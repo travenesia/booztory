@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, Gift, DollarCircle } from "iconoir-react"
+import { Clock, Gift, DollarCircle, User } from "iconoir-react"
 import { formatStatNumber } from "@/components/tweet/utils"
 
 interface ContentStatsProps {
@@ -65,6 +65,13 @@ export function ContentStats({
       </button>
 
       <div className="flex justify-center items-center h-full flex-grow space-x-3 sm:space-x-4 pr-1 sm:pr-2">
+        <div className="flex items-center" title={`Submitted by ${username}`}>
+          <User width={16} height={16} className="text-white flex-shrink-0 mr-1" />
+          <span className="block max-w-[6rem] text-xs font-medium text-white truncate">
+            {username}
+          </span>
+        </div>
+
         <div className="flex items-center" title="Time Left">
           <Clock width={16} height={16} className="text-white flex-shrink-0 mr-1" />
           <span className="block min-w-[3.5rem] sm:min-w-[4rem] text-xs font-medium text-white text-left tabular-nums">

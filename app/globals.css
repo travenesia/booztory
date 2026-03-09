@@ -271,7 +271,13 @@
 }
 
 main {
-  padding-bottom: 52px;
+  padding-bottom: 52px; /* space for bottom navbar on mobile */
+}
+
+@media (min-width: 768px) {
+  main {
+    padding-bottom: 0;
+  }
 }
 
 .ios-button-spacing {

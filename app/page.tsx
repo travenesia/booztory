@@ -69,7 +69,9 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Topbar />
-      <div className="flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
+
+      {/* Mobile layout */}
+      <div className="md:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
         {isLoading ? (
           <div className="animate-pulse bg-gray-200 rounded-lg w-full max-w-md h-96" />
         ) : (
@@ -92,9 +94,57 @@ export default function Home() {
           )
         )}
       </div>
+
+      {/* Desktop two-column layout — breaks out of max-w-[650px] to fill full viewport */}
+      <div className="hidden md:grid md:grid-cols-2 md:gap-12 md:items-center flex-1 px-12 mt-12 md:w-screen md:ml-[calc(50%-50vw)]">
+        {/* Left: platform info + CTA */}
+        <div className="flex flex-col justify-center space-y-6 py-12">
+          <p className="text-xs font-semibold tracking-widest text-red-700 uppercase">Live Spotlight</p>
+          <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+            The decentralized digital spotlight on Base
+          </h1>
+          <p className="text-base text-gray-500 leading-relaxed">
+            Creators rent a 15-minute featured slot for 1 USDC. Your content, on-chain, seen by the community.
+          </p>
+          <Button
+            onClick={handleFabClick}
+            className="w-fit px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-medium rounded-full elegance-button shadow-custom-sm hover:shadow-custom-sm flex items-center gap-2"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+            Submit Content
+          </Button>
+        </div>
+
+        {/* Right: content card */}
+        <div className="flex items-center justify-center py-8">
+          {isLoading ? (
+            <div className="animate-pulse bg-gray-200 rounded-lg w-full h-96" />
+          ) : (
+            content && (
+              <ContentCard
+                username={content.username}
+                contentType={content.contentType}
+                imageUrl={content.imageUrl}
+                timeLeft={getTimeLeft()}
+                donations={content.donations}
+                aspectRatio={content.aspectRatio}
+                contentUrl={content.contentUrl}
+                isPlaceholder={isPlaceholder}
+                endTime={content.endTime}
+                isConnected={isConnected}
+                tokenId={isPlaceholder ? undefined : BigInt(content.id)}
+                submittedBy={content.submittedBy}
+                authorName={content.authorName}
+              />
+            )
+          )}
+        </div>
+      </div>
+
+      {/* FAB — mobile only */}
       <Button
         onClick={handleFabClick}
-        className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 rounded-full bg-red-700 hover:bg-red-800 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button flex items-center justify-center p-0"
+        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 rounded-full bg-red-700 hover:bg-red-800 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button flex items-center justify-center p-0"
         aria-label="Submit Content"
       >
         <Plus size={48} strokeWidth={2.5} />
