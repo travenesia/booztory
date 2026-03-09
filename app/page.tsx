@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/navbar"
 import { ContentCard } from "@/components/content/contentCard"
 import { ContentSubmissionDrawer } from "@/components/modals/submitContent"
 import { Button } from "@/components/ui/button"
+import { RotatingWords } from "@/components/ui/rotating-words"
 import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
@@ -99,16 +100,27 @@ export default function Home() {
       <div className="hidden md:grid md:grid-cols-2 md:gap-12 md:items-center flex-1 px-12 mt-12 md:w-screen md:ml-[calc(50%-50vw)]">
         {/* Left: platform info + CTA */}
         <div className="flex flex-col justify-center space-y-6 py-12">
-          <p className="text-xs font-semibold tracking-widest text-red-700 uppercase">Live Spotlight</p>
-          <h1 className="text-4xl font-bold text-gray-900 leading-tight">
-            The decentralized digital spotlight on Base
+          <p className="text-xs font-semibold tracking-widest text-[#0090de] uppercase">Live Spotlight</p>
+          <h1 className="text-4xl font-bold text-gray-900 leading-snug">
+            Your content,{" "}
+            <br />
+            <RotatingWords
+              words={["seen.", "live.", "rewarded."]}
+              className="text-amber-500"
+            />
           </h1>
           <p className="text-base text-gray-500 leading-relaxed">
-            Creators rent a 15-minute featured slot for 1 USDC. Your content, on-chain, seen by the community.
+            The spotlight shifts every{" "}
+            <span className="font-semibold text-gray-900">15 minutes</span> —{" "}
+            <span className="italic">one creator, one link, one moment.</span>
+            <br />
+            For just{" "}
+            <span className="font-semibold text-gray-900">1 USDC</span>, step into
+            the feed and let <span className="italic">Base be your stage.</span>
           </p>
           <Button
             onClick={handleFabClick}
-            className="w-fit px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-medium rounded-full elegance-button shadow-custom-sm hover:shadow-custom-sm flex items-center gap-2"
+            className="w-fit px-6 py-3 text-white font-medium rounded-full elegance-button shadow-custom-sm hover:shadow-custom-sm flex items-center gap-2"
           >
             <Plus size={18} strokeWidth={2.5} />
             Submit Content
@@ -144,7 +156,7 @@ export default function Home() {
       {/* FAB — mobile only */}
       <Button
         onClick={handleFabClick}
-        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 rounded-full bg-red-700 hover:bg-red-800 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button flex items-center justify-center p-0"
+        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 rounded-full text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button flex items-center justify-center p-0"
         aria-label="Submit Content"
       >
         <Plus size={48} strokeWidth={2.5} />

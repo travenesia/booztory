@@ -75,9 +75,9 @@ function HistoryPage() {
                 key={`skeleton-history-${i}`}
                 className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border"
               >
-                <div className="flex items-center justify-between p-3 border-b border-red-500 bg-red-700">
-                  <Skeleton className="h-4 w-1/2 bg-red-300" />
-                  <Skeleton className="h-6 w-6 rounded-full bg-red-300" />
+                <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
+                  <Skeleton className="h-4 w-1/2 bg-gray-200" />
+                  <Skeleton className="h-6 w-6 rounded-full bg-gray-200" />
                 </div>
                 <div className="flex p-3">
                   <div className="relative w-1/3 mr-3">

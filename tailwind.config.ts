@@ -41,11 +41,11 @@ const config: Config = {
           900: "#18964F",
         },
         red: {
-          100: "#FFF5F7",
-          300: "#FFD7DF",
-          700: "#DC0025", // Main action red
-          800: "#B8001F", // Darker red for hover
-          900: "#B71B58", // Kept for other uses if any
+          100: "#E6F4FF",
+          300: "#CCE8FF",
+          700: "#0090de", // Main action color
+          800: "#007bbf", // Darker hover
+          900: "#005f9e", // Kept for other uses if any
         },
         yellow: {
           // Kept for existing status badges, can be updated if needed

@@ -84,8 +84,8 @@ export function HistoryCard({ content }: HistoryCardProps) {
       onClick={handleCardClick}
       className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border hover:shadow-custom-md-hover transition-shadow duration-200 cursor-pointer"
     >
-      <div className="flex items-center justify-between p-3 border-b border-red-500 bg-red-700">
-        <div className="text-xs font-medium text-white">Posted by @{displayUsername}</div>
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
+        <div className="text-xs font-medium text-gray-700">Posted by @{displayUsername}</div>
         <div className="flex-shrink-0">{getPlatformIcon()}</div>
       </div>
       <div className="p-3">

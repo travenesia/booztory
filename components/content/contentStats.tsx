@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, Gift, DollarCircle, User } from "iconoir-react"
+import { Clock, Gift, DollarCircle } from "iconoir-react"
 import { formatStatNumber } from "@/components/tweet/utils"
 
 interface ContentStatsProps {
@@ -29,7 +29,7 @@ export function ContentStats({
 
   if (isPlaceholder && username === "Booztory") {
     return (
-      <div className="h-8 w-full bg-purple-600 flex items-center rounded-b-[5px]">
+      <div className="h-8 w-full bg-[#0090de] flex items-center rounded-b-[5px]">
         <button
           className={`p-0 rounded-none bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center mr-2 flex-shrink-0 ${
             !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
@@ -52,7 +52,7 @@ export function ContentStats({
   }
 
   return (
-    <div className="h-8 w-full bg-purple-600 flex items-center rounded-b-[5px]">
+    <div className="h-8 w-full bg-[#0090de] flex items-center rounded-b-[5px]">
       <button
         className={`p-0 rounded-none bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center mr-2 flex-shrink-0 ${
           !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
@@ -66,15 +66,14 @@ export function ContentStats({
 
       <div className="flex justify-center items-center h-full flex-grow space-x-3 sm:space-x-4 pr-1 sm:pr-2">
         <div className="flex items-center" title={`Submitted by ${username}`}>
-          <User width={16} height={16} className="text-white flex-shrink-0 mr-1" />
           <span className="block max-w-[6rem] text-xs font-medium text-white truncate">
             {username}
           </span>
         </div>
 
-        <div className="flex items-center" title="Time Left">
+<div className="flex items-center" title="Time Left">
           <Clock width={16} height={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[3.5rem] sm:min-w-[4rem] text-xs font-medium text-white text-left tabular-nums">
+          <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
             {formatTime(timeLeft)}
           </span>
         </div>

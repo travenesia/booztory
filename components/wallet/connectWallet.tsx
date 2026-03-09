@@ -137,7 +137,7 @@ export function ConnectWalletButton() {
     if (isAuthenticated) {
       return (
         <>
-          <span className="truncate max-w-[90px]">{displayName || "Connected"}</span>
+          <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
           <Wallet size={16} />
         </>
       )
@@ -164,7 +164,7 @@ export function ConnectWalletButton() {
   return (
     <div className="flex flex-col items-center">
       <Button
-        className="h-8 px-2 py-2 elegance-button text-xs flex items-center justify-end space-x-1 min-w-[120px] !shadow-custom-sm hover:!shadow-custom-sm"
+        className="h-8 px-2 py-2 elegance-button text-xs flex items-center justify-end space-x-1 min-w-[120px] max-w-[180px] !shadow-custom-sm hover:!shadow-custom-sm"
         onClick={handleClick}
         disabled={isDisabled}
       >

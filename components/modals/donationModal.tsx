@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
+import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { useDonation } from "@/hooks/useDonation"
@@ -123,7 +124,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
 
         <div className="grid gap-4 py-3">
           <div className="flex items-center justify-between w-full">
-            <span className="text-sm font-semibold px-3 py-1 bg-blue-100 text-blue-700 rounded-full">USDC</span>
+            <Image src="/usdc.svg" alt="USDC" width={48} height={48} />
 
             {predefinedAmounts.map((value) => (
               <button
@@ -133,7 +134,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
                 disabled={isDonating}
                 className={`rounded-full w-12 h-12 flex items-center justify-center transition-all duration-200 shadow-[2px_2px_0px_0px_#1B1B1B] hover:shadow-[3px_3px_0px_0px_#1B1B1B] hover:transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed ${
                   amount === value
-                    ? "bg-red-700 text-white"
+                    ? "bg-[#0090de] text-white"
                     : "border border-elegance-sophisticated-sage bg-elegance-ethereal-ivory text-elegance-timeless-noir"
                 }`}
               >

@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 11%;
 
-    --primary: 348 100% 43%; /* red-700 (#DC0025) approx HSL */
+    --primary: 201 100% 43%; /* #0090de approx HSL */
     --primary-foreground: 0 0% 100%; /* white */
 
     --secondary: 220 13% 91%; /* sophisticated-sage approx HSL for secondary elements */
@@ -30,7 +30,7 @@
 
     --border: 220 13% 77%; /* sophisticated-sage for borders */
     --input: 220 13% 77%; /* sophisticated-sage for input borders */
-    --ring: 348 100% 43%; /* red-700 (#DC0025) for focus rings */
+    --ring: 201 100% 43%; /* #0090de for focus rings */
 
     --radius: 0.5rem;
   }
@@ -46,7 +46,7 @@
     --popover: 0 0% 15%;
     --popover-foreground: 228 18% 90%;
 
-    --primary: 348 100% 53%; /* Lighter red for dark mode */
+    --primary: 201 100% 53%; /* Lighter blue for dark mode */
     --primary-foreground: 0 0% 11%;
 
     --secondary: 0 0% 20%;
@@ -84,13 +84,13 @@
   }
 
   .elegance-button {
-    @apply bg-red-700 hover:bg-red-800 text-white rounded-full shadow-custom-md hover:shadow-custom-md-hover;
-    /* Uses red-700 (#DC0025) and red-800 (darker hover) from tailwind.config.ts */
-    /* Uses custom shadow with #1B1B1B (shadowColor) */
+    @apply text-white rounded-full shadow-custom-md hover:shadow-custom-md-hover;
+    background-color: #0090de;
     transition: all 0.2s ease;
   }
 
   .elegance-button:hover {
+    background-color: #007bbf;
     transform: translateY(-1px) translateX(-1px);
   }
 
@@ -121,7 +121,7 @@
   [type="password"]:focus,
   [type="number"]:focus,
   [type="search"]:focus {
-    @apply ring-2 ring-red-700 border-red-700;
+    @apply ring-2 ring-[#0090de] border-[#0090de];
   }
 
   h1,

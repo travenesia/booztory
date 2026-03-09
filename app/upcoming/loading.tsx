@@ -9,9 +9,9 @@ export default function Loading() {
       <section className="py-6 px-6 h-[calc(100vh-96px)] overflow-y-auto max-w-[650px] mx-auto w-full space-y-4">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border">
-            <div className="flex items-center justify-between p-3 border-b border-red-800 bg-red-700">
-              <Skeleton className="h-4 w-1/2 bg-red-300" />
-              <Skeleton className="h-6 w-6 rounded-full bg-red-300" />
+            <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
+              <Skeleton className="h-4 w-1/2 bg-gray-200" />
+              <Skeleton className="h-6 w-6 rounded-full bg-gray-200" />
             </div>
             <div className="flex p-3">
               <div className="relative w-1/3 mr-3">
