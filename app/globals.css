@@ -1,0 +1,303 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 228 18% 100%; /* white */
+    --foreground: 0 0% 11%; /* timeless-noir approx HSL */
+
+    --card: 0 0% 100%; /* white */
+    --card-foreground: 0 0% 11%; /* timeless-noir */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 11%;
+
+    --primary: 348 100% 43%; /* red-700 (#DC0025) approx HSL */
+    --primary-foreground: 0 0% 100%; /* white */
+
+    --secondary: 220 13% 91%; /* sophisticated-sage approx HSL for secondary elements */
+    --secondary-foreground: 0 0% 11%; /* timeless-noir */
+
+    --muted: 220 13% 91%;
+    --muted-foreground: 0 0% 40%; /* A slightly lighter gray for muted text */
+
+    --accent: 180 100% 31%; /* teal-700 approx HSL */
+    --accent-foreground: 0 0% 100%; /* white */
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 77%; /* sophisticated-sage for borders */
+    --input: 220 13% 77%; /* sophisticated-sage for input borders */
+    --ring: 348 100% 43%; /* red-700 (#DC0025) for focus rings */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Basic dark theme, can be expanded if needed */
+    --background: 0 0% 11%; /* timeless-noir */
+    --foreground: 228 18% 90%; /* ethereal-ivory */
+
+    --card: 0 0% 15%; /* Darker card */
+    --card-foreground: 228 18% 90%;
+
+    --popover: 0 0% 15%;
+    --popover-foreground: 228 18% 90%;
+
+    --primary: 348 100% 53%; /* Lighter red for dark mode */
+    --primary-foreground: 0 0% 11%;
+
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 228 18% 90%;
+
+    --muted: 0 0% 20%;
+    --muted-foreground: 228 18% 70%;
+
+    --accent: 180 100% 41%; /* Lighter teal for dark mode */
+    --accent-foreground: 0 0% 11%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 348 100% 53%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border; /* Default border color from CSS vars */
+  }
+  body {
+    @apply bg-white text-gray-900 overflow-hidden; /* Changed background to white, default text to dark gray */
+  }
+
+  button,
+  .btn,
+  [type="button"],
+  [type="submit"],
+  [type="reset"] {
+    @apply rounded-full px-4;
+  }
+
+  .elegance-button {
+    @apply bg-red-700 hover:bg-red-800 text-white rounded-full shadow-custom-md hover:shadow-custom-md-hover;
+    /* Uses red-700 (#DC0025) and red-800 (darker hover) from tailwind.config.ts */
+    /* Uses custom shadow with #1B1B1B (shadowColor) */
+    transition: all 0.2s ease;
+  }
+
+  .elegance-button:hover {
+    transform: translateY(-1px) translateX(-1px);
+  }
+
+  .elegance-button:disabled {
+    @apply bg-gray-400 text-gray-700 cursor-not-allowed opacity-70;
+    box-shadow: 2px 2px 0px 0px theme("colors.gray.500"); /* Lighter shadow for disabled */
+  }
+  .elegance-button:disabled:hover {
+    transform: none;
+    @apply bg-gray-400;
+    box-shadow: 2px 2px 0px 0px theme("colors.gray.500");
+  }
+
+  input,
+  .input,
+  [type="text"],
+  [type="email"],
+  [type="password"],
+  [type="number"],
+  [type="search"] {
+    @apply rounded-full border-gray-300 bg-gray-0; /* Updated input style */
+  }
+
+  input:focus,
+  .input:focus,
+  [type="text"]:focus,
+  [type="email"]:focus,
+  [type="password"]:focus,
+  [type="number"]:focus,
+  [type="search"]:focus {
+    @apply ring-2 ring-red-700 border-red-700;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-medium text-gray-900; /* Updated heading color */
+  }
+
+  p {
+    @apply text-xs text-gray-700; /* Updated paragraph color */
+  }
+}
+
+/* Twitter Embed Custom Styles - Updated for auto height */
+.react-tweet {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  border: none; /* Removed border */
+  border-radius: 12px;
+  padding: 12px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  height: auto !important;
+  min-height: 100px;
+  background-color: #ffffff; /* white */
+}
+
+.react-tweet-skeleton {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  border: none; /* Removed border */
+  border-radius: 12px;
+  padding: 12px !important;
+  background-color: #ffffff; /* white */
+  height: auto !important;
+  min-height: 100px;
+}
+
+.react-tweet-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.react-tweet-avatar {
+  margin-right: 12px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.react-tweet-author {
+  display: flex;
+  flex-direction: column;
+}
+
+.react-tweet-author-name {
+  font-weight: bold;
+  color: #1b1b1b; /* timeless-noir */
+}
+
+.react-tweet-author-handle {
+  color: #657080; /* gray-500 */
+}
+
+.react-tweet-body {
+  margin-bottom: 12px;
+  font-size: 12px !important;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  color: #1b1b1b; /* timeless-noir */
+}
+.react-tweet-body a {
+  color: #00a0a0; /* teal-600 */
+}
+
+.react-tweet-media {
+  margin-top: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 100%;
+  height: auto;
+}
+
+.react-tweet-media img,
+.react-tweet-media video {
+  max-width: 100%;
+  height: auto;
+}
+
+.react-tweet-footer {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+  color: #657080; /* gray-500 */
+  font-size: 14px;
+}
+
+.react-tweet-footer-heart,
+.react-tweet-footer-reply,
+.react-tweet-footer-retweet {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+}
+
+.react-tweet-footer-heart svg,
+.react-tweet-footer-reply svg,
+.react-tweet-footer-retweet svg {
+  margin-right: 4px;
+}
+
+.dark .react-tweet {
+  background-color: #1b1b1b; /* timeless-noir */
+  /* border-color: #595f39; /* muted-moss - border removed */
+}
+
+.dark .react-tweet-author-name {
+  color: #e4e4de; /* ethereal-ivory */
+}
+
+.dark .react-tweet-body {
+  color: #e4e4de; /* ethereal-ivory */
+}
+.dark .react-tweet-body a {
+  color: #40e0d0; /* lighter teal for dark mode */
+}
+
+.dark .react-tweet-skeleton {
+  background-color: #1b1b1b; /* timeless-noir */
+  /* border-color: #595f39; /* muted-moss - border removed */
+}
+
+.react-tweet.preview {
+  transform: scale(0.9);
+  transform-origin: top left;
+}
+
+:root {
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+}
+
+main {
+  padding-bottom: 52px;
+}
+
+.ios-button-spacing {
+  margin-bottom: 24px !important;
+}
+
+/* Fallback for when env() is not supported or keyboard is not the primary concern */
+.keyboard-button-spacing-fallback {
+  margin-bottom: 24px !important;
+}
+
+.rounded-custom {
+  border-radius: 5px !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
