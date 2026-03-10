@@ -11,6 +11,7 @@ import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
+import { motion } from "framer-motion"
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -100,23 +101,27 @@ export default function Home() {
       <div className="hidden md:grid md:grid-cols-2 md:gap-12 md:items-center flex-1 px-12 mt-12 md:w-screen md:ml-[calc(50%-50vw)]">
         {/* Left: platform info + CTA */}
         <div className="flex flex-col justify-center space-y-6 py-12">
-          <p className="text-xs font-semibold tracking-widest text-[#0090de] uppercase">Live Spotlight</p>
-          <h1 className="text-4xl font-bold text-gray-900 leading-snug">
-            Your content,{" "}
-            <br />
+          <p className="flex items-center gap-2 text-xs font-semibold tracking-widest text-red-600 uppercase">
+            <motion.span
+              className="inline-block w-2 h-2 rounded-full bg-red-600"
+              animate={{ opacity: [1, 0.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+            Live Spotlight
+          </p>
+          <h1 className="text-[48px] font-bold text-gray-900 leading-snug">
+            Your content{" "}
             <RotatingWords
-              words={["seen.", "live.", "rewarded."]}
+              words={["seen", "live", "rewarded"]}
               className="text-amber-500"
             />
           </h1>
           <p className="text-base text-gray-500 leading-relaxed">
-            The spotlight shifts every{" "}
-            <span className="font-semibold text-gray-900">15 minutes</span> —{" "}
-            <span className="italic">one creator, one link, one moment.</span>
+            <span className="italic">No algorithm. No gatekeepers.</span>
             <br />
-            For just{" "}
-            <span className="font-semibold text-gray-900">1 USDC</span>, step into
-            the feed and let <span className="italic">Base be your stage.</span>
+            Every <span className="font-bold text-gray-900">15 minutes</span>, one creator owns the spotlight.
+            <br />
+            Pay <span className="font-bold text-gray-900">1 USDC</span> and make it yours.
           </p>
           <Button
             onClick={handleFabClick}

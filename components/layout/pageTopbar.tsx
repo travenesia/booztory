@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, ShieldQuestion } from "iconoir-react"
+import { ArrowLeft } from "iconoir-react"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
@@ -55,10 +55,9 @@ export function PageTopbar({ title }: PageTopbarProps) {
               </Link>
             ))}
           </nav>
-          <ConnectWalletButton />
-          <Link href="/faq" className="md:hidden text-gray-900 p-1 hover:text-[#0090de] transition-colors" aria-label="FAQ">
-            <ShieldQuestion size={24} />
-          </Link>
+          <div className="hidden md:block">
+            <ConnectWalletButton />
+          </div>
         </div>
 
       </div>

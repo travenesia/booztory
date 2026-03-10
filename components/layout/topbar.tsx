@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ShieldQuestion } from "iconoir-react"
+import { Book } from "iconoir-react"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -45,11 +45,11 @@ export function Topbar() {
               </Link>
             ))}
           </nav>
-          <ConnectWalletButton />
-          {/* FAQ icon — mobile only */}
-          <Link href="/faq" className="md:hidden text-gray-900 p-1 hover:text-[#0090de] transition-colors" aria-label="FAQ">
-            <ShieldQuestion size={24} />
+          {/* FAQ icon — mobile/tablet only */}
+          <Link href="/faq" className="md:hidden p-1 transition-colors text-gray-900 hover:text-[#0090de]" aria-label="FAQ">
+            <Book size={24} />
           </Link>
+          <ConnectWalletButton />
         </div>
       </div>
     </header>
