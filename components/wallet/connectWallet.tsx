@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Wallet, Loader2 } from "lucide-react"
 import { useSession, signIn, signOut } from "next-auth/react"
@@ -22,6 +22,7 @@ export function ConnectWalletButton() {
   const { switchChainAsync } = useSwitchChain()
   const { openConnectModal } = useConnectModal()
   const [isLoading, setIsLoading] = useState(false)
+  const isSigningInRef = useRef(false)
   const { toast } = useToast()
 
   const isAuthenticated = status === "authenticated"
@@ -46,6 +47,8 @@ export function ConnectWalletButton() {
 
   const handleSignIn = useCallback(
     async (walletAddress: string, currentChainId?: number) => {
+      if (isSigningInRef.current) return
+      isSigningInRef.current = true
       setIsLoading(true)
       try {
         // Switch to the app chain if the wallet is on a different network
@@ -80,7 +83,6 @@ export function ConnectWalletButton() {
         }
       } catch (error) {
         console.error("Sign-in error:", error)
-        disconnect()
 
         const msg = error instanceof Error ? error.message : "Authentication failed."
         const isRejected = msg.toLowerCase().includes("rejected") || msg.toLowerCase().includes("user denied")
@@ -91,6 +93,7 @@ export function ConnectWalletButton() {
           variant: "destructive",
         })
       } finally {
+        isSigningInRef.current = false
         setIsLoading(false)
       }
     },
