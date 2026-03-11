@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 11%;
 
-    --primary: 201 100% 43%; /* #0090de approx HSL */
+    --primary: 0 100% 40%; /* #cc0000 approx HSL */
     --primary-foreground: 0 0% 100%; /* white */
 
     --secondary: 220 13% 91%; /* sophisticated-sage approx HSL for secondary elements */
@@ -30,7 +30,7 @@
 
     --border: 220 13% 77%; /* sophisticated-sage for borders */
     --input: 220 13% 77%; /* sophisticated-sage for input borders */
-    --ring: 201 100% 43%; /* #0090de for focus rings */
+    --ring: 0 100% 40%; /* #cc0000 for focus rings */
 
     --radius: 0.5rem;
   }
@@ -46,7 +46,7 @@
     --popover: 0 0% 15%;
     --popover-foreground: 228 18% 90%;
 
-    --primary: 201 100% 53%; /* Lighter blue for dark mode */
+    --primary: 0 100% 50%; /* Lighter red for dark mode */
     --primary-foreground: 0 0% 11%;
 
     --secondary: 0 0% 20%;
@@ -63,7 +63,7 @@
 
     --border: 0 0% 25%;
     --input: 0 0% 25%;
-    --ring: 348 100% 53%;
+    --ring: 0 100% 50%; /* red for dark mode focus rings */
   }
 }
 
@@ -85,12 +85,12 @@
 
   .elegance-button {
     @apply text-white rounded-full shadow-custom-md hover:shadow-custom-md-hover;
-    background-color: #0090de;
+    background-color: #cc0000;
     transition: all 0.2s ease;
   }
 
   .elegance-button:hover {
-    background-color: #007bbf;
+    background-color: #aa0000;
     transform: translateY(-1px) translateX(-1px);
   }
 
@@ -121,7 +121,7 @@
   [type="password"]:focus,
   [type="number"]:focus,
   [type="search"]:focus {
-    @apply ring-2 ring-[#0090de] border-[#0090de];
+    @apply ring-2 ring-[#cc0000] border-[#cc0000];
   }
 
   h1,

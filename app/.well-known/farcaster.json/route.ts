@@ -1,9 +1,9 @@
 function withValidProperties(
-  properties: Record<string, undefined | string | string[]>
+  properties: Record<string, undefined | string | string[] | boolean>
 ) {
   return Object.fromEntries(
     Object.entries(properties).filter(([_, value]) =>
-      Array.isArray(value) ? value.length > 0 : !!value
+      Array.isArray(value) ? value.length > 0 : value !== undefined && value !== ""
     )
   )
 }
@@ -31,12 +31,20 @@ export async function GET() {
       description:
         "Pay 1 USDC for a 15-minute featured slot. No algorithm. No gatekeepers.",
       primaryCategory: "social",
+      tags: ["content", "creator", "base", "onchain", "spotlight"],
       heroImageUrl: `${URL}/hero.png`,
       tagline: "Your content. On-chain.",
       ogTitle: "Booztory",
       ogDescription:
         "Pay 1 USDC for a 15-minute featured content slot on Base.",
       ogImageUrl: `${URL}/hero.png`,
+      // TODO: replace with real screenshot URLs (up to 3, 1284×2778 recommended)
+      screenshotUrls: [
+        "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+1",
+        "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+2",
+        "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+3",
+      ],
+      noindex: false,
     }),
   })
 }

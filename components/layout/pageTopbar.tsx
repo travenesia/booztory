@@ -26,7 +26,7 @@ export function PageTopbar({ title }: PageTopbarProps) {
       <div className="flex justify-between items-center h-full px-6 mx-auto">
 
         {/* Mobile: back arrow | Desktop: logo + Booztory wordmark */}
-        <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-[#0090de]">
+        <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-[#cc0000]">
           <ArrowLeft width={24} height={24} className="md:hidden" />
           <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
           <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
@@ -45,13 +45,13 @@ export function PageTopbar({ title }: PageTopbarProps) {
                 className={cn(
                   "relative px-3 py-1 text-sm font-medium transition-colors duration-200 group",
                   pathname === item.href
-                    ? "text-[#0090de]"
+                    ? "text-[#cc0000]"
                     : "text-gray-600 hover:text-gray-900"
                 )}
               >
                 {item.name}
                 <span className={cn(
-                  "absolute bottom-0 left-0 h-[2px] bg-[#0090de] transition-all duration-200",
+                  "absolute bottom-0 left-0 h-[2px] bg-[#cc0000] transition-all duration-200",
                   pathname === item.href ? "w-full" : "w-0 group-hover:w-full"
                 )} />
               </Link>

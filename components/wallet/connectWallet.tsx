@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Wallet, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useSession, signIn, signOut } from "next-auth/react"
 import { useAccount, useDisconnect, useSignMessage, useAccountEffect, useSwitchChain } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
@@ -124,7 +124,7 @@ export function ConnectWalletButton() {
   }
 
   // Determine what the button should show and do:
-  // 1. No wallet connected  → "Connect Wallet"  (openConnectModal is available)
+  // 1. No wallet connected  → "Connect"  (openConnectModal is available)
   // 2. Wallet connected, SIWE pending → "Signing in…"  (disabled)
   // 3. Fully authenticated  → displayName + disconnect on click
 
@@ -138,12 +138,7 @@ export function ConnectWalletButton() {
       )
     }
     if (isAuthenticated) {
-      return (
-        <>
-          <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
-          <Wallet size={16} />
-        </>
-      )
+      return <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
     }
     if (isSigningIn) {
       return (
@@ -153,12 +148,7 @@ export function ConnectWalletButton() {
         </>
       )
     }
-    return (
-      <>
-        <span>Connect Wallet</span>
-        <Wallet size={16} />
-      </>
-    )
+    return <span>Connect</span>
   }
 
   const handleClick = isAuthenticated ? handleDisconnect : isSigningIn ? undefined : handleConnect
@@ -167,7 +157,7 @@ export function ConnectWalletButton() {
   return (
     <div className="flex flex-col items-center">
       <Button
-        className="h-8 px-2 py-2 elegance-button text-xs flex items-center justify-end space-x-1 min-w-[120px] max-w-[180px] !shadow-custom-sm hover:!shadow-custom-sm"
+        className="h-8 px-4 py-2 elegance-button text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] !shadow-none hover:!shadow-none"
         onClick={handleClick}
         disabled={isDisabled}
       >
