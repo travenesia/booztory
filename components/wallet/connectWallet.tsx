@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useSession, signIn, signOut } from "next-auth/react"
-import { useAccount, useDisconnect, useSignMessage, useAccountEffect, useSwitchChain } from "wagmi"
+import { useAccount, useDisconnect, useSignMessage, useAccountEffect, useSwitchChain, useConnect, injected } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { useWalletName } from "@/hooks/useWalletName"
@@ -22,7 +22,10 @@ export function ConnectWalletButton() {
   const { signMessageAsync } = useSignMessage()
   const { switchChainAsync } = useSwitchChain()
   const { openConnectModal } = useConnectModal()
+  const { connect } = useConnect()
   const [isLoading, setIsLoading] = useState(false)
+  const [isMiniApp, setIsMiniApp] = useState(false)
+  const [isMiniAppChecked, setIsMiniAppChecked] = useState(false)
   const isSigningInRef = useRef(false)
   const { toast } = useToast()
 
@@ -34,6 +37,33 @@ export function ConnectWalletButton() {
   const resolvedName = useWalletName(address)
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
   const displayName = resolvedName || session?.user?.username || shortAddress
+
+  // Detect mini app on mount; if inside a frame, auto-connect via the frame ethereum provider.
+  // RainbowKit modal is never shown in mini app mode.
+  useEffect(() => {
+    sdk.isInMiniApp().then(async (inMiniApp) => {
+      setIsMiniApp(inMiniApp)
+      setIsMiniAppChecked(true)
+      if (inMiniApp) {
+        // Signal to the frame shell that the app is ready to display
+        sdk.actions.ready()
+        if (!isWalletConnected) {
+          connect({
+            connector: injected({
+              target() {
+                return {
+                  id: "farcaster",
+                  name: "Farcaster",
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  provider: () => sdk.wallet.ethProvider as any,
+                }
+              },
+            }),
+          })
+        }
+      }
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cache user profile when session changes
   useEffect(() => {
@@ -165,14 +195,14 @@ export function ConnectWalletButton() {
       return (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>{isAuthenticated ? "Disconnecting..." : "Connecting..."}</span>
+          <span>Connecting...</span>
         </>
       )
     }
     if (isAuthenticated) {
       return <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
     }
-    if (isSigningIn) {
+    if (isSigningIn || (isMiniApp && !isAuthenticated)) {
       return (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -180,11 +210,20 @@ export function ConnectWalletButton() {
         </>
       )
     }
+    // Before mini app check resolves, show nothing to avoid a flicker of "Connect"
+    if (!isMiniAppChecked) return null
     return <span>Connect</span>
   }
 
-  const handleClick = isAuthenticated ? handleDisconnect : isSigningIn ? undefined : handleConnect
-  const isDisabled = isLoading || isSigningIn || status === "loading"
+  // In mini app: no manual connect or disconnect — fully automatic
+  const handleClick = isMiniApp
+    ? undefined
+    : isAuthenticated
+    ? handleDisconnect
+    : isSigningIn
+    ? undefined
+    : handleConnect
+  const isDisabled = isLoading || isSigningIn || status === "loading" || (isMiniApp && !isAuthenticated)
 
   return (
     <div className="flex flex-col items-center">
