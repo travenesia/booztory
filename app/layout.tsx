@@ -17,15 +17,33 @@ const inter = Inter({
   preload: true,
 })
 
-export const metadata: Metadata = {
-  title: "Booztory - Boost Your Content",
-  description: "Advertise your content by paying 1 USDC for a 15-minute featured slot",
-  icons: {
-    icon: "/favicon.ico",
-  },
-  other: {
-    "base:app_id": "69af300b298d227d6bc5439f",
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const appUrl = process.env.NEXT_PUBLIC_URL as string
+
+  return {
+    title: "Booztory",
+    description: "Boost Your Content",
+    icons: {
+      icon: "/favicon.ico",
+    },
+    other: {
+      "base:app_id": "69af300b298d227d6bc5439f",
+      "fc:miniapp": JSON.stringify({
+        version: "next",
+        imageUrl: `${appUrl}/hero.png`,
+        button: {
+          title: "Launch Booztory",
+          action: {
+            type: "launch_miniapp",
+            name: "Booztory",
+            url: appUrl,
+            splashImageUrl: `${appUrl}/logo-color.svg`,
+            splashBackgroundColor: "#ffffff",
+          },
+        },
+      }),
+    },
+  }
 }
 
 export const viewport: Viewport = {
