@@ -9,11 +9,11 @@ export async function GET() {
     },
                     
     miniapp: {
-      version: "0.1.0",
+      version: "1",
       name: "Booztory",
       homeUrl: URL,
-      iconUrl: `${URL}/logo-color.svg`,
-      splashImageUrl: `${URL}/logo-color.svg`,
+      iconUrl: `${URL}/logo-color.png`,
+      splashImageUrl: `${URL}/splash.png`,
       splashBackgroundColor: "#ffffff",
       webhookUrl: `${URL}/api/webhook`,
       subtitle: "On-chain content spotlight",
