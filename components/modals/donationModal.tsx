@@ -28,7 +28,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
 
   const resolvedCreatorName = useWalletName(creatorAddress)
   const resolvedDonorName = useWalletName(session?.user?.id)
-  const displayCreatorName = resolvedCreatorName || username
+  const displayCreatorName = username.startsWith("@") ? username.slice(1) : (resolvedCreatorName || username)
   const donorUsername = resolvedDonorName || session?.user?.username || "Anonymous"
 
   useEffect(() => {

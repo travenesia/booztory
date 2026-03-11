@@ -182,7 +182,7 @@ export function ContentCard({
     setIsDonationModalOpen(true)
   }
 
-  const creatorAddress = (submittedBy || BOOZTORY_ADDRESS) as `0x${string}`
+  const creatorAddress = (isPlaceholder ? BOOZTORY_ADDRESS : (submittedBy || BOOZTORY_ADDRESS)) as `0x${string}`
   const donationTokenId = tokenId ?? 0n
 
   return (

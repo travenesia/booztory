@@ -22,7 +22,7 @@ export default function Home() {
 
   const isConnected = status === "authenticated"
 
-  const { content, isPlaceholder, isLoading, refetch } = useCurrentSlot()
+  const { content, isPlaceholder, isLoading, refetch, contractUsdcBalance } = useCurrentSlot()
 
   // Refresh on content events and suspension resume
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function Home() {
       contentType={content.contentType}
       imageUrl={content.imageUrl}
       timeLeft={getTimeLeft()}
-      donations={content.donations}
+      donations={isPlaceholder ? contractUsdcBalance : content.donations}
       aspectRatio={content.aspectRatio}
       contentUrl={content.contentUrl}
       isPlaceholder={isPlaceholder}

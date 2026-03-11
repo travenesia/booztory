@@ -1,13 +1,21 @@
 "use client"
 
 import { useReadContract } from "wagmi"
-import { BOOZTORY_ADDRESS, BOOZTORY_ABI, parseSlot, getPlaceholderContent, type ContentItem, type OnChainSlot } from "@/lib/contract"
+import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI, parseSlot, getPlaceholderContent, type ContentItem, type OnChainSlot } from "@/lib/contract"
 
 export function useCurrentSlot() {
   const { data, isLoading, refetch } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "getCurrentSlot",
+    query: { refetchInterval: 30_000 },
+  })
+
+  const { data: usdcBalance } = useReadContract({
+    address: USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [BOOZTORY_ADDRESS],
     query: { refetchInterval: 30_000 },
   })
 
@@ -18,8 +26,9 @@ export function useCurrentSlot() {
     : getPlaceholderContent()
 
   const isPlaceholder = !data || !data[2]
+  const contractUsdcBalance = usdcBalance ? Number(usdcBalance as bigint) / 1_000_000 : 0
 
-  return { content, isPlaceholder, isLoading, refetch }
+  return { content, isPlaceholder, isLoading, refetch, contractUsdcBalance }
 }
 
 export function useUpcomingSlots() {

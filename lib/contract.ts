@@ -187,8 +187,8 @@ export function getPlaceholderContent(): ContentItem {
   const now = Date.now()
   return {
     id: "placeholder",
-    username: "Booztory",
-    submittedBy: "0xA49CEE842116A89299A721D831BCf0511E8F6A15",
+    username: "@Booztory",
+    submittedBy: BOOZTORY_ADDRESS,
     contentType: "youtube",
     contentUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     imageUrl: "/placeholder.svg?height=180&width=320&text=No+Content",
@@ -198,7 +198,7 @@ export function getPlaceholderContent(): ContentItem {
     aspectRatio: "16:9",
     status: "live",
     title: "Submit your content to be featured!",
-    authorName: "Booztory",
+    authorName: "@Booztory",
     isPlaceholder: true,
   }
 }
