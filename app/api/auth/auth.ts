@@ -45,6 +45,36 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
+    CredentialsProvider({
+      id: "farcaster-quickauth",
+      name: "Farcaster Quick Auth",
+      credentials: {
+        token: { label: "Token", type: "text" },
+        address: { label: "Wallet Address", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.token || !credentials?.address) return null
+
+        try {
+          const { createClient } = await import("@farcaster/quick-auth")
+          const client = createClient()
+          const domain = new URL(process.env.NEXT_PUBLIC_URL!).hostname
+          await client.verifyJwt({ token: credentials.token, domain })
+
+          const address = credentials.address.toLowerCase()
+          const displayName = `${address.slice(0, 6)}...${address.slice(-4)}`
+
+          return {
+            id: address,
+            walletAddress: address,
+            username: displayName,
+          }
+        } catch (error) {
+          console.error("Quick Auth verification error:", error)
+          return null
+        }
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {

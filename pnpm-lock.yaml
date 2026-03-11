@@ -11,6 +11,9 @@ importers:
       '@farcaster/miniapp-sdk':
         specifier: ^0.2.3
         version: 0.2.3(bufferutil@4.1.0)(typescript@5.8.3)(utf-8-validate@6.0.6)(zod@3.25.57)
+      '@farcaster/quick-auth':
+        specifier: ^0.0.8
+        version: 0.0.8(typescript@5.8.3)
       '@hookform/resolvers':
         specifier: ^3.9.1
         version: 3.10.0(react-hook-form@7.57.0(react@19.1.0))
@@ -480,6 +483,11 @@ packages:
 
   '@farcaster/quick-auth@0.0.6':
     resolution: {integrity: sha512-tiZndhpfDtEhaKlkmS5cVDuS+A/tafqZT3y9I44rC69m3beJok6e8dIH2JhxVy3EvOWTyTBnrmNn6GOOh+qK6A==}
+    peerDependencies:
+      typescript: 5.8.3
+
+  '@farcaster/quick-auth@0.0.8':
+    resolution: {integrity: sha512-NRIq1BcbcQCC6xBF5owfckkY00xKQVpqhpLNl5rICVpl0xeDsiVbkenIrHaUuyjtCK2W28YVc2ZCFRyz9ERHKg==}
     peerDependencies:
       typescript: 5.8.3
 
@@ -7343,6 +7351,12 @@ snapshots:
       - zod
 
   '@farcaster/quick-auth@0.0.6(typescript@5.8.3)':
+    dependencies:
+      jose: 5.10.0
+      typescript: 5.8.3
+      zod: 3.25.57
+
+  '@farcaster/quick-auth@0.0.8(typescript@5.8.3)':
     dependencies:
       jose: 5.10.0
       typescript: 5.8.3

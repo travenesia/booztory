@@ -11,6 +11,7 @@ import { useWalletName } from "@/hooks/useWalletName"
 import { SiweMessage } from "siwe"
 import { useToast } from "@/hooks/use-toast"
 import { cache, CACHE_DURATIONS } from "@/lib/cache"
+import { sdk } from "@farcaster/miniapp-sdk"
 
 const USER_PROFILE_CACHE_KEY = "user_profile"
 
@@ -100,13 +101,44 @@ export function ConnectWalletButton() {
     [signMessageAsync, disconnect, toast, switchChainAsync],
   )
 
-  // Auto sign-in with SIWE once wallet connects.
-  // useAccountEffect fires only after the connector is fully ready to sign —
-  // avoiding the ConnectorNotConnectedError from the previous useEffect approach.
+  const handleQuickAuth = useCallback(
+    async (walletAddress: string) => {
+      if (isSigningInRef.current) return
+      isSigningInRef.current = true
+      setIsLoading(true)
+      try {
+        const { token } = await sdk.quickAuth.getToken()
+        const result = await signIn("farcaster-quickauth", {
+          token,
+          address: walletAddress,
+          redirect: false,
+        })
+        if (result?.error) throw new Error("Quick Auth sign-in failed.")
+      } catch (error) {
+        console.error("Quick Auth error:", error)
+        // Fall back to SIWE if Quick Auth fails
+        await handleSignIn(walletAddress, APP_CHAIN.id)
+      } finally {
+        isSigningInRef.current = false
+        setIsLoading(false)
+      }
+    },
+    [handleSignIn],
+  )
+
+  // Auto sign-in once wallet connects.
+  // Inside Warpcast/Base mini app: use Quick Auth (no signature prompt needed).
+  // Regular browser: use SIWE.
   useAccountEffect({
     onConnect({ address, chainId }) {
       if (status === "unauthenticated") {
-        handleSignIn(address, chainId)
+        sdk.isInMiniApp().then((inMiniApp) => {
+          if (inMiniApp) {
+            handleQuickAuth(address)
+          } else {
+            handleSignIn(address, chainId)
+          }
+        })
       }
     },
   })
