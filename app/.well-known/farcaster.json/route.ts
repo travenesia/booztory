@@ -44,7 +44,7 @@ export async function GET() {
         "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+2",
         "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+3",
       ],
-      noindex: false,
+      noindex: true, // Change to True for testing to prevent search engines from indexing the miniapp page
     }),
   })
 }
