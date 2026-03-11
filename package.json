@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@farcaster/miniapp-sdk": "^0.2.3",
     "@hookform/resolvers": "^3.9.1",
     "@mdx-js/loader": "latest",
     "@mdx-js/react": "latest",

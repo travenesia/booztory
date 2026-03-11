@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { ArrowLeft } from "iconoir-react"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -24,9 +25,10 @@ export function PageTopbar({ title }: PageTopbarProps) {
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
       <div className="flex justify-between items-center h-full px-6 mx-auto">
 
-        {/* Mobile: back arrow | Desktop: Booztory wordmark */}
-        <Link href="/" className="flex items-center text-gray-900 hover:text-[#0090de]">
+        {/* Mobile: back arrow | Desktop: logo + Booztory wordmark */}
+        <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-[#0090de]">
           <ArrowLeft width={24} height={24} className="md:hidden" />
+          <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
           <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
         </Link>
 

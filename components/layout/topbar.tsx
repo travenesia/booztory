@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Book } from "iconoir-react"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { usePathname } from "next/navigation"
@@ -20,6 +21,7 @@ export function Topbar() {
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
       <div className="flex justify-between items-center h-full px-6 mx-auto">
         <Link href="/" className="flex items-center gap-2">
+          <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority />
           <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
           <span className="hidden md:inline text-xs italic text-gray-400 leading-none">Live on Base Sepolia, Mainnet Coming Soon</span>
         </Link>

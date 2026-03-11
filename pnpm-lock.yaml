@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@farcaster/miniapp-sdk':
+        specifier: ^0.2.3
+        version: 0.2.3(bufferutil@4.1.0)(typescript@5.8.3)(utf-8-validate@6.0.6)(zod@3.25.57)
       '@hookform/resolvers':
         specifier: ^3.9.1
         version: 3.10.0(react-hook-form@7.57.0(react@19.1.0))
@@ -468,6 +471,17 @@ packages:
 
   '@ethersproject/web@5.8.0':
     resolution: {integrity: sha512-j7+Ksi/9KfGviws6Qtf9Q7KCqRhpwrYKQPs+JBA/rKVFF/yaWLHJEH3zfVP2plVu+eys0d2DlFmhoQJayFewcw==}
+
+  '@farcaster/miniapp-core@0.5.1':
+    resolution: {integrity: sha512-5QFn9zTV8GHUqZF31X9iwq9tNlnoOgP/o0UXb+QmdNeJsWXrhUFBKYl+C7KQOhVw2xqWKhBSDgYIHOkSRua3vg==}
+
+  '@farcaster/miniapp-sdk@0.2.3':
+    resolution: {integrity: sha512-FwxqGcYCXw3HyGfDuchFUmQN9Gd49jTJs585zzQv6l1Oba6A/vVVCYohEG6QxRT6b/UrdemImpNMGTnqAZ3hKw==}
+
+  '@farcaster/quick-auth@0.0.6':
+    resolution: {integrity: sha512-tiZndhpfDtEhaKlkmS5cVDuS+A/tafqZT3y9I44rC69m3beJok6e8dIH2JhxVy3EvOWTyTBnrmNn6GOOh+qK6A==}
+    peerDependencies:
+      typescript: 5.8.3
 
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
@@ -3249,6 +3263,9 @@ packages:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
 
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
+
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
@@ -4623,6 +4640,9 @@ packages:
   jose@4.15.9:
     resolution: {integrity: sha512-1vUQX+IdDMVPj4k8kOxgUqlcK518yluMuGZwqlr44FS1ppZB/5GWh4rZG89erpOBOJjU/OBsnCVFfapsRz6nEA==}
 
+  jose@5.10.0:
+    resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
+
   jose@6.1.3:
     resolution: {integrity: sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==}
 
@@ -5254,6 +5274,14 @@ packages:
 
   ox@0.12.4:
     resolution: {integrity: sha512-+P+C7QzuwPV8lu79dOwjBKfB2CbnbEXe/hfyyrff1drrO1nOOj3Hc87svHfcW1yneRr3WXaKr6nz11nq+/DF9Q==}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  ox@0.4.4:
+    resolution: {integrity: sha512-oJPEeCDs9iNiPs6J0rTx+Y0KGeCGyCAA3zo94yZhm8G5WpOxrwUtn2Ie/Y8IyARSqqY/j9JTKA3Fc1xs1DvFnw==}
     peerDependencies:
       typescript: '>=5.4.0'
     peerDependenciesMeta:
@@ -7288,6 +7316,37 @@ snapshots:
       '@ethersproject/logger': 5.8.0
       '@ethersproject/properties': 5.8.0
       '@ethersproject/strings': 5.8.0
+
+  '@farcaster/miniapp-core@0.5.1(bufferutil@4.1.0)(typescript@5.8.3)(utf-8-validate@6.0.6)':
+    dependencies:
+      '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.8.3)(utf-8-validate@6.0.6)
+      ox: 0.4.4(typescript@5.8.3)(zod@3.25.57)
+      zod: 3.25.57
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
+
+  '@farcaster/miniapp-sdk@0.2.3(bufferutil@4.1.0)(typescript@5.8.3)(utf-8-validate@6.0.6)(zod@3.25.57)':
+    dependencies:
+      '@farcaster/miniapp-core': 0.5.1(bufferutil@4.1.0)(typescript@5.8.3)(utf-8-validate@6.0.6)
+      '@farcaster/quick-auth': 0.0.6(typescript@5.8.3)
+      comlink: 4.4.2
+      eventemitter3: 5.0.1
+      ox: 0.4.4(typescript@5.8.3)(zod@3.25.57)
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
+      - zod
+
+  '@farcaster/quick-auth@0.0.6(typescript@5.8.3)':
+    dependencies:
+      jose: 5.10.0
+      typescript: 5.8.3
+      zod: 3.25.57
 
   '@fastify/busboy@2.1.1': {}
 
@@ -11110,6 +11169,8 @@ snapshots:
     dependencies:
       delayed-stream: 1.0.0
 
+  comlink@4.4.2: {}
+
   comma-separated-tokens@2.0.3: {}
 
   command-exists@1.2.9: {}
@@ -12802,6 +12863,8 @@ snapshots:
 
   jose@4.15.9: {}
 
+  jose@5.10.0: {}
+
   jose@6.1.3: {}
 
   js-sha3@0.8.0: {}
@@ -13653,6 +13716,20 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
+  ox@0.4.4(typescript@5.8.3)(zod@3.25.57):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.8.3)(zod@3.25.57)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - zod
+
   ox@0.6.7(typescript@5.8.3)(zod@3.25.57):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
@@ -13670,7 +13747,7 @@ snapshots:
   ox@0.6.9(typescript@5.8.3)(zod@3.25.57):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0

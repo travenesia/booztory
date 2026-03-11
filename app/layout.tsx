@@ -7,6 +7,7 @@ import { ScrollToTop } from "@/components/layout/scrollToTop"
 import { Toaster } from "@/components/ui/toaster"
 import { SessionProvider } from "@/providers/session-provider"
 import { WagmiRainbowProvider } from "@/providers/wagmi-provider"
+import { MiniAppInit } from "@/components/miniapp-init"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,8 +18,14 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Booztory - Promote Your Content",
+  title: "Booztory - Boost Your Content",
   description: "Advertise your content by paying 1 USDC for a 15-minute featured slot",
+  icons: {
+    icon: "/favicon.ico",
+  },
+  other: {
+    "base:app_id": "69af300b298d227d6bc5439f",
+  },
 }
 
 export const viewport: Viewport = {
@@ -42,6 +49,7 @@ export default function RootLayout({
         <SessionProvider>
           <WagmiRainbowProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+              <MiniAppInit />
               <ScrollToTop />
               <div className="mx-auto max-w-[650px] min-h-screen relative">{children}</div>
               <Toaster />
