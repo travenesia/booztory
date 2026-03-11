@@ -29,8 +29,8 @@ const nextConfig = {
   ],
   
   images: {
-    unoptimized: true,
     remotePatterns: [
+      { protocol: 'https', hostname: 'i.ytimg.com' },
       { protocol: 'https', hostname: 'pbs.twimg.com' },
       { protocol: 'https', hostname: 'abs.twimg.com' },
       { protocol: 'https', hostname: 'p16-sign-va.tiktokcdn.com' },

@@ -5,26 +5,14 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
+const navItems = [
+  { name: "Home", href: "/", icon: Home },
+  { name: "Upcoming", href: "/upcoming", icon: SkipNext },
+  { name: "History", href: "/history", icon: Clock },
+]
+
 export function Navbar() {
   const pathname = usePathname()
-
-  const navItems = [
-    {
-      name: "Home",
-      href: "/",
-      icon: Home,
-    },
-    {
-      name: "Upcoming",
-      href: "/upcoming",
-      icon: SkipNext,
-    },
-    {
-      name: "History",
-      href: "/history",
-      icon: Clock,
-    },
-  ]
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-red-700 shadow-lg z-50 w-full h-[52px] pb-1">

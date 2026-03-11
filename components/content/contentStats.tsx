@@ -21,13 +21,13 @@ export function ContentStats({
   isConnected,
 }: ContentStatsProps) {
   const formatTime = (minutes: number) => {
-    if (isPlaceholder && username === "Booztory") return "--:--"
+    if (isPlaceholder && username === "@Booztory") return "--:--"
     const mins = Math.floor(minutes)
     const secs = Math.floor((minutes - mins) * 60)
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
-  if (isPlaceholder && username === "Booztory") {
+  if (isPlaceholder && username === "@Booztory") {
     return (
       <div className="h-8 w-full bg-[#cc0000] flex items-center rounded-b-[5px]">
         <button
@@ -43,7 +43,7 @@ export function ContentStats({
 
         <div className="flex items-center" title="USDC Donated">
           <DollarCircle width={16} height={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[3.5rem] sm:min-w-[4rem] text-xs font-medium text-white text-left tabular-nums">
+          <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
             {formatStatNumber(donations)}
           </span>
         </div>
@@ -70,7 +70,7 @@ export function ContentStats({
         </span>
       </div>
 
-      <div className="flex items-center h-full ml-auto space-x-3 sm:space-x-4 pr-1 sm:pr-2">
+      <div className="flex items-center h-full ml-auto space-x-2 pr-1 sm:pr-2">
         <div className="flex items-center" title="Time Left">
           <Clock width={16} height={16} className="text-white flex-shrink-0 mr-1" />
           <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
@@ -80,7 +80,7 @@ export function ContentStats({
 
         <div className="flex items-center" title="USDC Donated">
           <DollarCircle width={16} height={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[3.5rem] sm:min-w-[4rem] text-xs font-medium text-white text-left tabular-nums">
+          <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
             {formatStatNumber(donations)}
           </span>
         </div>

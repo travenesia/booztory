@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useReadContract, useWriteContract, useSwitchChain, useChainId } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
@@ -34,6 +34,8 @@ export function usePayment() {
     functionName: "slotPrice",
   })
   const slotPrice = (onChainSlotPrice as bigint | undefined) ?? FALLBACK_SLOT_PRICE
+  const slotPriceRef = useRef(slotPrice)
+  slotPriceRef.current = slotPrice
 
   const resetPaymentState = useCallback(() => {
     setIsProcessing(false)
@@ -56,7 +58,7 @@ export function usePayment() {
           address: USDC_ADDRESS,
           abi: ERC20_ABI,
           functionName: "approve",
-          args: [BOOZTORY_ADDRESS, slotPrice],
+          args: [BOOZTORY_ADDRESS, slotPriceRef.current],
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
 
@@ -96,7 +98,7 @@ export function usePayment() {
         return { success: false, error: errorMessage }
       }
     },
-    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync, slotPrice],
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   return { mintSlot, isProcessing, resetPaymentState, slotPrice }

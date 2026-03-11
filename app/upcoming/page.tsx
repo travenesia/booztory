@@ -19,13 +19,12 @@ export default function UpcomingPage() {
   const displayedContent = allItems.slice(0, visibleCount)
 
   const loadMoreItems = useCallback(() => {
-    if (visibleCount >= allItems.length) return
     setIsLoadingMore(true)
     setTimeout(() => {
       setVisibleCount((c) => Math.min(c + ITEMS_PER_PAGE, allItems.length))
       setIsLoadingMore(false)
     }, 500)
-  }, [visibleCount, allItems.length])
+  }, [allItems.length])
 
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect()

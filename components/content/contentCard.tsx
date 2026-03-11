@@ -3,9 +3,10 @@
 import type React from "react"
 import { ContentEmbed } from "./contentEmbed"
 import { ContentStats } from "./contentStats"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { DonationModal } from "@/components/modals/donationModal"
 import { useWalletName } from "@/hooks/useWalletName"
+import { BOOZTORY_ADDRESS } from "@/lib/contract"
 
 type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify"
 
@@ -94,7 +95,7 @@ export function ContentCard({
     }
   }, [endTime, isPlaceholder, timeLeft])
 
-  const getEmbedAreaStyle = (): React.CSSProperties => {
+  const embedAreaStyle = useMemo((): React.CSSProperties => {
     if (typeof window === "undefined" || containerWidth === null || containerWidth === 0) {
       return { width: "100%", maxWidth: "320px", height: "200px", margin: "0 auto" }
     }
@@ -161,9 +162,7 @@ export function ContentCard({
     calculatedWidth = Math.max(100, calculatedWidth)
 
     return { height: `${calculatedHeight}px`, width: `${calculatedWidth}px`, margin: "0 auto" }
-  }
-
-  const embedAreaStyle = getEmbedAreaStyle()
+  }, [containerWidth, contentType, aspectRatio])
 
   const cardContainerStyle: React.CSSProperties = {
     width: contentType === "twitter" ? `${Math.min(containerWidth || 380, 380)}px` : embedAreaStyle.width,
@@ -172,7 +171,7 @@ export function ContentCard({
   }
 
   // Display name: wallet identity (Basename → ENS → truncated address)
-  const displayUsername = isPlaceholder ? "Booztory" : (resolvedWalletName || username || "Unknown User")
+  const displayUsername = isPlaceholder ? "@Booztory" : (resolvedWalletName || username || "Unknown User")
   const displayDonations = Math.max(0, donations || 0)
 
   const handleDonationClick = () => {
@@ -183,7 +182,7 @@ export function ContentCard({
     setIsDonationModalOpen(true)
   }
 
-  const creatorAddress = (submittedBy || "0x4FA414F690034Fd370Cb404668d4d8029a6e2772") as `0x${string}`
+  const creatorAddress = (submittedBy || BOOZTORY_ADDRESS) as `0x${string}`
   const donationTokenId = tokenId ?? 0n
 
   return (
@@ -201,7 +200,7 @@ export function ContentCard({
           >
             {contentUrl && !isPlaceholder ? (
               <ContentEmbed
-                key={`embed-${contentType}-${contentUrl}-${embedAreaStyle.width}-${embedAreaStyle.height}`}
+                key={`embed-${contentType}-${contentUrl}`}
                 contentType={contentType}
                 contentUrl={contentUrl}
                 aspectRatio={aspectRatio}

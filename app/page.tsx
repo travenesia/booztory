@@ -11,12 +11,14 @@ import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
 
 export default function Home() {
   const { data: session, status } = useSession()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const { toast } = useToast()
+  const isMobile = useIsMobile()
 
   const isConnected = status === "authenticated"
 
@@ -68,6 +70,24 @@ export default function Home() {
     return Math.ceil(Math.max(0, content.endTime - Date.now()) / 60000)
   }
 
+  const cardNode = content && (
+    <ContentCard
+      username={content.username}
+      contentType={content.contentType}
+      imageUrl={content.imageUrl}
+      timeLeft={getTimeLeft()}
+      donations={content.donations}
+      aspectRatio={content.aspectRatio}
+      contentUrl={content.contentUrl}
+      isPlaceholder={isPlaceholder}
+      endTime={content.endTime}
+      isConnected={isConnected}
+      tokenId={isPlaceholder ? undefined : BigInt(content.id)}
+      submittedBy={content.submittedBy}
+      authorName={content.authorName}
+    />
+  )
+
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Topbar />
@@ -77,23 +97,7 @@ export default function Home() {
         {isLoading ? (
           <div className="animate-pulse bg-gray-200 rounded-lg w-full max-w-md h-96" />
         ) : (
-          content && (
-            <ContentCard
-              username={content.username}
-              contentType={content.contentType}
-              imageUrl={content.imageUrl}
-              timeLeft={getTimeLeft()}
-              donations={content.donations}
-              aspectRatio={content.aspectRatio}
-              contentUrl={content.contentUrl}
-              isPlaceholder={isPlaceholder}
-              endTime={content.endTime}
-              isConnected={isConnected}
-              tokenId={isPlaceholder ? undefined : BigInt(content.id)}
-              submittedBy={content.submittedBy}
-              authorName={content.authorName}
-            />
-          )
+          isMobile && cardNode
         )}
       </div>
 
@@ -137,23 +141,7 @@ export default function Home() {
           {isLoading ? (
             <div className="animate-pulse bg-gray-200 rounded-lg w-full h-96" />
           ) : (
-            content && (
-              <ContentCard
-                username={content.username}
-                contentType={content.contentType}
-                imageUrl={content.imageUrl}
-                timeLeft={getTimeLeft()}
-                donations={content.donations}
-                aspectRatio={content.aspectRatio}
-                contentUrl={content.contentUrl}
-                isPlaceholder={isPlaceholder}
-                endTime={content.endTime}
-                isConnected={isConnected}
-                tokenId={isPlaceholder ? undefined : BigInt(content.id)}
-                submittedBy={content.submittedBy}
-                authorName={content.authorName}
-              />
-            )
+            !isMobile && cardNode
           )}
         </div>
       </div>

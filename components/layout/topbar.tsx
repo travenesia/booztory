@@ -7,15 +7,15 @@ import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
+const navItems = [
+  { name: "Home", href: "/" },
+  { name: "Upcoming", href: "/upcoming" },
+  { name: "History", href: "/history" },
+  { name: "FAQ", href: "/faq" },
+]
+
 export function Topbar() {
   const pathname = usePathname()
-
-  const navItems = [
-    { name: "Home", href: "/" },
-    { name: "Upcoming", href: "/upcoming" },
-    { name: "History", href: "/history" },
-    { name: "FAQ", href: "/faq" },
-  ]
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
