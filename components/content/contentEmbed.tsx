@@ -7,9 +7,10 @@ import { extractTwitterId } from "@/lib/youtubeMetadata"
 import { TwitterEmbed } from "@/components/embeds/twitterEmbed"
 import { VimeoEmbed } from "@/components/embeds/vimeoEmbed"
 import { SpotifyEmbed } from "@/components/embeds/spotifyEmbed"
+import { TwitchEmbed } from "@/components/embeds/twitchEmbed"
 
 interface ContentEmbedProps {
-  contentType: "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify"
+  contentType: "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
   contentUrl: string
   aspectRatio: "16:9" | "9:16"
   isPreview?: boolean
@@ -116,6 +117,11 @@ export const ContentEmbed = memo(function ContentEmbed({
   // If it's a Spotify embed, use the dedicated component
   if (contentType === "spotify") {
     return <SpotifyEmbed url={contentUrl} isPreview={isPreview} responsive={responsive} />
+  }
+
+  // If it's a Twitch embed, use the dedicated component
+  if (contentType === "twitch") {
+    return <TwitchEmbed url={contentUrl} aspectRatio={aspectRatio} isPreview={isPreview} responsive={responsive} />
   }
 
   // This code should never be reached as all content types are handled above

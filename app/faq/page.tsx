@@ -124,15 +124,15 @@ export default function FAQPage() {
                         <span className="w-2 h-2 bg-green-600 rounded-full"></span>
                         <span>Vimeo</span>
                       </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>Twitch (live streams, VODs, clips)</span>
+                      </li>
                     </ul>
                   </div>
                   <div>
                     <p className="font-medium text-yellow-600 mb-2">Coming soon:</p>
                     <ul className="space-y-1 ml-4">
-                      <li className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                        <span>Twitch</span>
-                      </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
                         <span>Instagram</span>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { YouTubeIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon } from "@/components/content/icon"
+import { YouTubeIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { Loader2 } from "lucide-react"
 import { isValidSpotifyUrl } from "@/lib/spotifyMetadata"
@@ -19,6 +19,7 @@ import { extractYouTubeId, getYouTubeMetadata, isYouTubeShort } from "@/lib/yout
 import { getTikTokMetadata } from "@/lib/tiktokMetadata"
 import { getVimeoMetadata, extractVimeoId } from "@/lib/vimeoMetadata"
 import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
+import { getTwitchMetadata, extractTwitchInfo } from "@/lib/twitchMetadata"
 import { sdk } from "@farcaster/miniapp-sdk"
 
 interface ContentSubmissionDrawerProps {
@@ -26,7 +27,7 @@ interface ContentSubmissionDrawerProps {
   onOpenChange: (open: boolean) => void
 }
 
-type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify"
+type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
 
 export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissionDrawerProps) {
   const { data: session } = useSession()
@@ -209,6 +210,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
     if (url.includes("twitter.com") || url.includes("x.com")) return "twitter"
     if (url.includes("vimeo.com")) return "vimeo"
     if (url.includes("spotify.com") || url.includes("open.spotify.com")) return "spotify"
+    if (url.includes("twitch.tv") || url.includes("clips.twitch.tv")) return "twitch"
     return null
   }
 
@@ -242,6 +244,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
         return /^(https?:\/\/)?(www\.)?vimeo\.com\/(\d+)/.test(url)
       case "spotify":
         return isValidSpotifyUrl(url)
+      case "twitch":
+        return !!extractTwitchInfo(url)
       default:
         return false
     }
@@ -381,11 +385,18 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           }
         }
         case "twitter": {
-          // Twitter doesn't have thumbnails, return placeholder
           return {
             title: "Twitter Post",
             authorName: "Twitter User",
             thumbnailUrl: "/placeholder.svg?height=180&width=320&text=Twitter+Post",
+          }
+        }
+        case "twitch": {
+          const metadata = await getTwitchMetadata(contentUrl)
+          return {
+            title: metadata?.title,
+            authorName: metadata?.author_name,
+            thumbnailUrl: metadata?.thumbnail_url,
           }
         }
       }
@@ -402,6 +413,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       twitter: "/placeholder.svg?height=180&width=320&text=Twitter+Post",
       vimeo: "/placeholder.svg?height=180&width=320&text=Vimeo+Video",
       spotify: "/placeholder.svg?height=180&width=320&text=Spotify+Music",
+      twitch: "/placeholder.svg?height=180&width=320&text=Twitch+Stream",
     }
 
     return {
@@ -466,6 +478,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           case "twitter":
           case "vimeo":
           case "spotify":
+          case "twitch":
             return "16:9"
           case "tiktok":
             return (metadata?.aspectRatio as "16:9" | "9:16") ?? detectedTikTokAspectRatio
@@ -580,6 +593,12 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
             <SpotifyIcon />
           </div>
         )
+      case "twitch":
+        return (
+          <div className="pointer-events-none">
+            <TwitchIcon />
+          </div>
+        )
       default:
         return null
     }
@@ -597,8 +616,10 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
         return "https://vimeo.com/ID"
       case "spotify":
         return "https://open.spotify.com/track/ID or album/ID etc."
+      case "twitch":
+        return "https://twitch.tv/channel, twitch.tv/videos/ID, or clips.twitch.tv/ClipID"
       default:
-        return "Paste YouTube, TikTok, Twitter, Vimeo, or Spotify URL"
+        return "Paste YouTube, TikTok, Twitter, Vimeo, Spotify, or Twitch URL"
     }
   }
 

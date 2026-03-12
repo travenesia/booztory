@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { DollarCircle } from "iconoir-react"
-import { YouTubeIcon, TikTokIcon, TwitterIcon, YouTubeShortsIcon, VimeoIcon, SpotifyIcon } from "./icon"
+import { YouTubeIcon, TikTokIcon, TwitterIcon, YouTubeShortsIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "./icon"
 import type { ContentItem } from "@/lib/contract"
 import { isYouTubeShort } from "@/lib/youtubeMetadata"
 import { TweetInfoPreview } from "@/components/tweet/tweet-info-preview"
@@ -51,6 +51,8 @@ export function HistoryCard({ content }: HistoryCardProps) {
         return <VimeoIcon />
       case "spotify":
         return <SpotifyIcon />
+      case "twitch":
+        return <TwitchIcon />
       default:
         return null
     }
