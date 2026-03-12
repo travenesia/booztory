@@ -16,7 +16,6 @@ const navItems = [
   { name: "Upcoming", href: "/upcoming" },
   { name: "History", href: "/history" },
   { name: "FAQ", href: "/faq" },
-  { name: "Privacy", href: "/privacy" },
 ]
 
 export function PageTopbar({ title }: PageTopbarProps) {
