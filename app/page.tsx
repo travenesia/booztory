@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import { sdk } from "@farcaster/miniapp-sdk"
 import { Topbar } from "@/components/layout/topbar"
 import { Navbar } from "@/components/layout/navbar"
 import { ContentCard } from "@/components/content/contentCard"
@@ -23,6 +24,17 @@ export default function Home() {
   const isConnected = status === "authenticated"
 
   const { content, isPlaceholder, isLoading, refetch, contractUsdcBalance } = useCurrentSlot()
+  const readyCalled = useRef(false)
+
+  // Signal to the Farcaster/Base mini app shell that the app is ready once content loads
+  useEffect(() => {
+    if (!isLoading && !readyCalled.current) {
+      readyCalled.current = true
+      sdk.isInMiniApp().then((inMiniApp) => {
+        if (inMiniApp) sdk.actions.ready()
+      })
+    }
+  }, [isLoading])
 
   // Refresh on content events and suspension resume
   useEffect(() => {

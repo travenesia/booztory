@@ -45,8 +45,6 @@ export function ConnectWalletButton() {
       setIsMiniApp(inMiniApp)
       setIsMiniAppChecked(true)
       if (inMiniApp) {
-        // Signal to the frame shell that the app is ready to display
-        sdk.actions.ready()
         if (!isWalletConnected) {
           connect({
             connector: injected({

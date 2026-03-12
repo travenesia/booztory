@@ -1,4 +1,5 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit"
+import { http } from "wagmi"
 import { base as baseChain, baseSepolia, mainnet } from "wagmi/chains"
 
 // Toggle this to switch between testnet and mainnet.
@@ -16,9 +17,16 @@ const base = {
   },
 } as const
 
+const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+
 export const wagmiConfig = getDefaultConfig({
   appName: "Booztory",
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
   chains: [APP_CHAIN, base, mainnet],
+  transports: {
+    [baseSepolia.id]: http(`https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`),
+    [baseChain.id]: http(`https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+    [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+  },
   ssr: true,
 })
