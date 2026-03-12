@@ -12,6 +12,7 @@ const navItems = [
   { name: "Upcoming", href: "/upcoming" },
   { name: "History", href: "/history" },
   { name: "FAQ", href: "/faq" },
+  { name: "Privacy", href: "/privacy" },
 ]
 
 export function Topbar() {
@@ -23,7 +24,6 @@ export function Topbar() {
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority />
           <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
-          <span className="hidden md:inline text-xs italic text-gray-400 leading-none">Live on Base Sepolia, Mainnet Coming Soon</span>
         </Link>
         <div className="flex items-center space-x-4">
           {/* Desktop nav links — hidden on mobile */}
