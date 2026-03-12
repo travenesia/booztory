@@ -4,7 +4,7 @@ import { DialogFooter } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
@@ -112,14 +112,17 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[425px] rounded-xl bg-gray-0 text-elegance-timeless-noir"
+        className="sm:max-w-[425px] rounded-xl bg-gray-0 text-elegance-timeless-noir [&>button]:right-3 [&>button]:top-3 [&>button]:h-7 [&>button]:w-7 [&>button]:rounded-full [&>button]:bg-white [&>button]:border [&>button]:border-gray-200 [&>button]:shadow-[0_2px_8px_rgba(0,0,0,0.15)] [&>button]:opacity-100 [&>button]:!inline-flex [&>button]:items-center [&>button]:justify-center [&>button_svg]:h-3.5 [&>button_svg]:w-3.5 [&>button_svg]:text-gray-800 [&>button_svg]:stroke-[2.5] [&>button_svg]:relative [&>button_svg]:z-10"
         style={keyboardOffset > 0 ? { top: `calc(50% - ${keyboardOffset / 2}px)`, transition: "top 0.3s ease" } : { transition: "top 0.3s ease" }}
       >
         <DialogHeader>
-          <DialogTitle className="font-medium text-elegance-timeless-noir">Support @{displayCreatorName}</DialogTitle>
-          <DialogDescription className="text-xs text-gray-500">
-            {session ? `Donating as @${donorUsername}` : "Donate USDC to show your appreciation."}
-          </DialogDescription>
+          <DialogTitle asChild>
+            <div className="px-3 py-2.5 rounded-lg border border-red-200 bg-red-50 text-sm font-normal text-elegance-timeless-noir leading-relaxed">
+              Hi <span className="font-semibold">@{session ? donorUsername : "you"}</span>
+              <span className="text-gray-500">, consider supporting </span>
+              <span className="font-semibold text-[#cc0000]">@{displayCreatorName}</span>
+            </div>
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-3">

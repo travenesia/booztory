@@ -19,6 +19,7 @@ import { extractYouTubeId, getYouTubeMetadata, isYouTubeShort } from "@/lib/yout
 import { getTikTokMetadata } from "@/lib/tiktokMetadata"
 import { getVimeoMetadata, extractVimeoId } from "@/lib/vimeoMetadata"
 import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
+import { sdk } from "@farcaster/miniapp-sdk"
 
 interface ContentSubmissionDrawerProps {
   open: boolean
@@ -46,6 +47,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const [keyboardHeight, setKeyboardHeight] = useState<number>(0)
   const initialViewportHeight = useRef<number>(0)
   const keyboardDetectionTimeout = useRef<NodeJS.Timeout | null>(null)
+
+  const [isMiniApp, setIsMiniApp] = useState(false)
 
   // Use ref to track if we're currently processing to prevent race conditions
   const isProcessingRef = useRef(false)
@@ -126,6 +129,10 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       }
     }
   }, [detectKeyboard])
+
+  useEffect(() => {
+    sdk.isInMiniApp().then(setIsMiniApp)
+  }, [])
 
   // Complete state reset when drawer opens/closes
   const resetAllState = () => {
@@ -651,14 +658,15 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       }
     }
 
-    // When keyboard is visible: shrink maxHeight to visual viewport, lift above keyboard
+    // When keyboard is visible: shrink maxHeight to visual viewport, lift above keyboard.
+    // In mini app WebViews the viewport already repositions — skip the bottom offset to avoid double-offset.
     const availableHeight = viewportHeight - 16
 
     return {
       maxHeight: `${availableHeight}px`,
       height: "auto",
       transition: "max-height 0.3s ease, bottom 0.3s ease",
-      bottom: `${keyboardHeight}px`,
+      bottom: isMiniApp ? "0px" : `${keyboardHeight}px`,
     }
   }
 
