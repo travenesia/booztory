@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const r = require\\(''d:/Projects/Blockchain/Superchain/Booztory/node_modules/iconoir-react/dist/cjs/index.js''\\); console.log\\(''User:'', !!r.User, ''Plus:'', !!r.Plus, ''ArrowUp:'', !!r.ArrowUp, ''OpenNewWindow:'', !!r.OpenNewWindow\\)\")",
+      "Read(//d/Projects/Blockchain/Superchain/Bootzory/app/**)",
+      "Bash(grep -r \"\\\\/api\\\\/getInstagramData\\\\|\\\\/api\\\\/webhook\" /d/Projects/Blockchain/Superchain/Booztory --include=*.ts --include=*.tsx --include=*.json)",
+      "Bash(grep -h ^import.*from.*components/ui /d/Projects/Blockchain/Superchain/Booztory/app/page.tsx /d/Projects/Blockchain/Superchain/Booztory/components/layout/*.tsx /d/Projects/Blockchain/Superchain/Booztory/components/content/*.tsx)",
+      "Read(//d/Projects/Blockchain/Superchain/Bootzory/lib/**)",
+      "Read(//d/Projects/Blockchain/Superchain/Bootzory/**)",
+      "Bash(grep -r \"hashNonce\\\\|from.*auth-utils\" /d/Projects/Blockchain/Superchain/Booztory --include=*.tsx --include=*.ts)",
+      "WebFetch(domain:onchainkit.xyz)",
+      "WebFetch(domain:docs.base.org)"
+    ]
+  }
+}
