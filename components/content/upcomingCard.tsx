@@ -81,7 +81,7 @@ export function UpcomingCard({ content }: UpcomingCardProps) {
   return (
     <div
       onClick={handleCardClick}
-      className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border hover:shadow-custom-md-hover transition-shadow duration-200 cursor-pointer"
+      className="bg-gray-0 rounded-lg overflow-hidden border border-border cursor-pointer"
     >
       <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
         <div className="text-xs font-medium text-gray-700">Posted by @{displayUsername}</div>

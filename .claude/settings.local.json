@@ -10,7 +10,8 @@
       "Bash(grep -r \"hashNonce\\\\|from.*auth-utils\" /d/Projects/Blockchain/Superchain/Booztory --include=*.tsx --include=*.ts)",
       "WebFetch(domain:onchainkit.xyz)",
       "WebFetch(domain:docs.base.org)",
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "WebFetch(domain:worldscan.org)"
     ]
   }
 }

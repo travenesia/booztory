@@ -85,6 +85,7 @@
 
   .elegance-button {
     @apply text-white rounded-full shadow-custom-md hover:shadow-custom-md-hover;
+    --tw-shadow-color: #D6D9DD;
     background-color: #cc0000;
     transition: all 0.2s ease;
   }
