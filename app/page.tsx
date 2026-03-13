@@ -8,7 +8,7 @@ import { ContentCard } from "@/components/content/contentCard"
 import { ContentSubmissionDrawer } from "@/components/modals/submitContent"
 import { Button } from "@/components/ui/button"
 import { RotatingWords } from "@/components/ui/rotating-words"
-import { Plus } from "lucide-react"
+import { HiMiniPlus } from "react-icons/hi2"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
@@ -143,7 +143,7 @@ export default function Home() {
             onClick={handleFabClick}
             className="w-fit px-6 py-3 text-white font-medium rounded-full elegance-button shadow-custom-sm hover:shadow-custom-sm flex items-center gap-2"
           >
-            <Plus size={18} strokeWidth={2.5} />
+            <HiMiniPlus size={18} />
             Submit Content
           </Button>
         </div>
@@ -161,10 +161,10 @@ export default function Home() {
       {/* FAB — mobile only */}
       <Button
         onClick={handleFabClick}
-        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 rounded-full text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button flex items-center justify-center p-0"
+        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 rounded-full text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button flex items-center justify-center p-0 [&_svg]:size-auto"
         aria-label="Submit Content"
       >
-        <Plus size={48} strokeWidth={2.5} />
+        <HiMiniPlus size={36} />
       </Button>
       <ContentSubmissionDrawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
       <Navbar />

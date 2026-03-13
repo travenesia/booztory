@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, Gift, DollarCircle } from "iconoir-react"
+import { HiClock, HiGift, HiCurrencyDollar } from "react-icons/hi2"
 import { formatStatNumber } from "@/components/tweet/utils"
 
 interface ContentStatsProps {
@@ -38,11 +38,11 @@ export function ContentStats({
           aria-label="Support this App"
           disabled={!isConnected}
         >
-          <Gift width={16} height={16} className="text-white" />
+          <HiGift size={16} className="text-white" />
         </button>
 
         <div className="flex items-center" title="USDC Donated">
-          <DollarCircle width={16} height={16} className="text-white flex-shrink-0 mr-1" />
+          <HiCurrencyDollar size={16} className="text-white flex-shrink-0 mr-1" />
           <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
             {formatStatNumber(donations)}
           </span>
@@ -61,7 +61,7 @@ export function ContentStats({
         aria-label={`Support @${username}`}
         disabled={!isConnected}
       >
-        <Gift width={16} height={16} className="text-white" />
+        <HiGift size={16} className="text-white" />
       </button>
 
       <div className="flex items-center" title={`Submitted by ${username}`}>
@@ -72,14 +72,14 @@ export function ContentStats({
 
       <div className="flex items-center h-full ml-auto space-x-2 pr-1 sm:pr-2">
         <div className="flex items-center" title="Time Left">
-          <Clock width={16} height={16} className="text-white flex-shrink-0 mr-1" />
+          <HiClock size={16} className="text-white flex-shrink-0 mr-1" />
           <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
             {formatTime(timeLeft)}
           </span>
         </div>
 
         <div className="flex items-center" title="USDC Donated">
-          <DollarCircle width={16} height={16} className="text-white flex-shrink-0 mr-1" />
+          <HiCurrencyDollar size={16} className="text-white flex-shrink-0 mr-1" />
           <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
             {formatStatNumber(donations)}
           </span>

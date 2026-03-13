@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft } from "iconoir-react"
+import { HiMiniArrowSmallLeft } from "react-icons/hi2"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
@@ -27,13 +27,13 @@ export function PageTopbar({ title }: PageTopbarProps) {
 
         {/* Mobile: back arrow | Desktop: logo + Booztory wordmark */}
         <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-[#cc0000]">
-          <ArrowLeft width={24} height={24} className="md:hidden" />
+          <HiMiniArrowSmallLeft size={24} className="md:hidden" />
           <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
           <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
         </Link>
 
-        {/* Mobile: page title */}
-        <h1 className="md:hidden text-lg font-medium text-gray-900">{title}</h1>
+        {/* Mobile: page title — absolutely centered relative to viewport */}
+        <h1 className="md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-medium text-gray-900">{title}</h1>
 
         {/* Desktop: nav links + connect wallet | Mobile: connect wallet + FAQ icon */}
         <div className="flex items-center space-x-4">

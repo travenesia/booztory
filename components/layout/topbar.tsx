@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Book } from "iconoir-react"
+import { HiOutlineSparkles } from "react-icons/hi2"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -25,7 +25,7 @@ export function Topbar() {
           <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
           <span className="hidden md:inline text-xs italic text-gray-400 leading-none">Live on Base Sepolia, Mainnet Coming Soon</span>
         </Link>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-1">
           {/* Desktop nav links — hidden on mobile */}
           <nav className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
@@ -47,9 +47,15 @@ export function Topbar() {
               </Link>
             ))}
           </nav>
+          {/* X (Twitter) icon — mobile/tablet only */}
+          <a href="https://x.com/booztory" target="_blank" rel="noopener noreferrer" className="md:hidden p-1 transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="Follow on X">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </a>
           {/* FAQ icon — mobile/tablet only */}
           <Link href="/faq" className="md:hidden p-1 transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="FAQ">
-            <Book size={24} />
+            <HiOutlineSparkles size={24} />
           </Link>
           <ConnectWalletButton />
         </div>

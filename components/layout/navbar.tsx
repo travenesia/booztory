@@ -1,14 +1,14 @@
 "use client"
 
-import { Home, SkipNext, Clock } from "iconoir-react"
+import { HiHome, HiMiniForward, HiFolder } from "react-icons/hi2"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { name: "Home", href: "/", icon: Home },
-  { name: "Upcoming", href: "/upcoming", icon: SkipNext },
-  { name: "History", href: "/history", icon: Clock },
+  { name: "Home", href: "/", icon: HiHome },
+  { name: "Upcoming", href: "/upcoming", icon: HiMiniForward },
+  { name: "History", href: "/history", icon: HiFolder },
 ]
 
 export function Navbar() {
@@ -29,7 +29,7 @@ export function Navbar() {
               )}
               aria-label={item.name}
             >
-              <item.icon width={24} height={24} />
+              <item.icon size={24} />
             </Link>
           )
         })}

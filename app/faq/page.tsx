@@ -12,20 +12,6 @@ export default function FAQPage() {
         <div className="space-y-6">
           {/* Hero Section */}
           <div className="text-center mb-4">
-            <a
-              href="https://x.com/booztory"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 text-gray-900 hover:text-red-700 transition-colors mb-3"
-            >
-              <span className="text-sm font-medium">Follow Booztory on</span>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
-                  fill="currentColor"
-                />
-              </svg>
-            </a>
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
               <p className="text-sm text-gray-700 leading-relaxed text-left">
                 Booztory is a decentralized digital spotlight built on Base. Rent a 15-minute featured slot for just 1 USDC and get your content seen by the world. Support creators you love — or earn support from your audience — through on-chain donations.
@@ -37,13 +23,10 @@ export default function FAQPage() {
           <Accordion type="single" collapsible className="w-full space-y-4">
             <AccordionItem
               value="availability"
-              className="bg-gray-0 rounded-lg border border-gray-300 shadow-custom-sm"
+              className="bg-gray-0 rounded-lg border border-gray-300"
             >
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <div className="flex items-center space-x-3">
-                  <span className="text-xl">🌍</span>
-                  <span className="font-medium text-gray-900">Is Booztory available in my country?</span>
-                </div>
+                <span className="font-medium text-gray-900">Is Booztory available in my country?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-sm text-gray-700 space-y-2">
@@ -55,12 +38,9 @@ export default function FAQPage() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="payments" className="bg-gray-0 rounded-lg border border-gray-300 shadow-custom-sm">
+            <AccordionItem value="payments" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <div className="flex items-center space-x-3">
-                  <span className="text-xl">💰</span>
-                  <span className="font-medium text-gray-900">How do payments work?</span>
-                </div>
+                <span className="font-medium text-gray-900">How do payments work?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-sm text-gray-700 space-y-3">
@@ -88,12 +68,9 @@ export default function FAQPage() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="platforms" className="bg-gray-0 rounded-lg border border-gray-300 shadow-custom-sm">
+            <AccordionItem value="platforms" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <div className="flex items-center space-x-3">
-                  <span className="text-xl">🎥</span>
-                  <span className="font-medium text-gray-900">Which platforms are supported?</span>
-                </div>
+                <span className="font-medium text-gray-900">Which platforms are supported?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-sm text-gray-700 space-y-4">
@@ -147,12 +124,9 @@ export default function FAQPage() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="features" className="bg-gray-0 rounded-lg border border-gray-300 shadow-custom-sm">
+            <AccordionItem value="features" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <div className="flex items-center space-x-3">
-                  <span className="text-xl">⏱</span>
-                  <span className="font-medium text-gray-900">What can I do on Booztory?</span>
-                </div>
+                <span className="font-medium text-gray-900">What can I do on Booztory?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-sm text-gray-700 space-y-3">
@@ -181,12 +155,9 @@ export default function FAQPage() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="roadmap" className="bg-gray-0 rounded-lg border border-gray-300 shadow-custom-sm">
+            <AccordionItem value="roadmap" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <div className="flex items-center space-x-3">
-                  <span className="text-xl">🚀</span>
-                  <span className="font-medium text-gray-900">What's next for Booztory?</span>
-                </div>
+                <span className="font-medium text-gray-900">What's next for Booztory?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-sm text-gray-700 space-y-3">

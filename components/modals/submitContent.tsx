@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Drawer } from "vaul"
 import { YouTubeIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { Loader2 } from "lucide-react"
@@ -732,90 +732,95 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="rounded-t-xl p-4 bg-gray-0 text-gray-900 overflow-hidden transition-all duration-400 ease-out"
-        style={getSheetContentStyle()}
-      >
-        <SheetHeader className="mb-4 flex-shrink-0">
-          <SheetTitle className="text-lg text-gray-900 font-medium">Submit Content</SheetTitle>
-          <SheetDescription className="text-xs text-gray-500">
-            Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
-          </SheetDescription>
-        </SheetHeader>
+    <Drawer.Root open={open} onOpenChange={onOpenChange}>
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-0 bg-black/80 z-50" />
+        <Drawer.Content
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl p-4 bg-gray-0 text-gray-900 overflow-hidden focus:outline-none"
+          style={getSheetContentStyle()}
+        >
+          {/* Drag handle */}
+          <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-4" />
 
-        <div className="flex flex-col h-full">
-          {/* Scrollable content area */}
-          <div className="flex-1 space-y-4" style={getContentAreaStyle()}>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
-                  Content URL
-                </Label>
-                {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
+          <div className="mb-4 flex-shrink-0">
+            <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
+            <Drawer.Description className="text-xs text-gray-500">
+              Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
+            </Drawer.Description>
+          </div>
+
+          <div className="flex flex-col h-full">
+            {/* Scrollable content area */}
+            <div className="flex-1 space-y-4" style={getContentAreaStyle()}>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
+                    Content URL
+                  </Label>
+                  {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
+                </div>
+                <Input
+                  id="content-url"
+                  placeholder={getPlaceholderText()}
+                  value={contentUrl}
+                  onChange={handleUrlChange}
+                  disabled={isAnyOperationInProgress}
+                  className={`rounded-[5px] border-gray-300 bg-gray-0 text-gray-900 focus:border-red-700 focus:ring-red-700 transition-colors duration-200 ${previewError ? "border-red-700 focus:ring-red-700" : ""}`}
+                />
+                {previewError && <p className="text-xs text-red-700 mt-1">{previewError}</p>}
               </div>
-              <Input
-                id="content-url"
-                placeholder={getPlaceholderText()}
-                value={contentUrl}
-                onChange={handleUrlChange}
-                disabled={isAnyOperationInProgress}
-                className={`rounded-[5px] border-gray-300 bg-gray-0 text-gray-900 focus:border-red-700 focus:ring-red-700 transition-colors duration-200 ${previewError ? "border-red-700 focus:ring-red-700" : ""}`}
-              />
-              {previewError && <p className="text-xs text-red-700 mt-1">{previewError}</p>}
+
+              {contentType && urlForPreview && (
+                <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
+                  <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
+                  {isPreviewLoading ? (
+                    <div className="flex items-center justify-center h-[200px]">
+                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                    </div>
+                  ) : isValidUrl && urlForPreview ? (
+                    <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
+                      <ContentEmbed
+                        contentType={contentType}
+                        contentUrl={urlForPreview}
+                        aspectRatio={
+                          contentType === "tiktok"
+                            ? detectedTikTokAspectRatio
+                            : contentType === "youtube" && urlForPreview.includes("shorts")
+                              ? "9:16"
+                              : "16:9"
+                        }
+                        isPreview={true}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
+                      <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {contentType && urlForPreview && (
-              <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
-                <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
-                {isPreviewLoading ? (
-                  <div className="flex items-center justify-center h-[200px]">
-                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                  </div>
-                ) : isValidUrl && urlForPreview ? (
-                  <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
-                    <ContentEmbed
-                      contentType={contentType}
-                      contentUrl={urlForPreview}
-                      aspectRatio={
-                        contentType === "tiktok"
-                          ? detectedTikTokAspectRatio
-                          : contentType === "youtube" && urlForPreview.includes("shorts")
-                            ? "9:16"
-                            : "16:9"
-                      }
-                      isPreview={true}
-                    />
+            {/* Fixed button container */}
+            <div style={getButtonContainerStyle()}>
+              <Button
+                className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
+                onClick={handleSubmit}
+                disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
+              >
+                {isAnyOperationInProgress ? (
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    {getButtonText()}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
-                    <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
-                  </div>
+                  getButtonText()
                 )}
-              </div>
-            )}
+              </Button>
+            </div>
           </div>
-
-          {/* Fixed button container */}
-          <div style={getButtonContainerStyle()}>
-            <Button
-              className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
-              onClick={handleSubmit}
-              disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
-            >
-              {isAnyOperationInProgress ? (
-                <div className="flex items-center justify-center">
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  {getButtonText()}
-                </div>
-              ) : (
-                getButtonText()
-              )}
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   )
 }

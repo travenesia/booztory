@@ -226,7 +226,7 @@ export function ConnectWalletButton() {
   return (
     <div className="flex flex-col items-center">
       <Button
-        className="h-8 px-4 py-2 elegance-button text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] !shadow-none hover:!shadow-none"
+        className="h-8 px-4 py-2 elegance-button text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] !shadow-none hover:!shadow-none rounded-full"
         onClick={handleClick}
         disabled={isDisabled}
       >
