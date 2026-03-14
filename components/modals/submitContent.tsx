@@ -684,7 +684,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/80 z-50" />
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl bg-gray-0 text-gray-900 focus:outline-none"
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl bg-gray-0 text-gray-900 focus:outline-none overflow-hidden"
           style={getSheetContentStyle()}
         >
           {/* Inner scroll wrapper */}
