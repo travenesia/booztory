@@ -161,7 +161,7 @@ export default function Home() {
       {/* FAB — mobile only */}
       <Button
         onClick={handleFabClick}
-        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button flex items-center justify-center p-0 [&_svg]:size-auto"
+        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button rounded-full flex items-center justify-center p-0 [&_svg]:size-auto"
         aria-label="Submit Content"
       >
         <HiMiniPlus size={36} />
