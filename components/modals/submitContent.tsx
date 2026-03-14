@@ -667,14 +667,13 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const getSheetContentStyle = () => {
     if (!isKeyboardVisible) {
       return {
-        height: "auto",
-        maxHeight: hasPreview ? "85vh" : "none",
-        transition: "max-height 0.3s ease, bottom 0.3s ease",
+        height: hasPreview ? "85vh" : "auto",
+        transition: "height 0.3s ease, bottom 0.3s ease",
         bottom: "0px",
       }
     }
 
-    // When keyboard is visible: lift above keyboard, cap height to available space.
+    // When keyboard is visible: lift above keyboard, auto height capped to available space.
     const availableHeight = viewportHeight - 16
     return {
       height: "auto",
