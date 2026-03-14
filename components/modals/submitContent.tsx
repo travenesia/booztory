@@ -692,148 +692,110 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
     }
   }
 
-  // Calculate content area height when keyboard is visible
-  const getContentAreaStyle = () => {
-    if (!isKeyboardVisible) {
-      return {
-        paddingBottom: "24px",
-      }
-    }
-
-    // When keyboard is visible, leave room for header (~80px) and button (~60px)
-    const availableContentHeight = viewportHeight - 80 - 60 - 20
-
-    return {
-      maxHeight: `${Math.max(availableContentHeight, 80)}px`,
-      overflowY: "auto" as const,
-      paddingBottom: "8px",
-    }
-  }
-
-  // Button container style to keep it above keyboard
-  const getButtonContainerStyle = () => {
-    if (!isKeyboardVisible) {
-      return {
-        position: "relative" as const,
-        paddingTop: "8px",
-        paddingBottom: "24px",
-      }
-    }
-
-    return {
-      position: "sticky" as const,
-      bottom: 0,
-      backgroundColor: "#FFFFFF", // Match drawer background
-      paddingTop: "12px",
-      paddingBottom: "12px",
-      borderTop: "1px solid #E5E7EB", // Light border to separate from content
-      marginTop: "8px",
-      zIndex: 10,
-    }
-  }
-
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl p-4 bg-white text-gray-900 overflow-hidden outline-none"
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl bg-white text-gray-900 outline-none flex flex-col"
           style={getSheetContentStyle()}
         >
           {/* vaul drag handle */}
-          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-300 flex-shrink-0" />
+          <div className="mx-auto mt-3 mb-2 h-1.5 w-12 rounded-full bg-gray-300 flex-shrink-0" />
 
-          <div className="mb-4 flex-shrink-0">
+          {/* Header */}
+          <div className="px-4 pb-3 flex-shrink-0">
             <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
             <Drawer.Description className="text-xs text-gray-500 mt-1">
               Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
             </Drawer.Description>
           </div>
 
-          <div className="flex flex-col h-full">
-            {/* Scrollable content area */}
-            <div className="flex-1 space-y-4" style={getContentAreaStyle()}>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
-                    Content URL
-                  </Label>
-                  {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
-                </div>
-                <div className="relative">
-                  {contentUrl && previewError && (
-                    <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
-                  )}
-                  {contentUrl && isValidUrl && (
-                    <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
-                  )}
-                  <Input
-                    id="content-url"
-                    placeholder={getPlaceholderText()}
-                    value={contentUrl}
-                    onChange={handleUrlChange}
-                    disabled={isAnyOperationInProgress}
-                    className={`rounded-[5px] transition-colors duration-200 text-gray-900 focus-visible:ring-0 focus-visible:ring-offset-0 ${
-                      !contentUrl
-                        ? "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
-                        : previewError
-                          ? "bg-gray-0 border-gray-300 focus:border-gray-400 pl-9"
-                          : isValidUrl
-                            ? "bg-green-50 border-green-200 focus:border-green-400 pl-9"
-                            : "bg-gray-0 border-gray-300 focus:border-gray-400"
-                    }`}
-                  />
-                </div>
+          {/* Scrollable content area — always above button */}
+          <div className="flex-1 overflow-y-auto px-4 space-y-4 min-h-0">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
+                  Content URL
+                </Label>
+                {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
               </div>
-
-              {contentType && urlForPreview && (
-                <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
-                  <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
-                  {isPreviewLoading ? (
-                    <div className="flex items-center justify-center h-[200px]">
-                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                    </div>
-                  ) : isValidUrl && urlForPreview ? (
-                    <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
-                      <ContentEmbed
-                        contentType={contentType}
-                        contentUrl={urlForPreview}
-                        aspectRatio={
-                          contentType === "tiktok"
-                            ? detectedTikTokAspectRatio
-                            : contentType === "youtube" && urlForPreview.includes("shorts")
-                              ? "9:16"
-                              : "16:9"
-                        }
-                        isPreview={true}
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
-                      <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="relative">
+                {contentUrl && previewError && (
+                  <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
+                )}
+                {contentUrl && isValidUrl && (
+                  <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
+                )}
+                <Input
+                  id="content-url"
+                  placeholder={getPlaceholderText()}
+                  value={contentUrl}
+                  onChange={handleUrlChange}
+                  disabled={isAnyOperationInProgress}
+                  className={`rounded-[5px] transition-colors duration-200 text-gray-900 focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                    !contentUrl
+                      ? "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
+                      : previewError
+                        ? "bg-gray-0 border-gray-300 focus:border-gray-400 pl-9"
+                        : isValidUrl
+                          ? "bg-green-50 border-green-200 focus:border-green-400 pl-9"
+                          : "bg-gray-0 border-gray-300 focus:border-gray-400"
+                  }`}
+                />
+              </div>
             </div>
 
-            {/* Fixed button container */}
-            <div style={getButtonContainerStyle()}>
-              <Button
-                className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
-                onClick={handleSubmit}
-                disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
-              >
-                {isAnyOperationInProgress ? (
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {getButtonText()}
+            {contentType && urlForPreview && (
+              <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
+                <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
+                {isPreviewLoading ? (
+                  <div className="flex items-center justify-center h-[200px]">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  </div>
+                ) : isValidUrl && urlForPreview ? (
+                  <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
+                    <ContentEmbed
+                      contentType={contentType}
+                      contentUrl={urlForPreview}
+                      aspectRatio={
+                        contentType === "tiktok"
+                          ? detectedTikTokAspectRatio
+                          : contentType === "youtube" && urlForPreview.includes("shorts")
+                            ? "9:16"
+                            : "16:9"
+                      }
+                      isPreview={true}
+                    />
                   </div>
                 ) : (
-                  getButtonText()
+                  <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
+                    <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
+                  </div>
                 )}
-              </Button>
-            </div>
+              </div>
+            )}
+
+            {/* Bottom spacing inside scroll area */}
+            <div className="h-2" />
+          </div>
+
+          {/* Button — always pinned at bottom */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-6 border-t border-gray-100 bg-white">
+            <Button
+              className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
+              onClick={handleSubmit}
+              disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
+            >
+              {isAnyOperationInProgress ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  {getButtonText()}
+                </div>
+              ) : (
+                getButtonText()
+              )}
+            </Button>
           </div>
         </Drawer.Content>
       </Drawer.Portal>
