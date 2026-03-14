@@ -662,7 +662,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
 
-  const hasPreview = !!(contentType && urlForPreview)
+  const hasPreview = !!(contentType && urlForPreview && isValidUrl)
 
   const getSheetContentStyle = () => {
     if (!isKeyboardVisible) {
@@ -674,11 +674,12 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       }
     }
 
-    // When keyboard is visible: shrink to visual viewport, lift above keyboard.
+    // When keyboard is visible: lift above keyboard, cap height to available space.
     const availableHeight = viewportHeight - 16
     return {
-      height: `${availableHeight}px`,
-      transition: "height 0.3s ease, bottom 0.3s ease",
+      height: "auto",
+      maxHeight: `${availableHeight}px`,
+      transition: "max-height 0.3s ease, bottom 0.3s ease",
       bottom: isMiniApp ? "0px" : `${keyboardHeight}px`,
     }
   }
@@ -737,7 +738,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
               </div>
             </div>
 
-            {contentType && urlForPreview && (
+            {contentType && urlForPreview && isValidUrl && (
               <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
                 <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
                 {isPreviewLoading ? (
