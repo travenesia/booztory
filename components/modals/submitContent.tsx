@@ -665,22 +665,17 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const hasPreview = !!(contentType && urlForPreview && isValidUrl)
 
   const getSheetContentStyle = () => {
-    if (!isKeyboardVisible) {
+    if (isKeyboardVisible) {
       return {
-        height: "auto",
-        maxHeight: "90vh",
+        maxHeight: `${viewportHeight - 16}px`,
+        bottom: isMiniApp ? "0px" : `${keyboardHeight}px`,
         transition: "max-height 0.3s ease, bottom 0.3s ease",
-        bottom: "0px",
       }
     }
-
-    // When keyboard is visible: lift above keyboard, auto height capped to available space.
-    const availableHeight = viewportHeight - 16
     return {
-      height: "auto",
-      maxHeight: `${availableHeight}px`,
+      maxHeight: "90vh",
+      bottom: "0px",
       transition: "max-height 0.3s ease, bottom 0.3s ease",
-      bottom: isMiniApp ? "0px" : `${keyboardHeight}px`,
     }
   }
 
@@ -695,82 +690,83 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           {/* Drag handle */}
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-4" />
 
-          <div className="w-full px-4">
-          <div className="mb-4">
-            <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
-            <Drawer.Description className="text-xs text-gray-500">
-              Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
-            </Drawer.Description>
-          </div>
-
-          {/* Content area */}
-          <div className="space-y-4 pb-2">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
-                  Content URL
-                </Label>
-                {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
-              </div>
-              <div className="relative">
-                {contentUrl && previewError && (
-                  <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
-                )}
-                {contentUrl && isValidUrl && (
-                  <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
-                )}
-                <Input
-                  id="content-url"
-                  placeholder={getPlaceholderText()}
-                  value={contentUrl}
-                  onChange={handleUrlChange}
-                  disabled={isAnyOperationInProgress}
-                  className={`rounded-[5px] transition-colors duration-200 text-gray-900 focus:ring-1 ${
-                    !contentUrl
-                      ? "bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-300 placeholder:text-blue-300"
-                      : previewError
-                        ? "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300 pl-9"
-                        : isValidUrl
-                          ? "bg-green-50 border-green-200 focus:border-green-400 focus:ring-green-300 pl-9"
-                          : "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300"
-                  }`}
-                />
-              </div>
+          {/* Scrollable content */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4">
+            <div className="mb-4">
+              <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
+              <Drawer.Description className="text-xs text-gray-500">
+                Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
+              </Drawer.Description>
             </div>
 
-            {contentType && urlForPreview && isValidUrl && (
-              <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
-                <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
-                {isPreviewLoading ? (
-                  <div className="flex items-center justify-center h-[200px]">
-                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                  </div>
-                ) : isValidUrl && urlForPreview ? (
-                  <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
-                    <ContentEmbed
-                      contentType={contentType}
-                      contentUrl={urlForPreview}
-                      aspectRatio={
-                        contentType === "tiktok"
-                          ? detectedTikTokAspectRatio
-                          : contentType === "youtube" && urlForPreview.includes("shorts")
-                            ? "9:16"
-                            : "16:9"
-                      }
-                      isPreview={true}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
-                    <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
-                  </div>
-                )}
+            <div className="space-y-4 pb-2">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
+                    Content URL
+                  </Label>
+                  {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
+                </div>
+                <div className="relative">
+                  {contentUrl && previewError && (
+                    <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
+                  )}
+                  {contentUrl && isValidUrl && (
+                    <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
+                  )}
+                  <Input
+                    id="content-url"
+                    placeholder={getPlaceholderText()}
+                    value={contentUrl}
+                    onChange={handleUrlChange}
+                    disabled={isAnyOperationInProgress}
+                    className={`rounded-[5px] transition-colors duration-200 text-gray-900 focus:ring-1 ${
+                      !contentUrl
+                        ? "bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-300 placeholder:text-blue-300"
+                        : previewError
+                          ? "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300 pl-9"
+                          : isValidUrl
+                            ? "bg-green-50 border-green-200 focus:border-green-400 focus:ring-green-300 pl-9"
+                            : "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300"
+                    }`}
+                  />
+                </div>
               </div>
-            )}
+
+              {contentType && urlForPreview && isValidUrl && (
+                <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
+                  <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
+                  {isPreviewLoading ? (
+                    <div className="flex items-center justify-center h-[200px]">
+                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                    </div>
+                  ) : isValidUrl && urlForPreview ? (
+                    <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
+                      <ContentEmbed
+                        contentType={contentType}
+                        contentUrl={urlForPreview}
+                        aspectRatio={
+                          contentType === "tiktok"
+                            ? detectedTikTokAspectRatio
+                            : contentType === "youtube" && urlForPreview.includes("shorts")
+                              ? "9:16"
+                              : "16:9"
+                        }
+                        isPreview={true}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
+                      <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Button */}
-          <div className="pt-3 pb-6">
+          {/* Button — pinned at bottom, never scrolls away */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-6">
             <Button
               className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
               onClick={handleSubmit}
@@ -786,7 +782,6 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
               )}
             </Button>
           </div>
-          </div>{/* end centered wrapper */}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
