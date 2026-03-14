@@ -43,7 +43,7 @@ export function ContentStats({
 
         <div className="flex items-center" title="USDC Donated">
           <HiCurrencyDollar size={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
+          <span className="block min-w-[42px] text-xs font-medium text-white text-left tabular-nums">
             {formatStatNumber(donations)}
           </span>
         </div>
@@ -65,7 +65,7 @@ export function ContentStats({
       </button>
 
       <div className="flex items-center" title={`Submitted by ${username}`}>
-        <span className="block max-w-[6rem] text-xs font-medium text-white truncate">
+        <span className="block max-w-[6rem] text-xs font-medium text-white truncate mr-2">
           {username}
         </span>
       </div>
@@ -73,14 +73,14 @@ export function ContentStats({
       <div className="flex items-center h-full ml-auto space-x-2 pr-1 sm:pr-2">
         <div className="flex items-center" title="Time Left">
           <HiClock size={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
+          <span className="block min-w-[42px] text-xs font-medium text-white text-left tabular-nums">
             {formatTime(timeLeft)}
           </span>
         </div>
 
         <div className="flex items-center" title="USDC Donated">
           <HiCurrencyDollar size={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[3rem] text-xs font-medium text-white text-left tabular-nums">
+          <span className="block min-w-[42px] text-xs font-medium text-white text-left tabular-nums">
             {formatStatNumber(donations)}
           </span>
         </div>

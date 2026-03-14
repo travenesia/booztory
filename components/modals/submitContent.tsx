@@ -667,7 +667,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
     if (!isKeyboardVisible) {
       return {
         height: "auto",
-        transition: "height 0.3s ease, bottom 0.3s ease",
+        maxHeight: hasPreview ? "85vh" : "none",
+        transition: "max-height 0.3s ease, bottom 0.3s ease",
         bottom: "0px",
       }
     }
@@ -692,8 +693,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           {/* Drag handle */}
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-4" />
 
-          <div className="flex flex-col flex-1 min-h-0 w-full px-4">
-          <div className="mb-4 flex-shrink-0">
+          <div className="w-full px-4">
+          <div className="mb-4">
             <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
             <Drawer.Description className="text-xs text-gray-500">
               Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
@@ -766,8 +767,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
             )}
           </div>
 
-          {/* Button — always pinned at bottom */}
-          <div className="flex-shrink-0 pt-3 pb-6">
+          {/* Button */}
+          <div className="pt-3 pb-6">
             <Button
               className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
               onClick={handleSubmit}
