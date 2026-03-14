@@ -662,8 +662,6 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
 
-  const hasPreview = !!(contentType && urlForPreview && isValidUrl)
-
   const getSheetContentStyle = (): React.CSSProperties => {
     if (isKeyboardVisible) {
       return {
@@ -688,7 +686,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           style={getSheetContentStyle()}
         >
           <div
-            className="pt-4 px-4"
+            className="pt-4 px-4 overflow-y-auto max-h-[inherit]"
             style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
           >
             {/* Drag handle */}
@@ -722,14 +720,14 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
                     value={contentUrl}
                     onChange={handleUrlChange}
                     disabled={isAnyOperationInProgress}
-                    className={`rounded-[5px] transition-colors duration-200 text-gray-900 focus:ring-1 ${
+                    className={`rounded-[5px] transition-colors duration-200 text-gray-900 focus-visible:ring-0 focus-visible:ring-offset-0 ${
                       !contentUrl
-                        ? "bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-300 placeholder:text-blue-300"
+                        ? "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
                         : previewError
-                          ? "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300 pl-9"
+                          ? "bg-gray-0 border-gray-300 focus:border-gray-400 pl-9"
                           : isValidUrl
-                            ? "bg-green-50 border-green-200 focus:border-green-400 focus:ring-green-300 pl-9"
-                            : "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300"
+                            ? "bg-green-50 border-green-200 focus:border-green-400 pl-9"
+                            : "bg-gray-0 border-gray-300 focus:border-gray-400"
                     }`}
                   />
                 </div>
