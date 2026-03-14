@@ -135,10 +135,10 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
                 type="button"
                 onClick={() => setAmount(value)}
                 disabled={isDonating}
-                className={`rounded-full w-12 h-12 flex items-center justify-center transition-all duration-200 shadow-[2px_2px_0px_0px_#1B1B1B] hover:shadow-[3px_3px_0px_0px_#1B1B1B] hover:transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`rounded-full w-12 h-12 flex items-center justify-center font-base text-sm border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   amount === value
-                    ? "bg-[#cc0000] text-white"
-                    : "border border-elegance-sophisticated-sage bg-elegance-ethereal-ivory text-elegance-timeless-noir"
+                    ? "bg-main text-main-foreground border-gray-900 shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+                    : "bg-secondary-background text-foreground border-gray-300 shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
                 }`}
               >
                 {value}
@@ -152,7 +152,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
               value={amount}
               onChange={(e) => setAmount(Number.parseFloat(e.target.value) || 0)}
               disabled={isDonating}
-              className="w-20 h-12 rounded-full shadow-[2px_2px_0px_0px_#1B1B1B] focus:shadow-[3px_3px_0px_0px_#1B1B1B] focus:transform focus:-translate-y-0.5 transition-all duration-200 bg-elegance-ethereal-ivory text-elegance-timeless-noir border-elegance-sophisticated-sage focus:border-red-700 focus:ring-red-700 disabled:opacity-50"
+              className="w-20 h-12 rounded-full shadow-shadow bg-secondary-background text-foreground border border-gray-300 focus:translate-x-boxShadowX focus:translate-y-boxShadowY focus:shadow-none transition-all focus:ring-0 focus-visible:ring-0 disabled:opacity-50"
             />
           </div>
         </div>

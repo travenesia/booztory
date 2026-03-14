@@ -11,7 +11,11 @@
       "WebFetch(domain:onchainkit.xyz)",
       "WebFetch(domain:docs.base.org)",
       "Bash(pnpm add:*)",
-      "WebFetch(domain:worldscan.org)"
+      "WebFetch(domain:worldscan.org)",
+      "WebFetch(domain:magicui.design)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api:*)",
+      "Bash(pnpm dlx:*)"
     ]
   }
 }

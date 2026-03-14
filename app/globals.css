@@ -65,6 +65,9 @@
     --input: 0 0% 25%;
     --ring: 0 100% 50%; /* red for dark mode focus rings */
   }
+  .theme {
+    --animate-shine: shine var(--duration) infinite linear;
+  }
 }
 
 @layer base {
@@ -80,11 +83,11 @@
   [type="button"],
   [type="submit"],
   [type="reset"] {
-    @apply rounded-full px-4;
+    @apply rounded-base px-4;
   }
 
   .elegance-button {
-    @apply text-white rounded-full shadow-custom-md hover:shadow-custom-md-hover;
+    @apply text-white rounded-base shadow-custom-md hover:shadow-custom-md-hover;
     --tw-shadow-color: #D6D9DD;
     background-color: #cc0000;
     transition: all 0.2s ease;
@@ -307,4 +310,18 @@ main {
 
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+@theme inline {
+  @keyframes shine {
+  0% {
+    background-position: 0% 0%;
+    }
+  50% {
+    background-position: 100% 100%;
+    }
+  to {
+    background-position: 0% 0%;
+    }
+  }
 }

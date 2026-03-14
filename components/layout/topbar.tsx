@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { HiOutlineSparkles } from "react-icons/hi2"
+import { HiOutlineMegaphone } from "react-icons/hi2"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -47,16 +47,17 @@ export function Topbar() {
               </Link>
             ))}
           </nav>
-          {/* X (Twitter) icon — mobile/tablet only */}
-          <a href="https://x.com/booztory" target="_blank" rel="noopener noreferrer" className="md:hidden p-1 transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="Follow on X">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
-          </a>
-          {/* FAQ icon — mobile/tablet only */}
-          <Link href="/faq" className="md:hidden p-1 transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="FAQ">
-            <HiOutlineSparkles size={24} />
-          </Link>
+          {/* X + FAQ icons — mobile/tablet only */}
+          <div className="md:hidden flex items-center">
+            <a href="https://x.com/booztory" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-7 h-7 rounded-base transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="Follow on X">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </a>
+            <Link href="/faq" className="flex items-center justify-center w-7 h-7 rounded-base transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="FAQ">
+              <HiOutlineMegaphone size={16} />
+            </Link>
+          </div>
           <ConnectWalletButton />
         </div>
       </div>

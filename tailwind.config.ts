@@ -21,7 +21,23 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
+      borderRadius: {
+        base: "5px",
+      },
+      fontWeight: {
+        base: "500",
+        heading: "700",
+      },
+      translate: {
+        boxShadowX: "4px",
+        boxShadowY: "4px",
+        reverseBoxShadowX: "-4px",
+        reverseBoxShadowY: "-4px",
+      },
       colors: {
+        main: "#cc0000",
+        "main-foreground": "#ffffff",
+        "secondary-background": "#FBFBFC",
         gray: {
           0: "#FFFFFF",
           25: "#FBFBFC",
@@ -106,6 +122,7 @@ const config: Config = {
         shadowColor: "#1B1B1B", // Custom color for shadows
       },
       boxShadow: {
+        shadow: "4px 4px 0px 0px #1B1B1B",
         "custom-sm": "3.2px 3.2px 0px 0px var(--tw-shadow-color, #1B1B1B)",
         "custom-md": "6.4px 6.4px 0px 0px var(--tw-shadow-color, #1B1B1B)",
         "custom-md-hover": "8px 8px 0px 0px var(--tw-shadow-color, #1B1B1B)",

@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { SessionProvider } from "@/providers/session-provider"
 import { WagmiRainbowProvider } from "@/providers/wagmi-provider"
 import { MiniAppInit } from "@/components/miniapp-init"
+import { FlickeringGrid } from "@/components/ui/flickering-grid"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -64,12 +65,20 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className={`${inter.variable} font-sans bg-elegance-ethereal-ivory min-h-screen`}>
+        <FlickeringGrid
+          className="fixed inset-0 z-0 pointer-events-none"
+          color="#000000"
+          maxOpacity={0.08}
+          flickerChance={0.1}
+          squareSize={4}
+          gridGap={6}
+        />
         <SessionProvider>
           <WagmiRainbowProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
               <MiniAppInit />
               <ScrollToTop />
-              <div className="mx-auto max-w-[650px] min-h-screen relative">{children}</div>
+              <div className="mx-auto max-w-[650px] min-h-screen relative z-10">{children}</div>
               <Toaster />
             </ThemeProvider>
           </WagmiRainbowProvider>

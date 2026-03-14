@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { DonationModal } from "@/components/modals/donationModal"
 import { useWalletName } from "@/hooks/useWalletName"
 import { BOOZTORY_ADDRESS } from "@/lib/contract"
+import { ShineBorder } from "@/components/ui/shine-border"
 
 type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify"
 
@@ -207,13 +208,16 @@ export function ContentCard({
                 responsive={true}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-25">
+              <div className="w-full h-full flex items-center justify-center bg-gray-25 relative overflow-hidden rounded-t-[5px]">
                 {isPlaceholder ? (
-                  <div className="text-center p-4">
-                    <h1 className="text-xl font-medium mb-2 text-gray-900">Welcome to Booztory</h1>
-                    <p className="text-sm text-gray-700">Submit your content to get featured here!</p>
-                    <p className="text-xs text-gray-500 mt-2">You can support the platform by donating.</p>
-                  </div>
+                  <>
+                    <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
+                    <div className="text-center p-4">
+                      <h1 className="text-xl font-medium mb-2 text-gray-900">Welcome to Booztory</h1>
+                      <p className="text-sm text-gray-700">Submit your content to get featured here!</p>
+                      <p className="text-xs text-gray-500 mt-2">You can support the platform by donating.</p>
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center p-4">
                     <p className="text-sm text-gray-700">Content preview not available.</p>
