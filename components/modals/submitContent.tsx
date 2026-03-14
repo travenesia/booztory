@@ -760,7 +760,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
               )}
             </div>
 
-            <div className="pt-3 pb-6 md:pb-4">
+            <div className="pt-3 pb-4">
               <Button
                 className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
                 onClick={handleSubmit}
