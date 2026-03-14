@@ -711,8 +711,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
             </Drawer.Description>
           </div>
 
-          {/* Scrollable content area — always above button */}
-          <div className="flex-1 overflow-y-auto px-4 space-y-4 min-h-0">
+          {/* Content area — expands to fit preview */}
+          <div className="px-4 space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
@@ -776,8 +776,6 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
               </div>
             )}
 
-            {/* Bottom spacing inside scroll area */}
-            <div className="h-2" />
           </div>
 
           {/* Button — always pinned at bottom */}
