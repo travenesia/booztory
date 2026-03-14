@@ -673,7 +673,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       }
     }
     return {
-      maxHeight: "92vh",
+      maxHeight: "95vh",
       bottom: "0px",
       transition: "bottom 0.3s ease, max-height 0.3s ease",
     }
@@ -690,8 +690,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           {/* Drag handle */}
           <div className="mx-auto w-12 h-1.5 rounded-full bg-gray-300 mb-4 flex-shrink-0" />
 
-          {/* Scrollable content area */}
-          <div className="px-4 overflow-y-auto">
+          {/* Scrollable content area — flex-1 min-h-0 lets it fill available space and scroll when drawer hits maxHeight */}
+          <div className="px-4 overflow-y-auto flex-1 min-h-0">
             <div className="mb-4">
               <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
               <Drawer.Description className="text-xs text-gray-500">
