@@ -697,7 +697,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl bg-white text-gray-900 outline-none flex flex-col"
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl bg-white text-gray-900 outline-none flex flex-col overflow-hidden"
           style={getSheetContentStyle()}
         >
           {/* Drag handle */}
@@ -711,8 +711,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
             </Drawer.Description>
           </div>
 
-          {/* Content area — expands to fit preview */}
-          <div className="px-4 space-y-4">
+          {/* Content area — expands to fit preview, scrolls when it exceeds available space */}
+          <div className="px-4 space-y-4 overflow-y-auto">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 {/* Radix Label */}
