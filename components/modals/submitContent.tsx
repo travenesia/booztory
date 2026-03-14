@@ -711,8 +711,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
             </Drawer.Description>
           </div>
 
-          {/* Content area — expands to fit preview, scrolls when it exceeds available space */}
-          <div className="px-4 space-y-4 overflow-y-auto">
+          {/* Content area — expands to fit preview */}
+          <div className="px-4 space-y-4 min-h-0">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 {/* Radix Label */}
