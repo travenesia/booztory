@@ -691,7 +691,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           <div className="mx-auto w-12 h-1.5 rounded-full bg-gray-300 mb-4 flex-shrink-0" />
 
           {/* Scrollable content area — flex-1 min-h-0 lets it fill available space and scroll when drawer hits maxHeight */}
-          <div className="px-4 overflow-y-auto flex-1 min-h-0">
+          <div className="px-4 overflow-y-auto flex-auto min-h-0">
             <div className="mb-4">
               <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
               <Drawer.Description className="text-xs text-gray-500">
