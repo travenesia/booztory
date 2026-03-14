@@ -6,6 +6,7 @@ import { HistoryCard } from "@/components/content/historyCard"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAllPastSlots } from "@/hooks/useContractContent"
+import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 
 const ITEMS_PER_PAGE = 5
 
@@ -48,7 +49,7 @@ function HistoryPage() {
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="History" />
-      <section className="py-6 px-6 h-[calc(100vh-96px)] overflow-y-auto max-w-[650px] mx-auto w-full">
+      <section className="py-6 px-6 max-w-[650px] mx-auto w-full">
         {allItems.length === 0 && !isLoadingMore && !isLoading ? (
           <div className="text-center py-8">
             <div className="text-gray-500 mb-2">No content history available</div>
@@ -98,6 +99,12 @@ function HistoryPage() {
           <div className="text-center py-4 text-gray-500 text-sm">All history content loaded.</div>
         )}
       </section>
+      {/* Progressive blur fixed above navbar */}
+      <div className="fixed bottom-12 md:bottom-0 left-0 right-0 h-20 pointer-events-none z-40">
+        <div className="relative h-full">
+          <ProgressiveBlur height="100%" position="bottom" />
+        </div>
+      </div>
       <Navbar />
     </main>
   )

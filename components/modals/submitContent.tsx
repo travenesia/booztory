@@ -9,6 +9,7 @@ import { Drawer } from "vaul"
 import { YouTubeIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { Loader2 } from "lucide-react"
+import { HiExclamationTriangle, HiCheckCircle } from "react-icons/hi2"
 import { isValidSpotifyUrl } from "@/lib/spotifyMetadata"
 import { useToast } from "@/hooks/use-toast"
 import confetti from "canvas-confetti"
@@ -660,74 +661,23 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
 
-  // Calculate dynamic height and positioning to prevent flickering and ensure button visibility
-  const getSheetContentStyle = () => {
-    if (typeof window === "undefined") {
-      return {
-        maxHeight: "90vh",
-        height: "auto",
-        transition: "max-height 0.3s ease, bottom 0.3s ease",
-      }
-    }
+  const hasPreview = !!(contentType && urlForPreview)
 
+  const getSheetContentStyle = () => {
     if (!isKeyboardVisible) {
       return {
-        maxHeight: `${Math.min(window.innerHeight * 0.9, 700)}px`,
         height: "auto",
-        transition: "max-height 0.3s ease, bottom 0.3s ease",
+        transition: "height 0.3s ease, bottom 0.3s ease",
         bottom: "0px",
       }
     }
 
-    // When keyboard is visible: shrink maxHeight to visual viewport, lift above keyboard.
-    // In mini app WebViews the viewport already repositions — skip the bottom offset to avoid double-offset.
+    // When keyboard is visible: shrink to visual viewport, lift above keyboard.
     const availableHeight = viewportHeight - 16
-
     return {
-      maxHeight: `${availableHeight}px`,
-      height: "auto",
-      transition: "max-height 0.3s ease, bottom 0.3s ease",
+      height: `${availableHeight}px`,
+      transition: "height 0.3s ease, bottom 0.3s ease",
       bottom: isMiniApp ? "0px" : `${keyboardHeight}px`,
-    }
-  }
-
-  // Calculate content area height when keyboard is visible
-  const getContentAreaStyle = () => {
-    if (!isKeyboardVisible) {
-      return {
-        paddingBottom: "24px",
-      }
-    }
-
-    // When keyboard is visible, leave room for header (~80px) and button (~60px)
-    const availableContentHeight = viewportHeight - 80 - 60 - 20
-
-    return {
-      maxHeight: `${Math.max(availableContentHeight, 80)}px`,
-      overflowY: "auto" as const,
-      paddingBottom: "8px",
-    }
-  }
-
-  // Button container style to keep it above keyboard
-  const getButtonContainerStyle = () => {
-    if (!isKeyboardVisible) {
-      return {
-        position: "relative" as const,
-        paddingTop: "8px",
-        paddingBottom: "24px",
-      }
-    }
-
-    return {
-      position: "sticky" as const,
-      bottom: 0,
-      backgroundColor: "#FFFFFF", // Match drawer background
-      paddingTop: "12px",
-      paddingBottom: "12px",
-      borderTop: "1px solid #E5E7EB", // Light border to separate from content
-      marginTop: "8px",
-      zIndex: 10,
     }
   }
 
@@ -736,12 +686,13 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/80 z-50" />
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl px-4 pt-4 bg-gray-0 text-gray-900 overflow-hidden focus:outline-none flex flex-col"
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl pt-4 bg-gray-0 text-gray-900 overflow-hidden focus:outline-none flex flex-col"
           style={getSheetContentStyle()}
         >
           {/* Drag handle */}
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-4" />
 
+          <div className="flex flex-col flex-1 min-h-0 w-full px-4">
           <div className="mb-4 flex-shrink-0">
             <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
             <Drawer.Description className="text-xs text-gray-500">
@@ -749,8 +700,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
             </Drawer.Description>
           </div>
 
-          {/* Scrollable content area — grows to fill space, scrolls if needed */}
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-2">
+          {/* Content area */}
+          <div className="space-y-4 pb-2">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
@@ -758,15 +709,30 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
                 </Label>
                 {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
               </div>
-              <Input
-                id="content-url"
-                placeholder={getPlaceholderText()}
-                value={contentUrl}
-                onChange={handleUrlChange}
-                disabled={isAnyOperationInProgress}
-                className={`rounded-[5px] border-gray-300 bg-gray-0 text-gray-900 focus:border-red-700 focus:ring-red-700 transition-colors duration-200 ${previewError ? "border-red-700 focus:ring-red-700" : ""}`}
-              />
-              {previewError && <p className="text-xs text-red-700 mt-1">{previewError}</p>}
+              <div className="relative">
+                {contentUrl && previewError && (
+                  <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
+                )}
+                {contentUrl && isValidUrl && (
+                  <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
+                )}
+                <Input
+                  id="content-url"
+                  placeholder={getPlaceholderText()}
+                  value={contentUrl}
+                  onChange={handleUrlChange}
+                  disabled={isAnyOperationInProgress}
+                  className={`rounded-[5px] transition-colors duration-200 text-gray-900 focus:ring-1 ${
+                    !contentUrl
+                      ? "bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-300 placeholder:text-blue-300"
+                      : previewError
+                        ? "bg-red-50 border-red-200 focus:border-red-400 focus:ring-red-300 pl-9"
+                        : isValidUrl
+                          ? "bg-green-50 border-green-200 focus:border-green-400 focus:ring-green-300 pl-9"
+                          : "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300"
+                  }`}
+                />
+              </div>
             </div>
 
             {contentType && urlForPreview && (
@@ -817,6 +783,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
               )}
             </Button>
           </div>
+          </div>{/* end centered wrapper */}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

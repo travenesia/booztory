@@ -6,6 +6,7 @@ import { UpcomingCard } from "@/components/content/upcomingCard"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useUpcomingSlots } from "@/hooks/useContractContent"
+import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 
 const ITEMS_PER_PAGE = 5
 
@@ -49,7 +50,7 @@ export default function UpcomingPage() {
     return (
       <main className="min-h-screen pt-12 pb-12">
         <PageTopbar title="Upcoming" />
-        <section className="py-6 px-6 h-[calc(100vh-96px)] overflow-y-auto max-w-[650px] mx-auto w-full space-y-4">
+        <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border">
               <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
@@ -76,7 +77,7 @@ export default function UpcomingPage() {
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="Upcoming" />
-      <section className="py-6 px-6 h-[calc(100vh-96px)] overflow-y-auto max-w-[650px] mx-auto w-full">
+      <section className="py-6 px-6 max-w-[650px] mx-auto w-full">
         {allItems.length === 0 && !isLoadingMore && !isLoading ? (
           <div className="text-center py-8">
             <div className="text-gray-500 mb-2">No upcoming content scheduled</div>
@@ -126,6 +127,12 @@ export default function UpcomingPage() {
           <div className="text-center py-4 text-gray-500 text-sm">All upcoming content loaded.</div>
         )}
       </section>
+      {/* Progressive blur fixed above navbar */}
+      <div className="fixed bottom-12 md:bottom-0 left-0 right-0 h-20 pointer-events-none z-40">
+        <div className="relative h-full">
+          <ProgressiveBlur height="100%" position="bottom" />
+        </div>
+      </div>
       <Navbar />
     </main>
   )

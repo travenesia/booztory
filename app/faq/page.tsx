@@ -8,7 +8,7 @@ export default function FAQPage() {
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="FAQ" />
-      <section className="py-6 px-6 h-[calc(100vh-96px)] overflow-y-auto max-w-[650px] mx-auto w-full">
+      <section className="py-6 px-6 max-w-[650px] mx-auto w-full">
         <div className="space-y-6">
           {/* Hero Section */}
           <div className="text-center mb-4">

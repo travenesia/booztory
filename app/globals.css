@@ -75,7 +75,7 @@
     @apply border-border; /* Default border color from CSS vars */
   }
   body {
-    @apply bg-white text-gray-900 overflow-hidden; /* Changed background to white, default text to dark gray */
+    @apply bg-white text-gray-900; /* Changed background to white, default text to dark gray */
   }
 
   button,
