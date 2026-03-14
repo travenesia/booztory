@@ -40,6 +40,25 @@ export const DubTweet = ({
           </div>
         ) : null}
       </div>
+
+      {/* Quoted tweet */}
+      {tweet.quoted_tweet && (
+        <div
+          role="link"
+          tabIndex={0}
+          onClick={() => window.open(tweet.quoted_tweet!.url, "_blank", "noreferrer")}
+          onKeyDown={(e) => e.key === "Enter" && window.open(tweet.quoted_tweet!.url, "_blank", "noreferrer")}
+          className="mt-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors cursor-pointer"
+        >
+          <TweetHeader tweet={tweet.quoted_tweet} />
+          <TweetText tweet={tweet.quoted_tweet} />
+          {tweet.quoted_tweet.mediaDetails?.length ? (
+            <div className="mt-2">
+              <TweetMedia tweet={tweet.quoted_tweet} media={tweet.quoted_tweet.mediaDetails[0]} />
+            </div>
+          ) : null}
+        </div>
+      )}
       <div className="flex justify-center space-x-8 text-sm text-gray-500 mt-5">
         <a
           className="group flex items-center space-x-3 hover:text-red-600"
