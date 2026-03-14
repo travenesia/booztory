@@ -667,8 +667,9 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const getSheetContentStyle = () => {
     if (!isKeyboardVisible) {
       return {
-        height: hasPreview ? "85vh" : "auto",
-        transition: "height 0.3s ease, bottom 0.3s ease",
+        height: "auto",
+        maxHeight: "90vh",
+        transition: "max-height 0.3s ease, bottom 0.3s ease",
         bottom: "0px",
       }
     }
