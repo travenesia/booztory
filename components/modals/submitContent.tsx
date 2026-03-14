@@ -667,16 +667,13 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const getSheetContentStyle = (): React.CSSProperties => {
     if (isKeyboardVisible) {
       return {
-        overflowY: "auto",
         maxHeight: `${viewportHeight - 16}px`,
         bottom: isMiniApp ? "0px" : `${keyboardHeight}px`,
         transition: "bottom 0.3s ease, max-height 0.3s ease",
       }
     }
     return {
-      maxHeight: "90vh",
-      // Allow scrolling when preview is visible so the button is always reachable
-      overflowY: hasPreview ? "auto" : undefined,
+      maxHeight: "92vh",
       bottom: "0px",
       transition: "bottom 0.3s ease, max-height 0.3s ease",
     }
@@ -687,13 +684,14 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/80 z-50" />
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl pt-4 bg-gray-0 text-gray-900 overflow-hidden focus:outline-none"
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl pt-4 bg-gray-0 text-gray-900 focus:outline-none flex flex-col"
           style={getSheetContentStyle()}
         >
           {/* Drag handle */}
-          <div className="mx-auto w-12 h-1.5 rounded-full bg-gray-300 mb-4" />
+          <div className="mx-auto w-12 h-1.5 rounded-full bg-gray-300 mb-4 flex-shrink-0" />
 
-          <div className="px-4">
+          {/* Scrollable content area */}
+          <div className="px-4 overflow-y-auto">
             <div className="mb-4">
               <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
               <Drawer.Description className="text-xs text-gray-500">
@@ -762,22 +760,26 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
               )}
             </div>
 
-            <div className="pt-3 pb-4">
-              <Button
-                className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
-                onClick={handleSubmit}
-                disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
-              >
-                {isAnyOperationInProgress ? (
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {getButtonText()}
-                  </div>
-                ) : (
-                  getButtonText()
-                )}
-              </Button>
-            </div>
+            {/* Spacer so content doesn't sit flush against the pinned button */}
+            <div className="h-3" />
+          </div>
+
+          {/* Pinned button — always visible at the bottom */}
+          <div className="px-4 pt-3 pb-4 flex-shrink-0">
+            <Button
+              className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
+              onClick={handleSubmit}
+              disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
+            >
+              {isAnyOperationInProgress ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  {getButtonText()}
+                </div>
+              ) : (
+                getButtonText()
+              )}
+            </Button>
           </div>
         </Drawer.Content>
       </Drawer.Portal>
