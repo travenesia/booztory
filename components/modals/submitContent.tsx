@@ -634,7 +634,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
       const width = 200 * (9 / 16)
       return { maxHeight: "200px", height: "200px", width: `${width}px`, margin: "0 auto" }
     } else {
-      const height = Math.min(200, (typeof window !== "undefined" ? window.innerWidth - 32 : 300) * (9 / 16))
+      const containerWidth = typeof window !== "undefined" ? window.innerWidth - 32 : 300
+      const height = Math.min(200, containerWidth * (9 / 16))
       return { height: `${height}px`, width: "100%" }
     }
   }
@@ -727,7 +728,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
                     !contentUrl
                       ? "bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-300 placeholder:text-blue-300"
                       : previewError
-                        ? "bg-red-50 border-red-200 focus:border-red-400 focus:ring-red-300 pl-9"
+                        ? "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300 pl-9"
                         : isValidUrl
                           ? "bg-green-50 border-green-200 focus:border-green-400 focus:ring-green-300 pl-9"
                           : "bg-gray-0 border-gray-300 focus:border-gray-400 focus:ring-gray-300"

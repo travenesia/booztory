@@ -20,6 +20,13 @@ export default function Home() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const { toast } = useToast()
   const isMobile = useIsMobile()
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 1280)
+    check()
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, [])
 
   const isConnected = status === "authenticated"
 
@@ -104,17 +111,17 @@ export default function Home() {
     <main className="min-h-screen flex flex-col">
       <Topbar />
 
-      {/* Mobile layout */}
-      <div className="md:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
+      {/* Mobile + tablet layout */}
+      <div className="xl:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
         {isLoading ? (
           <div className="animate-pulse bg-gray-200 rounded-lg w-full max-w-md h-96" />
         ) : (
-          isMobile && cardNode
+          !isDesktop && cardNode
         )}
       </div>
 
       {/* Desktop two-column layout — breaks out of max-w-[650px] to fill full viewport */}
-      <div className="hidden md:grid md:grid-cols-2 md:gap-12 md:items-center flex-1 px-12 mt-12 md:w-screen md:ml-[calc(50%-50vw)]">
+      <div className="hidden xl:grid xl:grid-cols-2 xl:gap-12 xl:items-center flex-1 px-12 mt-12 xl:w-screen xl:ml-[calc(50%-50vw)]">
         {/* Left: platform info + CTA */}
         <div className="flex flex-col justify-center space-y-6 py-12">
           <p className="flex items-center gap-2 text-xs font-semibold tracking-widest text-red-600 uppercase">
@@ -153,7 +160,7 @@ export default function Home() {
           {isLoading ? (
             <div className="animate-pulse bg-gray-200 rounded-lg w-full h-96" />
           ) : (
-            !isMobile && cardNode
+            isDesktop && cardNode
           )}
         </div>
       </div>
@@ -161,7 +168,7 @@ export default function Home() {
       {/* FAB — mobile only */}
       <Button
         onClick={handleFabClick}
-        className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button rounded-full flex items-center justify-center p-0 [&_svg]:size-auto"
+        className="xl:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button rounded-full flex items-center justify-center p-0 [&_svg]:size-auto"
         aria-label="Submit Content"
       >
         <HiMiniPlus size={36} />
