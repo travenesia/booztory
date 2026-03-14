@@ -687,9 +687,9 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
           className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl bg-gray-0 text-gray-900 focus:outline-none"
           style={getSheetContentStyle()}
         >
-          {/* Inner scroll wrapper — owns the overflow so Vaul's root element stays clean */}
+          {/* Inner scroll wrapper */}
           <div className="overflow-y-auto" style={{ maxHeight: "inherit" }}>
-            <div className="pt-4 px-4 pb-6">
+            <div className="pt-4 px-4">
               {/* Drag handle */}
               <div className="mx-auto w-12 h-1.5 rounded-full bg-gray-300 mb-4" />
 
@@ -760,23 +760,24 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="pt-4">
-                <Button
-                  className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
-                  onClick={handleSubmit}
-                  disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
-                >
-                  {isAnyOperationInProgress ? (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      {getButtonText()}
-                    </div>
-                  ) : (
-                    getButtonText()
-                  )}
-                </Button>
-              </div>
+            {/* Sticky button — sticks to the bottom of the scroll container when content overflows */}
+            <div className="sticky bottom-0 px-4 pt-3 pb-6 bg-gray-0">
+              <Button
+                className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
+                onClick={handleSubmit}
+                disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
+              >
+                {isAnyOperationInProgress ? (
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    {getButtonText()}
+                  </div>
+                ) : (
+                  getButtonText()
+                )}
+              </Button>
             </div>
           </div>
         </Drawer.Content>
