@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
+import { UsersOnline } from "@/components/layout/usersOnline"
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -113,11 +114,16 @@ export default function Home() {
 
       {/* Mobile + tablet layout */}
       <div className="xl:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
-        {isLoading ? (
-          <div className="animate-pulse bg-gray-200 rounded-lg w-full max-w-md h-96" />
-        ) : (
-          !isDesktop && cardNode
-        )}
+        <div className="w-full max-w-md flex flex-col gap-2">
+          <div className="flex justify-center">
+            <UsersOnline />
+          </div>
+          {isLoading ? (
+            <div className="animate-pulse bg-gray-200 rounded-lg w-full h-96" />
+          ) : (
+            !isDesktop && cardNode
+          )}
+        </div>
       </div>
 
       {/* Desktop two-column layout — breaks out of max-w-[650px] to fill full viewport */}
@@ -156,7 +162,10 @@ export default function Home() {
         </div>
 
         {/* Right: content card */}
-        <div className="flex items-center justify-center py-8">
+        <div className="flex flex-col items-center justify-center py-8 gap-2">
+          <div className="flex justify-center">
+            <UsersOnline />
+          </div>
           {isLoading ? (
             <div className="animate-pulse bg-gray-200 rounded-lg w-full h-96" />
           ) : (
