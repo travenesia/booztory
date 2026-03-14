@@ -675,6 +675,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
     }
     return {
       maxHeight: "90vh",
+      // Allow scrolling when preview is visible so the button is always reachable
+      overflowY: hasPreview ? "auto" : undefined,
       bottom: "0px",
       transition: "bottom 0.3s ease, max-height 0.3s ease",
     }
