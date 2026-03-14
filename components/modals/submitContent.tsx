@@ -763,7 +763,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
             </div>
 
             {/* Sticky button — sticks to the bottom of the scroll container when content overflows */}
-            <div className="sticky bottom-0 px-4 pt-3 pb-6 bg-gray-0">
+            <div className="sticky bottom-0 px-4 pt-3 bg-gray-0" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
               <Button
                 className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200"
                 onClick={handleSubmit}
