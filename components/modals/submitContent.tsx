@@ -37,6 +37,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [submissionStep, setSubmissionStep] = useState<"idle" | "processing_payment" | "submitting">("idle")
   const [detectedTikTokAspectRatio, setDetectedTikTokAspectRatio] = useState<"16:9" | "9:16">("9:16")
+  const [isInputFocused, setIsInputFocused] = useState(false)
   const { toast } = useToast()
 
   // Use ref to track if we're currently processing to prevent race conditions
@@ -551,7 +552,7 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
               {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
             </div>
             <div className="relative">
-              {contentUrl && previewError && (
+              {contentUrl && previewError && !isInputFocused && (
                 <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
               )}
               {contentUrl && isValidUrl && (
@@ -563,11 +564,13 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
                 placeholder={getPlaceholderText()}
                 value={contentUrl}
                 onChange={handleUrlChange}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
                 disabled={isAnyOperationInProgress}
                 className={`w-full h-9 rounded-[5px] border px-3 text-sm text-gray-900 outline-none transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
                   !contentUrl
                     ? "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
-                    : previewError
+                    : previewError && !isInputFocused
                       ? "bg-white border-gray-300 focus:border-gray-400 pl-9"
                       : isValidUrl
                         ? "bg-green-50 border-green-200 focus:border-green-400 pl-9"

@@ -118,15 +118,6 @@
     @apply rounded-full border-gray-300 bg-gray-0; /* Updated input style */
   }
 
-  input:focus,
-  .input:focus,
-  [type="text"]:focus,
-  [type="email"]:focus,
-  [type="password"]:focus,
-  [type="number"]:focus,
-  [type="search"]:focus {
-    @apply ring-2 ring-[#cc0000] border-[#cc0000];
-  }
 
   h1,
   h2,
