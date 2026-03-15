@@ -109,7 +109,7 @@ export default function Home() {
   )
 
   return (
-    <main className="h-screen flex flex-col overflow-hidden">
+    <main className="h-screen flex flex-col overflow-hidden xl:overflow-visible">
       <Topbar />
 
       {/* Mobile + tablet layout */}
