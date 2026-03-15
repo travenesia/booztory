@@ -77,7 +77,7 @@ function HistoryPage() {
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="History" />
-      <section className="py-6 px-6 max-w-[650px] mx-auto w-full touch-pan-y">
+      <section className="py-6 px-6 max-w-[650px] mx-auto w-full">
         {allItems.length === 0 && !isLoadingMore && !isLoading ? (
           <div className="text-center py-8">
             <div className="text-gray-500 mb-2">No content history available</div>

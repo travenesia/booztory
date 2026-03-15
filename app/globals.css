@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-iframe {
-  touch-action: none;
-}
-
 @layer base {
   :root {
     --background: 228 18% 100%; /* white */
