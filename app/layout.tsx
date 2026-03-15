@@ -64,7 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${inter.variable} font-sans bg-elegance-ethereal-ivory min-h-screen overscroll-none`}>
+      <body className={`${inter.variable} font-sans bg-elegance-ethereal-ivory min-h-screen overscroll-none touch-none`}>
         <FlickeringGrid
           className="fixed inset-0 z-0 pointer-events-none"
           color="#000000"
