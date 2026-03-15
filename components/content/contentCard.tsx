@@ -46,6 +46,9 @@ export function ContentCard({
   const [remainingTime, setRemainingTime] = useState(timeLeft)
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false)
   const [containerWidth, setContainerWidth] = useState<number | null>(null)
+  const [windowHeight, setWindowHeight] = useState<number>(() =>
+    typeof window !== "undefined" ? window.innerHeight : 800
+  )
   const containerRef = useRef<HTMLDivElement>(null)
 
   const resolvedWalletName = useWalletName(submittedBy)
@@ -58,6 +61,12 @@ export function ContentCard({
     const resizeObserver = new ResizeObserver(updateWidth)
     resizeObserver.observe(el)
     return () => resizeObserver.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const handleResize = () => setWindowHeight(window.innerHeight)
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   useEffect(() => {
@@ -98,7 +107,7 @@ export function ContentCard({
   }, [endTime, isPlaceholder, timeLeft])
 
   const embedAreaStyle = useMemo((): React.CSSProperties => {
-    if (typeof window === "undefined" || containerWidth === null || containerWidth === 0) {
+    if (containerWidth === null || containerWidth === 0) {
       return { width: "100%", maxWidth: "320px", height: "200px", margin: "0 auto" }
     }
 
@@ -109,7 +118,7 @@ export function ContentCard({
     const contentStatsHeight = 32
 
     const availableCardHeight =
-      window.innerHeight - topbarHeight - navbarHeight - sectionPaddingTop - sectionPaddingBottom
+      windowHeight - topbarHeight - navbarHeight - sectionPaddingTop - sectionPaddingBottom
     const maxEmbedAreaHeight = Math.max(150, availableCardHeight - contentStatsHeight)
 
     let calculatedWidth: number
@@ -164,7 +173,7 @@ export function ContentCard({
     calculatedWidth = Math.max(100, calculatedWidth)
 
     return { height: `${calculatedHeight}px`, width: `${calculatedWidth}px`, margin: "0 auto" }
-  }, [containerWidth, contentType, aspectRatio])
+  }, [containerWidth, contentType, aspectRatio, windowHeight])
 
   const cardContainerStyle: React.CSSProperties = {
     width: contentType === "twitter" ? `${Math.min(containerWidth || 380, 380)}px` : embedAreaStyle.width,
