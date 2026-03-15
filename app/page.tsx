@@ -109,11 +109,11 @@ export default function Home() {
   )
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main className="h-screen overflow-hidden flex flex-col xl:h-auto xl:min-h-screen xl:overflow-visible">
       <Topbar />
 
       {/* Mobile + tablet layout */}
-      <div className="xl:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
+      <div className="xl:hidden flex-1 flex flex-col relative px-6 items-center justify-center pt-12 pb-[52px] md:pb-4">
         <div className="w-full max-w-md flex flex-col gap-2">
           {isLoading ? (
             <div className="w-full animate-pulse">
