@@ -14,9 +14,10 @@ import { ShineBorder } from "@/components/ui/shine-border"
 
 interface HistoryCardProps {
   content: ContentItem
+  isOwn?: boolean
 }
 
-export function HistoryCard({ content }: HistoryCardProps) {
+export function HistoryCard({ content, isOwn = false }: HistoryCardProps) {
   const [isContentYoutubeShort, setIsContentYoutubeShort] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [tiktokTitle, setTiktokTitle] = useState<string | null>(null)
@@ -88,8 +89,8 @@ export function HistoryCard({ content }: HistoryCardProps) {
       className="relative bg-gray-0 rounded-lg overflow-hidden border border-border cursor-pointer"
     >
       <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
-      <div className="flex items-center justify-between h-9 px-3 border-b border-gray-200 bg-[#eef0f3]">
-        <div className="text-xs font-medium text-gray-700">Posted by @{displayUsername}</div>
+      <div className={`flex items-center justify-between h-9 px-3 border-b border-gray-200 ${isOwn ? "bg-amber-50" : "bg-[#eef0f3]"}`}>
+        <div className="text-xs font-medium text-gray-700">{isOwn ? "Posted by You" : `Posted by @${displayUsername}`}</div>
         <div className="flex-shrink-0">{getPlatformIcon()}</div>
       </div>
       <div className="p-3">

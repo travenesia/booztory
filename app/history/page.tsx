@@ -7,32 +7,42 @@ import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAllPastSlots } from "@/hooks/useContractContent"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
+import { useAccount } from "wagmi"
 
 const ITEMS_PER_PAGE = 5
 
 function HistoryPage() {
   const { items: allItems, isLoading } = useAllPastSlots()
+  const { address } = useAccount()
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
+
+  const sortedItems = address
+    ? [...allItems].sort((a, b) => {
+        const aOwn = a.submittedBy.toLowerCase() === address.toLowerCase() ? -1 : 0
+        const bOwn = b.submittedBy.toLowerCase() === address.toLowerCase() ? 1 : 0
+        return aOwn + bOwn
+      })
+    : allItems
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const displayedContent = allItems.slice(0, visibleCount)
+  const displayedContent = sortedItems.slice(0, visibleCount)
 
   const loadMoreItems = useCallback(() => {
     setIsLoadingMore(true)
     setTimeout(() => {
-      setVisibleCount((c) => Math.min(c + ITEMS_PER_PAGE, allItems.length))
+      setVisibleCount((c) => Math.min(c + ITEMS_PER_PAGE, sortedItems.length))
       setIsLoadingMore(false)
     }, 500)
-  }, [allItems.length])
+  }, [sortedItems.length])
 
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect()
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMore && visibleCount < allItems.length) {
+        if (entries[0].isIntersecting && !isLoadingMore && visibleCount < sortedItems.length) {
           loadMoreItems()
         }
       },
@@ -44,7 +54,7 @@ function HistoryPage() {
     return () => {
       if (observerRef.current) observerRef.current.disconnect()
     }
-  }, [isLoadingMore, loadMoreItems, visibleCount, allItems.length])
+  }, [isLoadingMore, loadMoreItems, visibleCount, sortedItems.length])
 
   if (isLoading) {
     return (
@@ -78,7 +88,7 @@ function HistoryPage() {
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="History" />
       <section className="py-6 px-6 max-w-[650px] mx-auto w-full">
-        {allItems.length === 0 && !isLoadingMore && !isLoading ? (
+        {sortedItems.length === 0 && !isLoadingMore && !isLoading ? (
           <div className="text-center py-8">
             <div className="text-gray-500 mb-2">No content history available</div>
             <p className="text-gray-400 text-sm">Featured content will appear here after it expires</p>
@@ -91,7 +101,7 @@ function HistoryPage() {
                 className="animate-fadeIn"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <HistoryCard content={content} />
+                <HistoryCard content={content} isOwn={!!address && content.submittedBy.toLowerCase() === address.toLowerCase()} />
               </div>
             ))}
           </div>
@@ -120,10 +130,10 @@ function HistoryPage() {
             ))}
           </div>
         )}
-        {visibleCount < allItems.length && !isLoadingMore && (
+        {visibleCount < sortedItems.length && !isLoadingMore && (
           <div ref={loadMoreRef} style={{ height: "20px", margin: "10px 0" }} />
         )}
-        {displayedContent.length > 0 && visibleCount >= allItems.length && !isLoadingMore && (
+        {displayedContent.length > 0 && visibleCount >= sortedItems.length && !isLoadingMore && (
           <div className="text-center py-4 text-gray-500 text-sm">All history content loaded.</div>
         )}
       </section>

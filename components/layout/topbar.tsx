@@ -20,7 +20,7 @@ export function Topbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
-      <div className="flex items-center h-full px-6">
+      <div className="flex items-center h-full px-6 md:px-12">
         {/* Left: logo + nav */}
         <div className="flex items-center gap-4 flex-1">
           <Link href="/" className="flex items-center gap-2">
