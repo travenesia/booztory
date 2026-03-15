@@ -109,11 +109,11 @@ export default function Home() {
   )
 
   return (
-    <main className="h-[100dvh] overflow-hidden flex flex-col xl:h-auto xl:min-h-screen xl:overflow-visible">
+    <main className="min-h-screen flex flex-col">
       <Topbar />
 
       {/* Mobile + tablet layout */}
-      <div className="xl:hidden flex-1 flex flex-col relative px-6 items-center justify-center pt-12 pb-12 md:pb-4">
+      <div className="xl:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
         <div className="w-full max-w-md flex flex-col gap-2">
           {isLoading ? (
             <div className="w-full animate-pulse">
@@ -169,7 +169,7 @@ export default function Home() {
         </div>
 
         {/* Right: content card */}
-        <div className="flex flex-col items-center justify-center py-6 gap-2">
+        <div className="flex flex-col items-center justify-center py-4 gap-2">
           {isLoading ? (
             <div className="w-full animate-pulse">
               <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />

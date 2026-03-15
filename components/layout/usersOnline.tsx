@@ -53,7 +53,7 @@ export function UsersOnline() {
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-700 opacity-75" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-green-700" />
       </span>
-      <span className="text-[8px] text-gray-800 tabular-nums whitespace-nowrap">
+      <span className="text-xs text-gray-500 tabular-nums whitespace-nowrap">
         {count} {label}
       </span>
     </div>

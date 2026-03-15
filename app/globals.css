@@ -76,7 +76,6 @@
   }
   body {
     @apply bg-white text-gray-900; /* Changed background to white, default text to dark gray */
-    touch-action: manipulation; /* Disable pinch-zoom on all pages */
   }
 
   button,

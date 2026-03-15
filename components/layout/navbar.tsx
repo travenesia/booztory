@@ -15,7 +15,7 @@ export function Navbar() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-red-700 shadow-lg z-50 w-full h-12 pb-1">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-red-700 shadow-lg z-50 w-full h-[52px] pb-1">
       <div className="w-full h-full flex justify-around items-center px-6 mx-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href
