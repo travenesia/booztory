@@ -20,6 +20,9 @@ export function ContentStats({
   onDonationClick,
   isConnected,
 }: ContentStatsProps) {
+  const formatDonations = (amount: number) =>
+    amount === 0 ? "0.00" : formatStatNumber(amount)
+
   const formatTime = (minutes: number) => {
     if (isPlaceholder && username === "@Booztory") return "--:--"
     const mins = Math.floor(minutes)
@@ -29,9 +32,9 @@ export function ContentStats({
 
   if (isPlaceholder && username === "@Booztory") {
     return (
-      <div className="h-8 w-full bg-[#cc0000] flex items-center rounded-b-[5px]">
+      <div className="h-8 w-full bg-[#cc0000] flex items-center justify-between rounded-b-[5px]">
         <button
-          className={`p-0 rounded-none rounded-bl-[5px] bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center mr-2 flex-shrink-0 ${
+          className={`p-0 rounded-none rounded-bl-[5px] bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center flex-shrink-0 ${
             !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
           }`}
           onClick={onDonationClick}
@@ -41,10 +44,10 @@ export function ContentStats({
           <HiGift size={16} className="text-white" />
         </button>
 
-        <div className="flex items-center" title="USDC Donated">
+        <div className="flex items-center pr-2" title="USDC Donated">
           <HiCurrencyDollar size={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[42px] text-xs font-medium text-white text-left tabular-nums">
-            {formatStatNumber(donations)}
+          <span className="text-xs font-medium text-white tabular-nums">
+            {formatDonations(donations)}
           </span>
         </div>
       </div>
@@ -52,36 +55,36 @@ export function ContentStats({
   }
 
   return (
-    <div className="h-8 w-full bg-[#cc0000] flex items-center rounded-b-[5px]">
-      <button
-        className={`p-0 rounded-none rounded-bl-[5px] bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center mr-2 flex-shrink-0 ${
-          !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
-        }`}
-        onClick={onDonationClick}
-        aria-label={`Support @${username}`}
-        disabled={!isConnected}
-      >
-        <HiGift size={16} className="text-white" />
-      </button>
+    <div className="h-8 w-full bg-[#cc0000] flex items-center justify-between rounded-b-[5px]">
+      <div className="flex items-center">
+        <button
+          className={`p-0 rounded-none rounded-bl-[5px] bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center flex-shrink-0 ${
+            !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
+          }`}
+          onClick={onDonationClick}
+          aria-label={`Support @${username}`}
+          disabled={!isConnected}
+        >
+          <HiGift size={16} className="text-white" />
+        </button>
 
-      <div className="flex items-center" title={`Submitted by ${username}`}>
-        <span className="block max-w-[6rem] text-xs font-medium text-white truncate mr-2">
+        <span className="block max-w-[6rem] text-xs font-medium text-white truncate" title={`Submitted by ${username}`}>
           {username}
         </span>
       </div>
 
-      <div className="flex items-center h-full ml-auto space-x-2 pr-1 sm:pr-2">
+      <div className="flex items-center gap-2 pr-2">
         <div className="flex items-center" title="Time Left">
           <HiClock size={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[42px] text-xs font-medium text-white text-left tabular-nums">
+          <span className="text-xs font-medium text-white tabular-nums">
             {formatTime(timeLeft)}
           </span>
         </div>
 
         <div className="flex items-center" title="USDC Donated">
           <HiCurrencyDollar size={16} className="text-white flex-shrink-0 mr-1" />
-          <span className="block min-w-[42px] text-xs font-medium text-white text-left tabular-nums">
-            {formatStatNumber(donations)}
+          <span className="text-xs font-medium text-white tabular-nums">
+            {formatDonations(donations)}
           </span>
         </div>
       </div>

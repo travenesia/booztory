@@ -23,40 +23,39 @@ export function PageTopbar({ title }: PageTopbarProps) {
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
-      <div className="flex justify-between items-center h-full px-6 mx-auto">
+      <div className="flex items-center h-full px-6">
 
-        {/* Mobile: back arrow | Desktop: logo + Booztory wordmark */}
-        <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-[#cc0000]">
-          <HiMiniArrowSmallLeft size={24} className="md:hidden" />
-          <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
-          <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
-        </Link>
+        {/* Left: logo + nav */}
+        <div className="flex items-center gap-4 flex-1">
+          <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-[#cc0000]">
+            <HiMiniArrowSmallLeft size={24} className="md:hidden" />
+            <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
+            <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
+          </Link>
 
-        {/* Mobile: page title — absolutely centered relative to viewport */}
-        <h1 className="md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-medium text-gray-900">{title}</h1>
-
-        {/* Desktop: nav links + connect wallet | Mobile: connect wallet + FAQ icon */}
-        <div className="flex items-center space-x-4">
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "relative px-3 py-1 text-sm font-medium transition-colors duration-200 group",
+                  "px-3 py-1.5 text-sm font-medium transition-colors duration-150",
                   pathname === item.href
-                    ? "text-[#cc0000]"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "text-[#aa0000]"
+                    : "text-gray-900 hover:text-[#aa0000]"
                 )}
               >
                 {item.name}
-                <span className={cn(
-                  "absolute bottom-0 left-0 h-[2px] bg-[#cc0000] transition-all duration-200",
-                  pathname === item.href ? "w-full" : "w-0 group-hover:w-full"
-                )} />
               </Link>
             ))}
           </nav>
+        </div>
+
+        {/* Mobile: page title — absolutely centered */}
+        <h1 className="md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-medium text-gray-900">{title}</h1>
+
+        {/* Right */}
+        <div className="flex items-center">
           <div className="hidden md:block">
             <ConnectWalletButton />
           </div>

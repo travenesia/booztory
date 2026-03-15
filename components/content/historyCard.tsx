@@ -10,6 +10,7 @@ import { TweetInfoPreview } from "@/components/tweet/tweet-info-preview"
 import { extractTwitterId } from "@/lib/youtubeMetadata"
 import { useWalletName } from "@/hooks/useWalletName"
 import { getTikTokMetadata } from "@/lib/tiktokMetadata"
+import { ShineBorder } from "@/components/ui/shine-border"
 
 interface HistoryCardProps {
   content: ContentItem
@@ -84,9 +85,10 @@ export function HistoryCard({ content }: HistoryCardProps) {
   return (
     <div
       onClick={handleCardClick}
-      className="bg-gray-0 rounded-lg overflow-hidden border border-border cursor-pointer"
+      className="relative bg-gray-0 rounded-lg overflow-hidden border border-border cursor-pointer"
     >
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
+      <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
+      <div className="flex items-center justify-between h-9 px-3 border-b border-gray-200 bg-[#eef0f3]">
         <div className="text-xs font-medium text-gray-700">Posted by @{displayUsername}</div>
         <div className="flex-shrink-0">{getPlatformIcon()}</div>
       </div>
@@ -120,16 +122,14 @@ export function HistoryCard({ content }: HistoryCardProps) {
           </div>
         )}
       </div>
-      <div className="p-3 border-t border-border bg-gray-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Completed</span>
-            <span className="text-xs text-gray-500 ml-2">{formatRelativeTime(content.endTime)}</span>
-          </div>
-          <div className="flex items-center text-gray-900">
-            <DollarCircle width={14} height={14} className="mr-1" />
-            <p className="text-xs">{content.donations.toFixed(2)}</p>
-          </div>
+      <div className="flex items-center justify-between w-full h-9 px-3 border-t border-border bg-gray-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Completed</span>
+          <span className="text-xs text-gray-500">{formatRelativeTime(content.endTime)}</span>
+        </div>
+        <div className="flex items-center text-gray-900">
+          <DollarCircle width={14} height={14} className="mr-1" />
+          <p className="text-xs">{content.donations.toFixed(2)}</p>
         </div>
       </div>
     </div>
