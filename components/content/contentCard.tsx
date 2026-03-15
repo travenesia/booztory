@@ -8,6 +8,7 @@ import { DonationModal } from "@/components/modals/donationModal"
 import { useWalletName } from "@/hooks/useWalletName"
 import { BOOZTORY_ADDRESS } from "@/lib/contract"
 import { ShineBorder } from "@/components/ui/shine-border"
+import { UsersOnline } from "@/components/layout/usersOnline"
 
 type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify"
 
@@ -199,6 +200,11 @@ export function ContentCard({
               borderTopRightRadius: "5px",
             }}
           >
+            {/* Users Online overlay */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 bg-green-50/90 backdrop-blur-sm rounded-b-lg px-3 h-[12px] flex items-center">
+              <UsersOnline />
+            </div>
+
             {contentUrl && !isPlaceholder ? (
               <ContentEmbed
                 key={`embed-${contentType}-${contentUrl}`}

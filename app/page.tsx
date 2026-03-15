@@ -14,7 +14,7 @@ import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
-import { UsersOnline } from "@/components/layout/usersOnline"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -115,11 +115,18 @@ export default function Home() {
       {/* Mobile + tablet layout */}
       <div className="xl:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
         <div className="w-full max-w-md flex flex-col gap-2">
-          <div className="flex justify-center">
-            <UsersOnline />
-          </div>
           {isLoading ? (
-            <div className="animate-pulse bg-gray-200 rounded-lg w-full h-96" />
+            <div className="w-full animate-pulse">
+              <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />
+              <div className="h-8 w-full bg-red-900/20 rounded-b-[5px] flex items-center px-2 gap-2">
+                <Skeleton className="h-5 w-5 rounded bg-red-300/40 flex-shrink-0" />
+                <Skeleton className="h-3 w-24 bg-red-300/40" />
+                <div className="ml-auto flex items-center gap-3 pr-1">
+                  <Skeleton className="h-3 w-10 bg-red-300/40" />
+                  <Skeleton className="h-3 w-10 bg-red-300/40" />
+                </div>
+              </div>
+            </div>
           ) : (
             !isDesktop && cardNode
           )}
@@ -163,11 +170,18 @@ export default function Home() {
 
         {/* Right: content card */}
         <div className="flex flex-col items-center justify-center py-8 gap-2">
-          <div className="flex justify-center">
-            <UsersOnline />
-          </div>
           {isLoading ? (
-            <div className="animate-pulse bg-gray-200 rounded-lg w-full h-96" />
+            <div className="w-full animate-pulse">
+              <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />
+              <div className="h-8 w-full bg-red-900/20 rounded-b-[5px] flex items-center px-2 gap-2">
+                <Skeleton className="h-5 w-5 rounded bg-red-300/40 flex-shrink-0" />
+                <Skeleton className="h-3 w-24 bg-red-300/40" />
+                <div className="ml-auto flex items-center gap-3 pr-1">
+                  <Skeleton className="h-3 w-10 bg-red-300/40" />
+                  <Skeleton className="h-3 w-10 bg-red-300/40" />
+                </div>
+              </div>
+            </div>
           ) : (
             isDesktop && cardNode
           )}

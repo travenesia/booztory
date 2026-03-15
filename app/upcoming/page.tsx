@@ -52,7 +52,7 @@ export default function UpcomingPage() {
         <PageTopbar title="Upcoming" />
         <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border">
+            <div key={i} className="bg-gray-0 rounded-lg overflow-hidden border border-border">
               <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
                 <Skeleton className="h-4 w-1/2 bg-gray-200" />
                 <Skeleton className="h-6 w-6 rounded-full bg-gray-200" />
@@ -101,11 +101,11 @@ export default function UpcomingPage() {
             {[...Array(2)].map((_, i) => (
               <div
                 key={`skeleton-${i}`}
-                className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border"
+                className="bg-gray-0 rounded-lg overflow-hidden border border-border"
               >
-                <div className="flex items-center justify-between p-3 border-b border-red-500 bg-red-700">
-                  <Skeleton className="h-4 w-1/2 bg-red-300" />
-                  <Skeleton className="h-6 w-6 rounded-full bg-red-300" />
+                <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
+                  <Skeleton className="h-4 w-1/2 bg-gray-200" />
+                  <Skeleton className="h-6 w-6 rounded-full bg-gray-200" />
                 </div>
                 <div className="flex p-3">
                   <div className="relative w-1/3 mr-3">

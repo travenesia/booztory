@@ -46,6 +46,34 @@ function HistoryPage() {
     }
   }, [isLoadingMore, loadMoreItems, visibleCount, allItems.length])
 
+  if (isLoading) {
+    return (
+      <main className="min-h-screen pt-12 pb-12">
+        <PageTopbar title="History" />
+        <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-gray-0 rounded-lg overflow-hidden border border-border">
+              <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
+                <Skeleton className="h-4 w-1/2 bg-gray-200" />
+                <Skeleton className="h-6 w-6 rounded-full bg-gray-200" />
+              </div>
+              <div className="flex p-3">
+                <div className="relative w-1/3 mr-3">
+                  <Skeleton className="aspect-video w-full rounded-md bg-gray-100" />
+                </div>
+                <div className="w-2/3 space-y-2">
+                  <Skeleton className="h-4 w-full bg-gray-100" />
+                  <Skeleton className="h-4 w-3/4 bg-gray-100" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+        <Navbar />
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="History" />
@@ -73,7 +101,7 @@ function HistoryPage() {
             {[...Array(2)].map((_, i) => (
               <div
                 key={`skeleton-history-${i}`}
-                className="bg-gray-0 rounded-lg shadow-custom-md overflow-hidden border border-border"
+                className="bg-gray-0 rounded-lg overflow-hidden border border-border"
               >
                 <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
                   <Skeleton className="h-4 w-1/2 bg-gray-200" />
