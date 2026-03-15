@@ -50,7 +50,7 @@ export default function UpcomingPage() {
     return (
       <main className="min-h-screen pt-12 pb-12">
         <PageTopbar title="Upcoming" />
-        <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
+        <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4 touch-pan-y">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-gray-0 rounded-lg overflow-hidden border border-border">
               <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-[#eef0f3]">
