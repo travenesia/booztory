@@ -15,7 +15,8 @@
       "WebFetch(domain:magicui.design)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(gh api:*)",
-      "Bash(pnpm dlx:*)"
+      "Bash(pnpm dlx:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }

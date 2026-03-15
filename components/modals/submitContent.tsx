@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
-import { Drawer } from "vaul"
+import { useState, useEffect, useRef } from "react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { YouTubeIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { Loader2 } from "lucide-react"
@@ -18,7 +18,6 @@ import { getTikTokMetadata } from "@/lib/tiktokMetadata"
 import { getVimeoMetadata, extractVimeoId } from "@/lib/vimeoMetadata"
 import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
 import { getTwitchMetadata, extractTwitchInfo } from "@/lib/twitchMetadata"
-import { sdk } from "@farcaster/miniapp-sdk"
 
 interface ContentSubmissionDrawerProps {
   open: boolean
@@ -40,15 +39,6 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const [detectedTikTokAspectRatio, setDetectedTikTokAspectRatio] = useState<"16:9" | "9:16">("9:16")
   const { toast } = useToast()
 
-  // Keyboard and viewport handling
-  const [viewportHeight, setViewportHeight] = useState<number>(0)
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
-  const [keyboardHeight, setKeyboardHeight] = useState<number>(0)
-  const initialViewportHeight = useRef<number>(0)
-  const keyboardDetectionTimeout = useRef<NodeJS.Timeout | null>(null)
-
-  const [isMiniApp, setIsMiniApp] = useState(false)
-
   // Use ref to track if we're currently processing to prevent race conditions
   const isProcessingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -56,149 +46,28 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   const { mintSlot, isProcessing, resetPaymentState, slotPrice } = usePayment()
   const slotPriceDisplay = (Number(slotPrice) / 1_000_000).toFixed(2)
 
-  // Enhanced keyboard detection with debouncing
-  const detectKeyboard = useCallback(() => {
-    if (typeof window === "undefined") return
-
-    const currentHeight = window.innerHeight
-    const visualViewportHeight = window.visualViewport?.height || currentHeight
-
-    // Clear any existing timeout
-    if (keyboardDetectionTimeout.current) {
-      clearTimeout(keyboardDetectionTimeout.current)
-    }
-
-    // Debounce the keyboard detection to prevent flickering
-    keyboardDetectionTimeout.current = setTimeout(() => {
-      // Store initial height on first load
-      if (initialViewportHeight.current === 0) {
-        initialViewportHeight.current = currentHeight
-      }
-
-      // Calculate if keyboard is visible (significant height reduction)
-      const heightDifference = initialViewportHeight.current - visualViewportHeight
-      const isKeyboard = heightDifference > 150 // More than 150px reduction indicates keyboard
-
-      // Calculate keyboard height for positioning
-      const calculatedKeyboardHeight = isKeyboard ? heightDifference : 0
-
-      setIsKeyboardVisible(isKeyboard)
-      setViewportHeight(visualViewportHeight)
-      setKeyboardHeight(calculatedKeyboardHeight)
-
-      console.log("🎹 Keyboard detection:", {
-        isKeyboard,
-        currentHeight,
-        visualViewportHeight,
-        heightDifference,
-        keyboardHeight: calculatedKeyboardHeight,
-      })
-    }, 100) // 100ms debounce
-  }, [])
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Set initial viewport height
-      const initialHeight = window.innerHeight
-      setViewportHeight(initialHeight)
-      initialViewportHeight.current = initialHeight
-
-      // Add event listeners with passive option for better performance
-      window.addEventListener("resize", detectKeyboard, { passive: true })
-      window.addEventListener("orientationchange", detectKeyboard, { passive: true })
-
-      // Also listen for visual viewport changes (better keyboard detection on iOS)
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", detectKeyboard, { passive: true })
-        window.visualViewport.addEventListener("scroll", detectKeyboard, { passive: true })
-      }
-
-      return () => {
-        window.removeEventListener("resize", detectKeyboard)
-        window.removeEventListener("orientationchange", detectKeyboard)
-
-        if (window.visualViewport) {
-          window.visualViewport.removeEventListener("resize", detectKeyboard)
-          window.visualViewport.removeEventListener("scroll", detectKeyboard)
-        }
-
-        if (keyboardDetectionTimeout.current) {
-          clearTimeout(keyboardDetectionTimeout.current)
-        }
-      }
-    }
-  }, [detectKeyboard])
-
-  useEffect(() => {
-    sdk.isInMiniApp().then(setIsMiniApp)
-  }, [])
-
-  // Complete state reset when drawer opens/closes
-  const resetAllState = () => {
-    console.log("🔄 Resetting all drawer state...")
-
-    // Cancel any ongoing operations
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-    }
-
-    // Clear keyboard detection timeout
-    if (keyboardDetectionTimeout.current) {
-      clearTimeout(keyboardDetectionTimeout.current)
-      keyboardDetectionTimeout.current = null
-    }
-
-    // Reset all form state
-    setContentUrl("")
-    setResolvedContentUrl(null)
-    setContentType(null)
-    setIsSubmitting(false)
-    setIsValidUrl(false)
-    setIsPreviewLoading(false)
-    setPreviewError(null)
-    setSubmissionStep("idle")
-
-    // Reset keyboard state
-    setIsKeyboardVisible(false)
-    setKeyboardHeight(0)
-    if (typeof window !== "undefined") {
-      setViewportHeight(window.innerHeight)
-      initialViewportHeight.current = window.innerHeight
-    }
-
-    // Reset processing flag
-    isProcessingRef.current = false
-
-    // Reset payment state
-    resetPaymentState()
-
-    console.log("✅ All drawer state reset complete")
-  }
-
+  // Reset state when sheet closes
   useEffect(() => {
     if (!open) {
-      resetAllState()
-    } else {
-      // When opening, create new abort controller and reset viewport
-      abortControllerRef.current = new AbortController()
-      if (typeof window !== "undefined") {
-        const currentHeight = window.innerHeight
-        setViewportHeight(currentHeight)
-        initialViewportHeight.current = currentHeight
-        setIsKeyboardVisible(false)
-        setKeyboardHeight(0)
-      }
-    }
-
-    // Cleanup on unmount
-    return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
+        abortControllerRef.current = null
       }
-      if (keyboardDetectionTimeout.current) {
-        clearTimeout(keyboardDetectionTimeout.current)
-      }
+      setContentUrl("")
+      setResolvedContentUrl(null)
+      setContentType(null)
+      setIsSubmitting(false)
+      setIsValidUrl(false)
+      setIsPreviewLoading(false)
+      setPreviewError(null)
+      setSubmissionStep("idle")
+      isProcessingRef.current = false
+      resetPaymentState()
+    } else {
+      abortControllerRef.current = new AbortController()
+    }
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort()
     }
   }, [open, resetPaymentState])
 
@@ -630,10 +499,8 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
     if (isPortrait) {
       const width = 200 * (9 / 16)
       return { maxHeight: "200px", height: "200px", width: `${width}px`, margin: "0 auto" }
-    } else {
-      const height = Math.min(200, (typeof window !== "undefined" ? window.innerWidth - 32 : 300) * (9 / 16))
-      return { height: `${height}px`, width: "100%" }
     }
+    return { height: "200px", width: "100%" }
   }
 
   const getButtonText = () => {
@@ -658,141 +525,107 @@ export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissio
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
 
-  // Calculate dynamic height and positioning to prevent flickering and ensure button visibility
-  const getSheetContentStyle = () => {
-    if (typeof window === "undefined") {
-      return {
-        maxHeight: "90vh",
-        height: "auto",
-        transition: "max-height 0.3s ease, bottom 0.3s ease",
-      }
-    }
-
-    if (!isKeyboardVisible) {
-      return {
-        maxHeight: `${Math.min(window.innerHeight * 0.9, 700)}px`,
-        height: "auto",
-        transition: "max-height 0.3s ease, bottom 0.3s ease",
-        bottom: "0px",
-      }
-    }
-
-    // When keyboard is visible: shrink maxHeight to visual viewport, lift above keyboard.
-    // In mini app WebViews the viewport already repositions — skip the bottom offset to avoid double-offset.
-    const availableHeight = viewportHeight - 16
-
-    return {
-      maxHeight: `${availableHeight}px`,
-      height: "auto",
-      transition: "max-height 0.3s ease, bottom 0.3s ease",
-      bottom: isMiniApp ? "0px" : `${keyboardHeight}px`,
-    }
-  }
-
   return (
-    <Drawer.Root open={open} onOpenChange={onOpenChange}>
-      <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-        <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-xl bg-white text-gray-900 outline-none flex flex-col overflow-hidden"
-          style={getSheetContentStyle()}
-        >
-          {/* Drag handle */}
-          <div className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-gray-300 flex-shrink-0" />
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="rounded-t-xl bg-white text-gray-900 outline-none flex flex-col overflow-hidden max-h-[90vh] p-0"
+      >
+        {/* Drag handle */}
+        <div className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-gray-300 flex-shrink-0" />
 
-          <div className="px-4 pt-2 pb-3 flex-shrink-0">
-            <Drawer.Title className="text-lg text-gray-900 font-medium">Submit Content</Drawer.Title>
-            <Drawer.Description className="text-xs text-gray-500 mt-1">
-              Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
-            </Drawer.Description>
-          </div>
+        <SheetHeader className="px-4 pt-2 pb-3 flex-shrink-0 text-left">
+          <SheetTitle className="text-lg text-gray-900 font-medium">Submit Content</SheetTitle>
+          <SheetDescription className="text-xs text-gray-500 mt-1">
+            Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
+          </SheetDescription>
+        </SheetHeader>
 
-          {/* Content area — expands to fit preview */}
-          <div className="px-4 space-y-4 min-h-0">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
-                  Content URL
-                </label>
-                {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
-              </div>
-              <div className="relative">
-                {contentUrl && previewError && (
-                  <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
-                )}
-                {contentUrl && isValidUrl && (
-                  <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
-                )}
-                <input
-                  id="content-url"
-                  type="text"
-                  placeholder={getPlaceholderText()}
-                  value={contentUrl}
-                  onChange={handleUrlChange}
-                  disabled={isAnyOperationInProgress}
-                  className={`w-full h-9 rounded-[5px] border px-3 text-sm text-gray-900 outline-none transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    !contentUrl
-                      ? "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
-                      : previewError
-                        ? "bg-white border-gray-300 focus:border-gray-400 pl-9"
-                        : isValidUrl
-                          ? "bg-green-50 border-green-200 focus:border-green-400 pl-9"
-                          : "bg-white border-gray-300 focus:border-gray-400"
-                  }`}
-                />
-              </div>
+        {/* Content area */}
+        <div className="px-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
+                Content URL
+              </label>
+              {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
             </div>
-
-            {contentType && urlForPreview && (
-              <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
-                <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
-                {isPreviewLoading ? (
-                  <div className="flex items-center justify-center h-[200px]">
-                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                  </div>
-                ) : isValidUrl && urlForPreview ? (
-                  <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
-                    <ContentEmbed
-                      contentType={contentType}
-                      contentUrl={urlForPreview}
-                      aspectRatio={
-                        contentType === "tiktok"
-                          ? detectedTikTokAspectRatio
-                          : contentType === "youtube" && urlForPreview.includes("shorts")
-                            ? "9:16"
-                            : "16:9"
-                      }
-                      isPreview={true}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
-                    <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Button — always pinned at bottom */}
-          <div className="flex-shrink-0 px-4 pt-3 pb-3 mt-0.5 border-t border-gray-100 bg-white">
-            <button
-              className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50"
-              onClick={handleSubmit}
-              disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
-            >
-              {isAnyOperationInProgress ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  {getButtonText()}
-                </>
-              ) : (
-                getButtonText()
+            <div className="relative">
+              {contentUrl && previewError && (
+                <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
               )}
-            </button>
+              {contentUrl && isValidUrl && (
+                <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
+              )}
+              <input
+                id="content-url"
+                type="text"
+                placeholder={getPlaceholderText()}
+                value={contentUrl}
+                onChange={handleUrlChange}
+                disabled={isAnyOperationInProgress}
+                className={`w-full h-9 rounded-[5px] border px-3 text-sm text-gray-900 outline-none transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  !contentUrl
+                    ? "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
+                    : previewError
+                      ? "bg-white border-gray-300 focus:border-gray-400 pl-9"
+                      : isValidUrl
+                        ? "bg-green-50 border-green-200 focus:border-green-400 pl-9"
+                        : "bg-white border-gray-300 focus:border-gray-400"
+                }`}
+              />
+            </div>
           </div>
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
+
+          {contentType && urlForPreview && (
+            <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
+              <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
+              {isPreviewLoading ? (
+                <div className="flex items-center justify-center h-[200px]">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : isValidUrl && urlForPreview ? (
+                <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
+                  <ContentEmbed
+                    contentType={contentType}
+                    contentUrl={urlForPreview}
+                    aspectRatio={
+                      contentType === "tiktok"
+                        ? detectedTikTokAspectRatio
+                        : contentType === "youtube" && urlForPreview.includes("shorts")
+                          ? "9:16"
+                          : "16:9"
+                    }
+                    isPreview={true}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
+                  <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Button — always pinned at bottom */}
+        <div className="flex-shrink-0 px-4 pt-3 pb-3 mt-0.5 border-t border-gray-100 bg-white">
+          <button
+            className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50"
+            onClick={handleSubmit}
+            disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
+          >
+            {isAnyOperationInProgress ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                {getButtonText()}
+              </>
+            ) : (
+              getButtonText()
+            )}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
