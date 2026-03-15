@@ -9,6 +9,8 @@ import { SessionProvider } from "@/providers/session-provider"
 import { WagmiRainbowProvider } from "@/providers/wagmi-provider"
 import { MiniAppInit } from "@/components/miniapp-init"
 import { FlickeringGrid } from "@/components/ui/flickering-grid"
+import { SubmitDrawerProvider } from "@/providers/submit-drawer-provider"
+import { ContentSubmissionDrawer } from "@/components/modals/submitContent"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -77,10 +79,13 @@ export default function RootLayout({
         <SessionProvider>
           <WagmiRainbowProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-              <MiniAppInit />
-              <ScrollToTop />
-              <div className="mx-auto max-w-[650px] min-h-screen relative z-10">{children}</div>
-              <Toaster />
+              <SubmitDrawerProvider>
+                <MiniAppInit />
+                <ScrollToTop />
+                <div className="mx-auto max-w-[650px] min-h-screen relative z-10">{children}</div>
+                <ContentSubmissionDrawer />
+                <Toaster />
+              </SubmitDrawerProvider>
             </ThemeProvider>
           </WagmiRainbowProvider>
         </SessionProvider>

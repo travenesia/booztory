@@ -7,10 +7,11 @@ import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-const navItems = [
+const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "Home", href: "/" },
   { name: "Upcoming", href: "/upcoming" },
   { name: "History", href: "/history" },
+  { name: "Reward", href: "/reward", badge: true },
   { name: "FAQ", href: "/faq" },
 ]
 
@@ -34,13 +35,18 @@ export function Topbar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "px-3 py-1.5 rounded text-sm font-medium transition-colors duration-150",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors duration-150",
                 pathname === item.href
                   ? "text-[#aa0000]"
                   : "text-gray-900 hover:text-[#aa0000]"
               )}
             >
               {item.name}
+              {item.badge && (
+                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                  New
+                </span>
+              )}
             </Link>
           ))}
           </nav>

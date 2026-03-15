@@ -18,15 +18,12 @@ import { getTikTokMetadata } from "@/lib/tiktokMetadata"
 import { getVimeoMetadata, extractVimeoId } from "@/lib/vimeoMetadata"
 import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
 import { getTwitchMetadata, extractTwitchInfo } from "@/lib/twitchMetadata"
-
-interface ContentSubmissionDrawerProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
+import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
 
 type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
 
-export function ContentSubmissionDrawer({ open, onOpenChange }: ContentSubmissionDrawerProps) {
+export function ContentSubmissionDrawer() {
+  const { isOpen: open, setIsOpen: onOpenChange } = useSubmitDrawer()
   const { data: session } = useSession()
   const [contentUrl, setContentUrl] = useState("")
   const [resolvedContentUrl, setResolvedContentUrl] = useState<string | null>(null)

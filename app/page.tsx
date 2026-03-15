@@ -5,11 +5,11 @@ import { sdk } from "@farcaster/miniapp-sdk"
 import { Topbar } from "@/components/layout/topbar"
 import { Navbar } from "@/components/layout/navbar"
 import { ContentCard } from "@/components/content/contentCard"
-import { ContentSubmissionDrawer } from "@/components/modals/submitContent"
 import { Button } from "@/components/ui/button"
 import { RotatingWords } from "@/components/ui/rotating-words"
 import { HiMiniPlus } from "react-icons/hi2"
 import { useToast } from "@/hooks/use-toast"
+import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
 import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Home() {
   const { data: session, status } = useSession()
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const { setIsOpen: setDrawerOpen } = useSubmitDrawer()
   const { toast } = useToast()
   const isMobile = useIsMobile()
   const [isDesktop, setIsDesktop] = useState(false)
@@ -74,15 +74,15 @@ export default function Home() {
   }, [content?.id, content?.endTime, isPlaceholder, refetch])
 
   const handleFabClick = () => {
-    if (!isConnected) {
+    if (status !== "authenticated") {
       toast({
         title: "Connect Wallet First",
         description: "You need to connect your wallet to submit content.",
         variant: "destructive",
       })
-    } else {
-      setIsDrawerOpen(true)
+      return
     }
+    setDrawerOpen(true)
   }
 
   const getTimeLeft = () => {
@@ -188,15 +188,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* FAB — mobile only */}
-      <Button
-        onClick={handleFabClick}
-        className="xl:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] right-6 h-16 w-16 text-white shadow-custom-sm hover:shadow-custom-sm z-50 elegance-button rounded-full flex items-center justify-center p-0 [&_svg]:size-auto"
-        aria-label="Submit Content"
-      >
-        <HiMiniPlus size={36} />
-      </Button>
-      <ContentSubmissionDrawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
       <Navbar />
     </main>
   )
