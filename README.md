@@ -1,6 +1,6 @@
 # Booztory
 
-**Booztory** is a decentralized content spotlight built on [Base](https://base.org). Pay 1 USDC to feature your content — YouTube, TikTok, X, Spotify, or Vimeo — in a live 15-minute slot. Each slot is minted as an ERC-721 token. Fans can support creators directly through on-chain USDC donations. Minters earn **BOOZ** reward tokens and are entered into a weekly **Chainlink VRF raffle**. No algorithms. No gatekeepers. No database.
+**Booztory** is a decentralized content spotlight built on [Base](https://base.org). Pay 1 USDC to feature your content — YouTube, TikTok, X, Spotify, Vimeo, or Twitch — in a live 15-minute slot. Each slot is minted as an ERC-721 token. Fans can support creators directly through on-chain USDC donations. Minters earn **BOOZ** reward tokens, build daily GM streaks, and are entered into a weekly **Chainlink VRF raffle**. No algorithms. No gatekeepers. No database.
 
 > Currently live on **Base Sepolia Testnet** · Mainnet launch coming soon.
 
@@ -11,10 +11,11 @@
 1. Connect your Web3 wallet
 2. Submit a content URL and approve 1 USDC
 3. Your slot is minted as an ERC-721 token and added to the on-chain queue
-4. You earn **BOOZ** reward tokens and one raffle entry per mint
+4. You earn **1,000 BOOZ** reward tokens and one raffle entry per mint
 5. Content goes live for 15 minutes when it reaches the front of the queue
 6. Viewers can send USDC donations directly to the creator (95% to creator, 5% protocol fee)
 7. Weekly raffle winners are drawn via Chainlink VRF and paid out in USDC automatically
+8. Claim your daily GM streak for additional BOOZ — up to 10,000 BOOZ over a 90-day journey
 
 ---
 
@@ -25,6 +26,7 @@
 | Frontend | Next.js 16 · React 19 · TypeScript · Tailwind CSS |
 | Wallet | wagmi v2 · RainbowKit · viem |
 | Auth | NextAuth 4 · SIWE (Sign-In with Ethereum) |
+| Mini App | Farcaster Mini App SDK (`@farcaster/miniapp-sdk`) · Farcaster QuickAuth |
 | Smart Contracts | Solidity 0.8.28 · OpenZeppelin · Hardhat 2.28.6 |
 | Randomness | Chainlink VRF v2.5 |
 | Chain | Base (8453) · Base Sepolia (84532) |
@@ -41,7 +43,7 @@
 | TikTok | ✅ Live |
 | Spotify | ✅ Live |
 | Vimeo | ✅ Live |
-| Twitch | 🔜 Coming soon |
+| Twitch | ✅ Live |
 | Instagram | 🔜 Coming soon |
 | Custom uploads | 🔜 Coming soon |
 
@@ -55,14 +57,15 @@ booztory/
 │   ├── page.tsx            # Home — live content, countdown, donation modal
 │   ├── history/page.tsx    # Past content with infinite scroll
 │   ├── upcoming/page.tsx   # Queued content with infinite scroll
-│   ├── reward/page.tsx     # BOOZ reward token info and redemption
+│   ├── reward/page.tsx     # BOOZ balance, GM streak, raffle entries, weekly draw
 │   ├── faq/page.tsx        # FAQ accordion
 │   └── api/                # API routes (nonce, SIWE, tweet data, TikTok resolver)
 ├── components/
 │   ├── content/            # ContentCard, ContentEmbed, HistoryCard, UpcomingCard
-│   ├── layout/             # Navbar, Topbar, ScrollToTop
-│   ├── modals/             # SubmitContent drawer, DonationModal
-│   └── wallet/             # ConnectWallet button, WalletDropdown
+│   ├── layout/             # Navbar, Topbar, PageTopbar, ScrollToTop, UsersOnline
+│   ├── modals/             # SubmitContent drawer, DonationModal, GMModal
+│   ├── wallet/             # ConnectWallet button, WalletDropdown
+│   └── embeds/             # YouTube, TikTok, Twitter, Vimeo, Spotify, Twitch embeds
 ├── contracts/
 │   ├── Booztory.sol        # ERC-721 slot contract with donation and reward hooks
 │   ├── BooztoryToken.sol   # BOOZ ERC-20 reward token (SuperchainERC20 / IERC7802)
@@ -142,11 +145,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Smart Contracts
 
-There are three contracts deployed together:
+Three contracts deployed together and wired up:
 
 | Contract | Description |
 |---|---|
-| `Booztory.sol` | ERC-721 slot minting, donations, reward wiring |
+| `Booztory.sol` | ERC-721 slot minting, donations, reward wiring, GM streak |
 | `BooztoryToken.sol` | BOOZ ERC-20 reward token (soulbound Phase 1, SuperchainERC20-ready) |
 | `BooztoryRaffle.sol` | Weekly raffle with Chainlink VRF v2.5 randomness |
 
@@ -274,8 +277,11 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 
 | Function | Description |
 |---|---|
-| `mintSlot(url, type, ratio, title, author, imageUrl)` | Pay slotPrice USDC → mint ERC-721 slot |
+| `mintSlot(url, type, ratio, title, author, imageUrl)` | Pay slotPrice USDC → mint ERC-721 slot, earn 1,000 BOOZ, add raffle entry |
+| `mintSlotWithDiscount(...)` | Burn 1,000 BOOZ → pay 0.9 USDC, still earn 1,000 BOOZ + raffle entry |
+| `mintSlotWithTokens(...)` | Burn 10,000 BOOZ → free slot, no BOOZ earned, no raffle entry |
 | `donate(tokenId, amount)` | Send USDC to creator (95%) + protocol fee (5%) |
+| `claimDailyGM()` | Claim daily GM streak reward — earns BOOZ, one claim per UTC day |
 | `getCurrentSlot()` | Returns the currently live slot |
 | `getUpcomingSlots()` | Returns all queued slots in order |
 | `getPastSlots(offset, limit)` | Returns past slots, newest first |
@@ -290,7 +296,7 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 | Function | Description |
 |---|---|
 | `mintReward(address, uint256)` | Booztory only — mint BOOZ to a user |
-| `burnFrom(address, uint256)` | Booztory only — burn BOOZ for free slot redemption |
+| `burnFrom(address, uint256)` | Booztory only — burn BOOZ for free slot / discount redemption |
 | `burn(uint256)` | Any holder — voluntarily burn own tokens |
 | `setSoulbound(bool)` | Owner — toggle soulbound mode (Phase 1 → Phase 2) |
 | `setBooztory(address)` | Owner — set authorized Booztory contract |
@@ -302,10 +308,36 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 
 | Function | Description |
 |---|---|
-| `addEntry(address)` | Booztory only — add one raffle entry per mint |
+| `addEntry(address)` | Booztory only — add one raffle entry per paid mint |
 | `requestWeeklyDraw(uint256 week)` | Owner — trigger VRF randomness request |
 | `setPrizes(amounts[])` | Owner — set prize tiers in USDC |
 | `setDrawThreshold(uint256)` | Owner — minimum entries to allow a draw |
+
+---
+
+## BOOZ Reward Token
+
+**BOOZ** is the native reward token of Booztory. It is earned by participating in the platform — no purchase required.
+
+| Action | Reward |
+|---|---|
+| Mint a slot (1 USDC) | 1,000 BOOZ |
+| GM streak Day 1–7 | 5 / 10 / 15 / 20 / 25 / 30 / 35 BOOZ |
+| GM streak Days 8–90 | 50 BOOZ/day |
+| Milestone Day 7 (Warrior) | +50 BOOZ |
+| Milestone Day 14 (Elite) | +250 BOOZ |
+| Milestone Day 30 (Epic) | +350 BOOZ |
+| Milestone Day 60 (Legend) | +500 BOOZ |
+| Milestone Day 90 (Mythic) | +4,560 BOOZ |
+
+**Burn sinks:**
+- Burn 10,000 BOOZ → free slot (no USDC needed, no raffle entry)
+- Burn 1,000 BOOZ → discounted slot (0.9 USDC, still earns BOOZ + raffle entry)
+
+Complete the full 90-day GM journey = 10,000 BOOZ = exactly 1 free slot.
+
+**Phase 1:** Soulbound — no trading, no farming incentive.
+**Phase 2:** `setSoulbound(false)` → transfers enabled, seed Uniswap v3 BOOZ/USDC pool from treasury.
 
 ---
 
@@ -316,6 +348,7 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 3. Signature verified via NextAuth credentials provider
 4. JWT session created: `{ userId: address, walletAddress, username }`
 5. No database — wallet address is the user identity
+6. **Farcaster Mini App:** QuickAuth via `sdk.quickAuth.getToken()` replaces SIWE automatically
 
 ---
 
@@ -340,13 +373,16 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] ERC-721 slot contract
 - [x] wagmi + RainbowKit wallet connection
 - [x] SIWE authentication
-- [x] Content submission (approve + mintSlot)
-- [x] Donation flow (approve + donate)
+- [x] Farcaster Mini App + QuickAuth
+- [x] Content submission — standard, discount, and free (token burn) paths
+- [x] Donation flow (approve + donate, 95/5 split)
 - [x] ENS + Basename display
-- [x] YouTube, TikTok, X, Spotify, Vimeo embeds
+- [x] YouTube, TikTok, X, Spotify, Vimeo, Twitch embeds
 - [x] History & Upcoming pages
 - [x] BOOZ reward token (ERC-20, soulbound Phase 1)
+- [x] Daily GM streak (90-day journey, on-chain)
 - [x] Weekly raffle (Chainlink VRF v2.5)
+- [x] Reward page (`/reward`) — BOOZ balance, streak, raffle entries
 - [x] SuperchainERC20 / IERC7802 support (cross-chain ready)
 - [x] Base Sepolia deployment
 - [ ] Base Mainnet deployment

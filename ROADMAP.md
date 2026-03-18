@@ -90,11 +90,11 @@ No hourly free claim — eliminates sybil farming entirely (no World ID on Base)
 - **Deploy order**: Booztory first → BooztoryToken(booztoryAddress) → `setRewardToken(booztoryTokenAddress)` on Booztory
 
 ### Booztory.sol Mint Paths
-| Function | Payment | BOOZ Earned | BOOZ Burned |
-|---|---|---|---|
-| `mintSlot()` | 1 USDC | 1,000 | 0 |
-| `mintSlotWithTokens()` | None | 0 | 10,000 |
-| `mintSlotWithDiscount()` | 0.9 USDC | 1,000 | 1,000 |
+| Function | Payment | BOOZ Earned | BOOZ Burned | Raffle Entry |
+|---|---|---|---|---|
+| `mintSlot()` | 1 USDC | 1,000 | 0 | ✅ Yes |
+| `mintSlotWithTokens()` | None | 0 | 10,000 | ✗ No |
+| `mintSlotWithDiscount()` | 0.9 USDC | 1,000 | 1,000 | ✅ Yes |
 
 ### Admin Setters (owner only)
 - `setRewardToken(address)` — enable/disable rewards (address(0) = disabled)
@@ -118,7 +118,7 @@ No hourly free claim — eliminates sybil farming entirely (no World ID on Base)
 - `external_url` points to booztory.com
 
 ### Admin Setters
-- `setContentTypeImage(string, string)` — set NFT image per content type (youtube, tiktok, twitter, vimeo, spotify, or any future platform)
+- `setContentTypeImage(string, string)` — set NFT image per content type (youtube, tiktok, twitter, vimeo, spotify, twitch, or any future platform)
 
 ---
 
@@ -128,7 +128,7 @@ Separate contract from Booztory.sol — keeps VRF complexity isolated, allows in
 
 ### Rules
 - **Weekly** draw (not daily)
-- **Multiple entries per wallet**: each mint = 1 entry (mint 5× = 5 entries)
+- **Multiple entries per wallet**: each paid mint = 1 entry (mint 5× = 5 entries)
 - **One prize per wallet**: duplicate winners re-rolled via linear probe
 - **Threshold**: draw only runs if ≥ 100 entries that week (configurable via `setDrawThreshold()`)
 - **Minimum unique minters**: ≥ winner count (enforced on-chain to prevent infinite loop in VRF callback)
@@ -245,9 +245,10 @@ Previously confirmed on old deploy:
 6. Frontend integration:
    - ~~BOOZ balance in wallet dropdown~~ ✅ Done
    - ~~GM streak claim UI (modal + mobile drawer + confetti)~~ ✅ Done
-   - `/reward` page (raffle progress, streak history, BOOZ stats) — **Next**
-   - `mintSlotWithDiscount()` path in submission drawer — Planned
-   - `mintSlotWithTokens()` path in submission drawer — Planned
+   - ~~`/reward` page (raffle progress, streak history, BOOZ stats)~~ ✅ Done
+   - ~~`mintSlotWithDiscount()` path in submission drawer~~ ✅ Done
+   - ~~`mintSlotWithTokens()` path in submission drawer~~ ✅ Done
+   - ~~Farcaster Mini App + QuickAuth~~ ✅ Done
 7. Verify all 3 contracts on Basescan
 8. Resolve remaining burn sinks (boost, badge, governance) before making token tradeable
 9. Mainnet deployment (Base) — after testnet validation complete
@@ -267,9 +268,10 @@ Previously confirmed on old deploy:
 | Context | Wallet | Content | Toggle |
 |---|---|---|---|
 | World Mini App (World App) | MiniKit | World Chain always | None |
+| Farcaster Mini App | Farcaster SDK + QuickAuth | Base by default | None |
 | Regular browser | RainbowKit / wagmi | Base by default | Toggle to World available |
 
-In regular browser, default chain is Base. Toggle button lets user switch to view World Chain content. Inside World App, content is always World Chain — no toggle needed.
+In regular browser, default chain is Base. Inside Farcaster, QuickAuth replaces SIWE automatically. Inside World App, content is always World Chain — no toggle needed.
 
 ### What SuperchainERC20 Enables
 - BOOZ earned on Base can be bridged to World Chain natively (burn on source, mint on destination)
