@@ -1056,24 +1056,26 @@ export default function RewardPage() {
           <div className="space-y-4">
 
             {/* Balances — USDC + BOOZ */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* USDC */}
-              <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 flex items-center gap-3">
-                <img src="/usdc.svg" alt="USDC" width={36} height={36} className="flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-3xl font-black text-blue-900 leading-tight">{address ? usdcFormatted : "—"}</span>
-                  <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">USDC</span>
+            {address && (
+              <div className="grid grid-cols-2 gap-3">
+                {/* USDC */}
+                <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 flex items-center gap-3">
+                  <img src="/usdc.svg" alt="USDC" width={36} height={36} className="flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-3xl font-black text-blue-900 leading-tight">{usdcFormatted}</span>
+                    <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">USDC</span>
+                  </div>
+                </div>
+                {/* BOOZ */}
+                <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-4 flex items-center gap-3">
+                  <HiBolt size={36} className="text-red-400 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-3xl font-black text-red-900 leading-tight">{boozFormatted}</span>
+                    <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">BOOZ</span>
+                  </div>
                 </div>
               </div>
-              {/* BOOZ */}
-              <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-4 flex items-center gap-3">
-                <HiBolt size={36} className="text-red-400 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-3xl font-black text-red-900 leading-tight">{address ? boozFormatted : "—"}</span>
-                  <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">BOOZ</span>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* GM Streak Card */}
             <div className="rounded-xl border border-gray-200 bg-white p-5">

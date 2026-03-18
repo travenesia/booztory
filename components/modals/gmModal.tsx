@@ -294,7 +294,7 @@ export function GMMobileButton() {
             <SheetTitle>Daily GM</SheetTitle>
           </SheetHeader>
           <GMContent onClose={() => setOpen(false)} />
-          <div className="h-6 bg-[#0d0d0d]" />
+          <div className="pb-[env(safe-area-inset-bottom)]" />
         </SheetContent>
       </Sheet>
     </>

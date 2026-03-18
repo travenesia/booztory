@@ -22,6 +22,7 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
   const [imageError, setImageError] = useState(false)
   const [tiktokTitle, setTiktokTitle] = useState<string | null>(null)
   const [tiktokAuthor, setTiktokAuthor] = useState<string | null>(null)
+  const [tiktokThumbnail, setTiktokThumbnail] = useState<string | null>(null)
 
   const resolvedName = useWalletName(content.submittedBy)
   const displayUsername = resolvedName || content.username
@@ -31,11 +32,12 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
     if (content.contentType === "youtube") {
       setIsContentYoutubeShort(isYouTubeShort(content.contentUrl) || content.aspectRatio === "9:16")
     }
-    if (content.contentType === "tiktok" && (!content.title || !content.authorName)) {
+    if (content.contentType === "tiktok") {
       getTikTokMetadata(content.contentUrl).then((meta) => {
         if (meta) {
           if (!content.title) setTiktokTitle(meta.title)
           if (!content.authorName) setTiktokAuthor(meta.author_name)
+          setTiktokThumbnail(meta.thumbnail_url)
         }
       })
     }
@@ -76,7 +78,7 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
 
   const title = content.title || tiktokTitle || "Content Title"
   const authorName = content.authorName || tiktokAuthor || displayUsername || "Creator"
-  const thumbnailUrl = content.imageUrl
+  const thumbnailUrl = tiktokThumbnail || content.imageUrl
 
   const handleCardClick = () => {
     window.open(content.contentUrl, "_blank", "noopener,noreferrer")
