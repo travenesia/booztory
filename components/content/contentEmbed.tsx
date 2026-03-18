@@ -10,7 +10,7 @@ import { SpotifyEmbed } from "@/components/embeds/spotifyEmbed"
 import { TwitchEmbed } from "@/components/embeds/twitchEmbed"
 
 interface ContentEmbedProps {
-  contentType: "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
+  contentType: "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
   contentUrl: string
   aspectRatio: "16:9" | "9:16"
   isPreview?: boolean
@@ -88,11 +88,11 @@ export const ContentEmbed = memo(function ContentEmbed({
   }, [responsive])
 
   // If it's a YouTube embed, use the dedicated component
-  if (contentType === "youtube") {
+  if (contentType === "youtube" || contentType === "youtubeshorts") {
     return (
       <YouTubeEmbed
         url={contentUrl}
-        aspectRatio={contentType === "youtube" && contentUrl.includes("shorts") ? "9:16" : aspectRatio}
+        aspectRatio={contentType === "youtubeshorts" ? "9:16" : aspectRatio}
         isPreview={isPreview}
         responsive={responsive}
       />

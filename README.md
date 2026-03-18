@@ -1,6 +1,6 @@
 # Booztory
 
-**Booztory** is a decentralized content spotlight built on [Base](https://base.org). Pay 1 USDC to feature your content — YouTube, TikTok, X, Spotify, or Vimeo — in a live 15-minute slot. Each slot is minted as an ERC-721 token. Fans can support creators directly through on-chain USDC donations. No algorithms. No gatekeepers. No database.
+**Booztory** is a decentralized content spotlight built on [Base](https://base.org). Pay 1 USDC to feature your content — YouTube, TikTok, X, Spotify, or Vimeo — in a live 15-minute slot. Each slot is minted as an ERC-721 token. Fans can support creators directly through on-chain USDC donations. Minters earn **BOOZ** reward tokens and are entered into a weekly **Chainlink VRF raffle**. No algorithms. No gatekeepers. No database.
 
 > Currently live on **Base Sepolia Testnet** · Mainnet launch coming soon.
 
@@ -11,8 +11,10 @@
 1. Connect your Web3 wallet
 2. Submit a content URL and approve 1 USDC
 3. Your slot is minted as an ERC-721 token and added to the on-chain queue
-4. Content goes live for 15 minutes when it reaches the front of the queue
-5. Viewers can send USDC donations directly to the creator through the contract (95% to creator, 5% protocol fee)
+4. You earn **BOOZ** reward tokens and one raffle entry per mint
+5. Content goes live for 15 minutes when it reaches the front of the queue
+6. Viewers can send USDC donations directly to the creator (95% to creator, 5% protocol fee)
+7. Weekly raffle winners are drawn via Chainlink VRF and paid out in USDC automatically
 
 ---
 
@@ -23,7 +25,8 @@
 | Frontend | Next.js 16 · React 19 · TypeScript · Tailwind CSS |
 | Wallet | wagmi v2 · RainbowKit · viem |
 | Auth | NextAuth 4 · SIWE (Sign-In with Ethereum) |
-| Smart Contract | Solidity 0.8.28 · OpenZeppelin ERC-721 · Hardhat |
+| Smart Contracts | Solidity 0.8.28 · OpenZeppelin · Hardhat 2.28.6 |
+| Randomness | Chainlink VRF v2.5 |
 | Chain | Base (8453) · Base Sepolia (84532) |
 | Identity | ENS · Basenames |
 
@@ -52,20 +55,23 @@ booztory/
 │   ├── page.tsx            # Home — live content, countdown, donation modal
 │   ├── history/page.tsx    # Past content with infinite scroll
 │   ├── upcoming/page.tsx   # Queued content with infinite scroll
+│   ├── reward/page.tsx     # BOOZ reward token info and redemption
 │   ├── faq/page.tsx        # FAQ accordion
 │   └── api/                # API routes (nonce, SIWE, tweet data, TikTok resolver)
 ├── components/
 │   ├── content/            # ContentCard, ContentEmbed, HistoryCard, UpcomingCard
 │   ├── layout/             # Navbar, Topbar, ScrollToTop
 │   ├── modals/             # SubmitContent drawer, DonationModal
-│   └── wallet/             # ConnectWallet button
+│   └── wallet/             # ConnectWallet button, WalletDropdown
 ├── contracts/
-│   └── Booztory.sol        # ERC-721 slot contract
+│   ├── Booztory.sol        # ERC-721 slot contract with donation and reward hooks
+│   ├── BooztoryToken.sol   # BOOZ ERC-20 reward token (SuperchainERC20 / IERC7802)
+│   └── BooztoryRaffle.sol  # Weekly raffle powered by Chainlink VRF v2.5
 ├── hooks/                  # useContractContent, usePayment, useDonation, useWalletName
 ├── lib/                    # Contract ABI, wagmi config, cache, metadata fetchers
 ├── providers/              # WagmiProvider, SessionProvider
 └── scripts/
-    └── deploy.ts           # Hardhat deploy script
+    └── deploy.ts           # Hardhat deploy script (all 3 contracts + wiring)
 ```
 
 ---
@@ -91,16 +97,37 @@ pnpm install
 Create a `.env.local` file in the project root:
 
 ```env
-# WalletConnect
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
-
-# Contract addresses (set after deployment)
-NEXT_PUBLIC_BOOZTORY_ADDRESS=
-NEXT_PUBLIC_USDC_ADDRESS=
+# App URL
+NEXT_PUBLIC_URL=http://localhost:3000
 
 # NextAuth
 NEXTAUTH_SECRET=your_random_secret_here
 NEXTAUTH_URL=http://localhost:3000
+
+# Alchemy API key — https://dashboard.alchemy.com
+NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_key
+
+# WalletConnect — https://cloud.walletconnect.com
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
+
+# Contract addresses (set after deployment — see Smart Contract section)
+NEXT_PUBLIC_BOOZTORY_ADDRESS=
+NEXT_PUBLIC_RAFFLE_ADDRESS=
+NEXT_PUBLIC_TOKEN_ADDRESS=
+
+# USDC token address
+# Base mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+# Base Sepolia:  0x036CbD53842c5426634e7929541eC2318f3dCF7e
+NEXT_PUBLIC_USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+
+# Deployer private key (for Hardhat scripts only — never expose)
+PRIVATE_KEY=0x...
+
+# Chainlink VRF subscription ID — https://vrf.chain.link
+VRF_SUBSCRIPTION_ID=
+
+# Basescan API key — https://basescan.org/apis
+BASESCAN_API_KEY=
 ```
 
 ### 3. Run the dev server
@@ -113,7 +140,15 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## Smart Contract
+## Smart Contracts
+
+There are three contracts deployed together:
+
+| Contract | Description |
+|---|---|
+| `Booztory.sol` | ERC-721 slot minting, donations, reward wiring |
+| `BooztoryToken.sol` | BOOZ ERC-20 reward token (soulbound Phase 1, SuperchainERC20-ready) |
+| `BooztoryRaffle.sol` | Weekly raffle with Chainlink VRF v2.5 randomness |
 
 ### Compile
 
@@ -122,6 +157,18 @@ npx hardhat compile
 ```
 
 ### Deploy
+
+The deploy script handles all 6 steps automatically:
+1. Deploy `Booztory`
+2. Deploy `BooztoryToken` via CREATE2 factory (deterministic address across chains)
+3. Deploy `BooztoryRaffle`
+4. `BooztoryToken.setBooztory(booztoryAddress)`
+5. `Booztory.setRewardToken(tokenAddress)`
+6. `Booztory.setRaffle(raffleAddress)`
+
+**Before deploying**, make sure `.env.local` contains:
+- `PRIVATE_KEY` — deployer wallet private key
+- `VRF_SUBSCRIPTION_ID` — your Chainlink VRF subscription ID (from [vrf.chain.link](https://vrf.chain.link))
 
 **Base Sepolia (testnet):**
 ```bash
@@ -133,39 +180,132 @@ npx hardhat run scripts/deploy.ts --network base-sepolia
 npx hardhat run scripts/deploy.ts --network base
 ```
 
-After deployment, copy the output addresses into your `.env.local`:
+The script prints all deployed addresses and the exact `.env.local` values to copy:
+
+```
+╔══════════════════════════════════════════════════════════╗
+║  Deployment complete — base-sepolia                      ║
+╠══════════════════════════════════════════════════════════╣
+║  Booztory:       0x...                                   ║
+║  BooztoryToken:  0x...                                   ║
+║  BooztoryRaffle: 0x...                                   ║
+╚══════════════════════════════════════════════════════════╝
+```
+
+Copy the three addresses into `.env.local`:
+
 ```env
 NEXT_PUBLIC_BOOZTORY_ADDRESS=0x...
-NEXT_PUBLIC_USDC_ADDRESS=0x...
+NEXT_PUBLIC_RAFFLE_ADDRESS=0x...
+NEXT_PUBLIC_TOKEN_ADDRESS=0x...
 ```
 
-### Verify
+### Post-deploy: Chainlink VRF setup
 
+After deploying, add `BooztoryRaffle` as a consumer on your VRF subscription:
+
+1. Go to [vrf.chain.link](https://vrf.chain.link)
+2. Open your subscription
+3. Click **Add consumer** and paste the `BooztoryRaffle` address
+4. Ensure the subscription is funded with LINK
+
+Without this step, the raffle contract cannot request randomness.
+
+### Verify on Basescan
+
+Make sure `BASESCAN_API_KEY` is set in `.env.local`, then run:
+
+**Booztory:**
 ```bash
-npx hardhat verify --network base-sepolia <DEPLOYED_ADDRESS> <USDC_ADDRESS>
+npx hardhat verify --network base-sepolia <BOOZTORY_ADDRESS> "<USDC_ADDRESS>"
 ```
 
-### Key Contract Functions
+**BooztoryToken** — requires the deployer address as constructor argument:
+```bash
+npx hardhat verify --network base-sepolia <TOKEN_ADDRESS> "<DEPLOYER_ADDRESS>"
+```
+
+**BooztoryRaffle:**
+```bash
+npx hardhat verify --network base-sepolia <RAFFLE_ADDRESS> \
+  "<VRF_COORDINATOR>" \
+  "<BOOZTORY_ADDRESS>" \
+  "<USDC_ADDRESS>" \
+  <VRF_SUBSCRIPTION_ID> \
+  "<KEY_HASH>"
+```
+
+VRF coordinator and key hash constants (30 gwei gas lane):
+
+| Network | VRF Coordinator | Key Hash |
+|---|---|---|
+| Base Mainnet | `0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634` | `0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71` |
+| Base Sepolia | `0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE` | `0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71` |
+
+> **Tip:** The deploy script output also prints the exact verify commands for all three contracts with the correct arguments filled in.
+
+---
+
+## Deployed Addresses
+
+### Base Sepolia (Testnet)
+
+| Contract | Address |
+|---|---|
+| Booztory | `0x9D644381cd8bFA5fdba46C94BdB2A131aaeEF892` |
+| BooztoryToken (BOOZ) | `0x3b3C0EF1f9072A435BE1B5860d674e9E0e47FAfE` |
+| BooztoryRaffle | `0xee7a205dA0D3E16ca9384Feb1852A78aBf34285e` |
+| USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+
+### Base Mainnet
+
+| Contract | Address |
+|---|---|
+| Booztory | _pending mainnet deployment_ |
+| BooztoryToken (BOOZ) | _pending mainnet deployment_ |
+| BooztoryRaffle | _pending mainnet deployment_ |
+| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+
+---
+
+## Key Contract Functions
+
+### Booztory.sol
 
 | Function | Description |
 |---|---|
-| `mintSlot(url, type, ratio, title, author, imageUrl)` | Pay 1 USDC → mint ERC-721 slot |
+| `mintSlot(url, type, ratio, title, author, imageUrl)` | Pay slotPrice USDC → mint ERC-721 slot |
 | `donate(tokenId, amount)` | Send USDC to creator (95%) + protocol fee (5%) |
 | `getCurrentSlot()` | Returns the currently live slot |
 | `getUpcomingSlots()` | Returns all queued slots in order |
 | `getPastSlots(offset, limit)` | Returns past slots, newest first |
 | `withdraw()` | Owner withdraws accumulated fees |
 | `setSlotPrice(uint256)` | Owner — update slot price |
-| `setSlotDuration(uint256)` | Owner — update slot duration (default: 900s) |
+| `setSlotDuration(uint256)` | Owner — update slot duration (default: 900s = 15 min) |
+| `setRewardToken(address)` | Owner — set BOOZ token address |
+| `setRaffle(address)` | Owner — set raffle contract address |
 
----
+### BooztoryToken.sol (BOOZ)
 
-## Known Addresses
+| Function | Description |
+|---|---|
+| `mintReward(address, uint256)` | Booztory only — mint BOOZ to a user |
+| `burnFrom(address, uint256)` | Booztory only — burn BOOZ for free slot redemption |
+| `burn(uint256)` | Any holder — voluntarily burn own tokens |
+| `setSoulbound(bool)` | Owner — toggle soulbound mode (Phase 1 → Phase 2) |
+| `setBooztory(address)` | Owner — set authorized Booztory contract |
+| `mintTreasury(address, uint256)` | Owner — one-time treasury mint (max 10M BOOZ) |
+| `crosschainMint(address, uint256)` | Superchain bridge only — mint on bridge-in |
+| `crosschainBurn(address, uint256)` | Superchain bridge only — burn on bridge-out (blocked while soulbound) |
 
-| Token | Network | Address |
-|---|---|---|
-| USDC | Base Mainnet | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| USDC | Base Sepolia | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+### BooztoryRaffle.sol
+
+| Function | Description |
+|---|---|
+| `addEntry(address)` | Booztory only — add one raffle entry per mint |
+| `requestWeeklyDraw(uint256 week)` | Owner — trigger VRF randomness request |
+| `setPrizes(amounts[])` | Owner — set prize tiers in USDC |
+| `setDrawThreshold(uint256)` | Owner — minimum entries to allow a draw |
 
 ---
 
@@ -185,6 +325,10 @@ npx hardhat verify --network base-sepolia <DEPLOYED_ADDRESS> <USDC_ADDRESS>
 pnpm dev          # Start Next.js dev server
 pnpm build        # Production build (also type-checks)
 pnpm lint         # Run ESLint
+
+npx hardhat compile                                          # Compile contracts
+npx hardhat run scripts/deploy.ts --network base-sepolia    # Deploy to testnet
+npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 ```
 
 > No test runner is configured. Use `pnpm build` to catch TypeScript errors.
@@ -201,11 +345,15 @@ pnpm lint         # Run ESLint
 - [x] ENS + Basename display
 - [x] YouTube, TikTok, X, Spotify, Vimeo embeds
 - [x] History & Upcoming pages
+- [x] BOOZ reward token (ERC-20, soulbound Phase 1)
+- [x] Weekly raffle (Chainlink VRF v2.5)
+- [x] SuperchainERC20 / IERC7802 support (cross-chain ready)
+- [x] Base Sepolia deployment
 - [ ] Base Mainnet deployment
-- [ ] Base Mini App
-- [ ] Farcaster Mini App
+- [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
+- [ ] World Chain deployment (World Mini App)
+- [ ] Superchain expansion (OP Mainnet, etc.)
 - [ ] Creator analytics dashboard
-- [ ] Reward pool for top creators
 
 ---
 

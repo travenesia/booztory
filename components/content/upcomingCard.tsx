@@ -45,6 +45,8 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
     switch (content.contentType) {
       case "youtube":
         return isContentYoutubeShort ? <YouTubeShortsIcon /> : <YouTubeIcon />
+      case "youtubeshorts":
+        return <YouTubeShortsIcon />
       case "tiktok":
         return <TikTokIcon />
       case "twitter":
@@ -83,10 +85,13 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
   return (
     <div
       onClick={handleCardClick}
-      className="relative bg-gray-0 rounded-lg overflow-hidden border border-border cursor-pointer"
+      className="relative bg-gray-0 rounded-lg overflow-hidden cursor-pointer"
     >
       <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
-      <div className={`flex items-center justify-between h-9 px-3 border-b border-gray-200 ${isOwn ? "bg-amber-50" : "bg-[#eef0f3]"}`}>
+      <div
+        className="flex items-center justify-between h-9 px-3 border-b border-gray-200"
+        style={{ background: isOwn ? "linear-gradient(160deg, #fffbeb 0%, #fef3c7 40%, #fffdf0 100%)" : "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
+      >
         <div className="text-xs font-medium text-gray-700">{isOwn ? "Posted by You" : `Posted by @${displayUsername}`}</div>
         <div className="flex-shrink-0">{getPlatformIcon()}</div>
       </div>

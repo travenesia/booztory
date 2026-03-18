@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { HiOutlineMegaphone } from "react-icons/hi2"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
+import { GMButton, GMMobileButton } from "@/components/modals/gmModal"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
@@ -24,7 +25,7 @@ export function Topbar() {
         {/* Left: logo + nav */}
         <div className="flex items-center gap-4 flex-1">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority />
+            <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
             <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
             <span className="hidden md:inline text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">Testnet</span>
           </Link>
@@ -35,7 +36,7 @@ export function Topbar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors duration-150",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-bold transition-colors duration-150",
                 pathname === item.href
                   ? "text-[#aa0000]"
                   : "text-gray-900 hover:text-[#aa0000]"
@@ -54,6 +55,9 @@ export function Topbar() {
 
         {/* Right: mobile icons + wallet */}
         <div className="flex items-center gap-2">
+          {/* GM button — desktop */}
+          <GMButton />
+
           {/* X icon — desktop */}
           <a
             href="https://x.com/booztory"
@@ -62,22 +66,27 @@ export function Topbar() {
             className="hidden md:flex items-center justify-center w-7 h-7 transition-colors"
             aria-label="Follow on X"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="#111827" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/social/x.svg" alt="X" width={13} height={13} />
           </a>
-          {/* X + FAQ icons — mobile/tablet only */}
+          {/* GM + X + FAQ icons — mobile/tablet only */}
           <div className="md:hidden flex items-center">
-            <a href="https://x.com/booztory" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-7 h-7 rounded-base transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="Follow on X">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
+            <GMMobileButton />
+            <a href="https://x.com/booztory" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-7 h-7 rounded-base transition-colors" aria-label="Follow on X">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/social/x.svg" alt="X" width={14} height={14} />
             </a>
             <Link href="/faq" className="flex items-center justify-center w-7 h-7 rounded-base transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="FAQ">
               <HiOutlineMegaphone size={16} />
             </Link>
           </div>
-          <ConnectWalletButton />
+          {["/history", "/upcoming", "/faq", "/reward"].includes(pathname) ? (
+            <div className="hidden md:block">
+              <ConnectWalletButton />
+            </div>
+          ) : (
+            <ConnectWalletButton />
+          )}
         </div>
       </div>
     </header>

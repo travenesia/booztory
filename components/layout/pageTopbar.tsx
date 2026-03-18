@@ -6,6 +6,7 @@ import { HiMiniArrowSmallLeft } from "react-icons/hi2"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
+import { GMButton } from "@/components/modals/gmModal"
 
 interface PageTopbarProps {
   title: string
@@ -59,10 +60,13 @@ export function PageTopbar({ title }: PageTopbarProps) {
         </div>
 
         {/* Mobile: page title — absolutely centered */}
-        <h1 className="md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-medium text-gray-900">{title}</h1>
+        <h1 className="md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-bold text-gray-900">{title}</h1>
 
         {/* Right */}
         <div className="flex items-center gap-2">
+          {/* GM button — desktop */}
+          <GMButton />
+
           <a
             href="https://x.com/booztory"
             target="_blank"
@@ -70,9 +74,8 @@ export function PageTopbar({ title }: PageTopbarProps) {
             className="hidden md:flex items-center justify-center w-7 h-7 transition-colors"
             aria-label="Follow on X"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="#111827" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/social/x.svg" alt="X" width={13} height={13} />
           </a>
           <div className="hidden md:block">
             <ConnectWalletButton />

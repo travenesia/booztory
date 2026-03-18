@@ -7,6 +7,12 @@ export const BOOZTORY_ADDRESS = (process.env.NEXT_PUBLIC_BOOZTORY_ADDRESS || "0x
 // Base Sepolia USDC: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
 export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913") as `0x${string}`
 
+// BOOZ reward token address — set via NEXT_PUBLIC_TOKEN_ADDRESS after deployment
+export const TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`
+
+// BooztoryRaffle contract address — set via NEXT_PUBLIC_RAFFLE_ADDRESS after deployment
+export const RAFFLE_ADDRESS = (process.env.NEXT_PUBLIC_RAFFLE_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`
+
 // ─── Slot struct components (reused across multiple ABI entries) ──────────────
 const SLOT_COMPONENTS = [
   { internalType: "string",  name: "contentUrl",    type: "string"  },
@@ -38,6 +44,7 @@ export const BOOZTORY_ABI = [
   { inputs: [{ internalType: "address", name: "owner", type: "address" }], name: "OwnableInvalidOwner", type: "error" },
   { inputs: [{ internalType: "address", name: "account", type: "address" }], name: "OwnableUnauthorizedAccount", type: "error" },
   { inputs: [], name: "ReentrancyGuardReentrantCall", type: "error" },
+  { inputs: [], name: "QueueFull", type: "error" },
 
   // Events
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "owner", type: "address" }, { indexed: true, internalType: "address", name: "approved", type: "address" }, { indexed: true, internalType: "uint256", name: "tokenId", type: "uint256" }], name: "Approval", type: "event" },
@@ -79,11 +86,21 @@ export const BOOZTORY_ABI = [
   { inputs: [], name: "donationFeeBps", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "nextTokenId", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "queueEndTime", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "maxQueueSize", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "getQueueSize", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "slots", outputs: [{ internalType: "string", name: "contentUrl", type: "string" }, { internalType: "string", name: "contentType", type: "string" }, { internalType: "string", name: "aspectRatio", type: "string" }, { internalType: "string", name: "title", type: "string" }, { internalType: "string", name: "authorName", type: "string" }, { internalType: "string", name: "imageUrl", type: "string" }, { internalType: "uint256", name: "scheduledTime", type: "uint256" }, { internalType: "uint256", name: "endTime", type: "uint256" }, { internalType: "address", name: "creator", type: "address" }, { internalType: "uint256", name: "donations", type: "uint256" }], stateMutability: "view", type: "function" },
 
   // Core write functions
   { inputs: [{ internalType: "string", name: "contentUrl", type: "string" }, { internalType: "string", name: "contentType", type: "string" }, { internalType: "string", name: "aspectRatio", type: "string" }, { internalType: "string", name: "title", type: "string" }, { internalType: "string", name: "authorName", type: "string" }, { internalType: "string", name: "imageUrl", type: "string" }], name: "mintSlot", outputs: [], stateMutability: "payable", type: "function" },
+  { inputs: [{ internalType: "string", name: "contentUrl", type: "string" }, { internalType: "string", name: "contentType", type: "string" }, { internalType: "string", name: "aspectRatio", type: "string" }, { internalType: "string", name: "title", type: "string" }, { internalType: "string", name: "authorName", type: "string" }, { internalType: "string", name: "imageUrl", type: "string" }], name: "mintSlotWithDiscount", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "string", name: "contentUrl", type: "string" }, { internalType: "string", name: "contentType", type: "string" }, { internalType: "string", name: "aspectRatio", type: "string" }, { internalType: "string", name: "title", type: "string" }, { internalType: "string", name: "authorName", type: "string" }, { internalType: "string", name: "imageUrl", type: "string" }], name: "mintSlotWithTokens", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "donate", outputs: [], stateMutability: "payable", type: "function" },
+
+  // Burn-path config reads
+  { inputs: [], name: "discountBurnCost", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "freeSlotCost", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "discountAmount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "rewardToken", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
 
   // Read functions
   { inputs: [], name: "getCurrentSlot", outputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }, { components: SLOT_COMPONENTS, internalType: "struct Booztory.Slot", name: "slot", type: "tuple" }, { internalType: "bool", name: "found", type: "bool" }], stateMutability: "view", type: "function" },
@@ -92,6 +109,16 @@ export const BOOZTORY_ABI = [
   { inputs: [{ internalType: "address", name: "creator", type: "address" }], name: "getSlotsByCreator", outputs: [{ internalType: "uint256[]", name: "tokenIds", type: "uint256[]" }, { components: SLOT_COMPONENTS, internalType: "struct Booztory.Slot[]", name: "slotData", type: "tuple[]" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "getUpcomingSlots", outputs: [{ internalType: "uint256[]", name: "tokenIds", type: "uint256[]" }, { components: SLOT_COMPONENTS, internalType: "struct Booztory.Slot[]", name: "slotData", type: "tuple[]" }], stateMutability: "view", type: "function" },
 
+  // GM Streak
+  { inputs: [{ internalType: "address", name: "account", type: "address" }], name: "gmStreaks", outputs: [{ internalType: "uint256", name: "lastClaimDay", type: "uint256" }, { internalType: "uint16", name: "streakCount", type: "uint16" }, { internalType: "uint8", name: "claimedMilestones", type: "uint8" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "index", type: "uint256" }], name: "gmDayRewards", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "gmFlatDailyReward", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "index", type: "uint256" }], name: "gmMilestoneDays", outputs: [{ internalType: "uint16", name: "", type: "uint16" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "index", type: "uint256" }], name: "gmMilestoneRewards", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "claimDailyGM", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256[5]", name: "_rewards", type: "uint256[5]" }], name: "setGMMilestoneRewards", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }], name: "setGMFlatDailyReward", outputs: [], stateMutability: "nonpayable", type: "function" },
+
   // Admin (owner only)
   { inputs: [{ internalType: "uint256", name: "_price", type: "uint256" }], name: "setSlotPrice", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "uint256", name: "_duration", type: "uint256" }], name: "setSlotDuration", outputs: [], stateMutability: "nonpayable", type: "function" },
@@ -99,6 +126,29 @@ export const BOOZTORY_ABI = [
   { inputs: [{ internalType: "uint256", name: "_bps", type: "uint256" }], name: "setDonationFeeBps", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [], name: "withdraw", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "address", name: "token", type: "address" }], name: "withdrawToken", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "withdrawETH", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_size", type: "uint256" }], name: "setMaxQueueSize", outputs: [], stateMutability: "nonpayable", type: "function" },
+] as const
+
+// ─── Raffle ABI ───────────────────────────────────────────────────────────────
+export const RAFFLE_ABI = [
+  { inputs: [], name: "currentWeek", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "getWeeklyEntryCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "weeklyUniqueCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "drawThreshold", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "minUniqueMinters", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }, { internalType: "address", name: "", type: "address" }], name: "hasMinted", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "getPrizes", outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "getWeeklyWinners", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "getWeeklyEntries", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "weekDrawn", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "owner", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "requestWeeklyDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "resetDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_threshold", type: "uint256" }], name: "setDrawThreshold", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_min", type: "uint256" }], name: "setMinUniqueMinters", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256[]", name: "_prizes", type: "uint256[]" }], name: "setPrizes", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "withdraw", outputs: [], stateMutability: "nonpayable", type: "function" },
 ] as const
 
 // ERC-20 minimal ABI (approve + transfer)

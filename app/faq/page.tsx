@@ -151,6 +151,159 @@ export default function FAQPage() {
                       <p>See what's live now, what's queued up next, and what's already aired</p>
                     </div>
                   </div>
+                  <div className="flex items-start space-x-3">
+                    <span className="w-2 h-2 bg-red-700 rounded-full mt-2 flex-shrink-0"></span>
+                    <div>
+                      <p className="font-medium text-gray-900">Earn $BOOZ rewards</p>
+                      <p>Claim daily GM streaks and enter weekly raffles to earn $BOOZ tokens</p>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* ── Rewards & $BOOZ ── */}
+            <AccordionItem value="booz-token" className="bg-gray-0 rounded-lg border border-gray-300">
+              <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
+                <span className="font-medium text-gray-900">What is $BOOZ?</span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 pt-2 px-4">
+                <div className="text-sm text-gray-700 space-y-3">
+                  <p>
+                    <strong>$BOOZ is the native reward token of Booztory.</strong> It is earned by participating in the platform — no purchase required.
+                  </p>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">Ways to earn $BOOZ:</p>
+                    <ul className="space-y-1 ml-4">
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Mint a paid slot (1 USDC) — earns 1,000 $BOOZ</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Daily GM streak — 5 to 50 $BOOZ per day</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Milestone bonuses at days 7, 14, 30, 60, and 90</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Complete the full 90-day journey — 10,000 $BOOZ total</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <p className="text-gray-500">
+                    $BOOZ can be spent to get discounted or free slots. See the Rewards page for your current balance.
+                  </p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="gm-streak" className="bg-gray-0 rounded-lg border border-gray-300">
+              <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
+                <span className="font-medium text-gray-900">How does the Daily GM streak work?</span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 pt-2 px-4">
+                <div className="text-sm text-gray-700 space-y-3">
+                  <p>
+                    Tap the bolt icon in the top bar once per day to claim your daily GM reward. Each consecutive day builds your 90-day journey with escalating rewards and one-time milestone bonuses.
+                  </p>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">Daily rewards:</p>
+                    <ul className="space-y-1 ml-4">
+                      {[5, 10, 15, 20, 25, 30, 35].map((amt, i) => (
+                        <li key={i} className="flex items-center space-x-2">
+                          <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                          <span>Day {i + 1} — {amt} $BOOZ</span>
+                        </li>
+                      ))}
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Days 8–90 — 50 $BOOZ per day</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">Milestone bonuses (one-time):</p>
+                    <ul className="space-y-1 ml-4">
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        <span>⚔️ Warrior — Day 7 — +50 $BOOZ</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        <span>🛡️ Elite — Day 14 — +250 $BOOZ</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        <span>👑 Epic — Day 30 — +350 $BOOZ</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        <span>🔥 Legend — Day 60 — +500 $BOOZ</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        <span>🔱 Mythic — Day 90 — +4,560 $BOOZ (Journey Complete)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <p className="text-emerald-600 font-medium">
+                    Complete all 90 days = 10,000 $BOOZ total = exactly 1 free slot mint.
+                  </p>
+                  <p className="text-gray-500">
+                    Miss a day and the streak resets to Day 1. Milestone bonuses are permanent — if you restart, you won't earn them again. One claim per UTC day.
+                  </p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="raffle" className="bg-gray-0 rounded-lg border border-gray-300">
+              <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
+                <span className="font-medium text-gray-900">How does the weekly raffle work?</span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 pt-2 px-4">
+                <div className="text-sm text-gray-700 space-y-3">
+                  <p>
+                    Every paid slot mint (1 USDC) automatically earns you one raffle entry for the current week. Mint more slots to increase your chances.
+                  </p>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">How the draw works:</p>
+                    <ul className="space-y-1 ml-4">
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>A minimum number of total entries must be reached</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>A minimum number of unique wallets must participate</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Winners are selected using Chainlink VRF (verifiable randomness)</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>USDC prizes are sent directly to winners on-chain</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
+                    <p className="font-medium text-gray-900 text-xs mb-1">Raffle entry eligibility:</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Standard mint (1 USDC)</span>
+                      <span className="text-green-600 font-medium">✓ Entry + 1,000 $BOOZ</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Discount mint (0.9 USDC + burn 1K $BOOZ)</span>
+                      <span className="text-green-600 font-medium">✓ Entry + 1,000 $BOOZ</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Free mint (burn 10K $BOOZ)</span>
+                      <span className="text-red-500 font-medium">✗ No entry, no reward</span>
+                    </div>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -161,23 +314,41 @@ export default function FAQPage() {
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-sm text-gray-700 space-y-3">
-                  <p>
-                    <strong>Booztory is currently live on Base Sepolia Testnet.</strong>
-                  </p>
                   <div>
-                    <p className="font-medium text-teal-600 mb-2">On the roadmap:</p>
+                    <p className="font-medium text-green-700 mb-2">Already live:</p>
+                    <ul className="space-y-1 ml-4">
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>ERC-721 slot minting on Base</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>$BOOZ reward token + 90-day GM streak journey</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>Discounted slots (burn 1,000 $BOOZ → pay 0.9 USDC)</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>Free slots (burn 10,000 $BOOZ → free slot)</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>Weekly raffle (Chainlink VRF) — USDC prizes</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>Base Mini App + Farcaster Mini App</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-medium text-teal-600 mb-2">Coming soon:</p>
                     <ul className="space-y-1 ml-4">
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                        <span>Base Chain mainnet launch</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                        <span>Base Mini App</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                        <span>Farcaster Mini App</span>
+                        <span>Base mainnet launch</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
@@ -185,7 +356,7 @@ export default function FAQPage() {
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                        <span>Reward pool for top creators</span>
+                        <span>Instagram support</span>
                       </li>
                     </ul>
                   </div>

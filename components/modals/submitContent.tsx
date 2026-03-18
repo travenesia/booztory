@@ -2,11 +2,14 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
+import { useAccount, useReadContract } from "wagmi"
+import { formatUnits } from "viem"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
-import { YouTubeIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
+import { YouTubeIcon, YouTubeShortsIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { Loader2 } from "lucide-react"
-import { HiExclamationTriangle, HiCheckCircle } from "react-icons/hi2"
+import { HiExclamationTriangle, HiCheckCircle, HiBolt } from "react-icons/hi2"
+import { cn } from "@/lib/utils"
 import { isValidSpotifyUrl } from "@/lib/spotifyMetadata"
 import { useToast } from "@/hooks/use-toast"
 import confetti from "canvas-confetti"
@@ -19,12 +22,16 @@ import { getVimeoMetadata, extractVimeoId } from "@/lib/vimeoMetadata"
 import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
 import { getTwitchMetadata, extractTwitchInfo } from "@/lib/twitchMetadata"
 import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
+import { TOKEN_ADDRESS, ERC20_ABI, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 
-type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
+type PaymentMethod = "standard" | "discount" | "free"
+
+type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
 
 export function ContentSubmissionDrawer() {
   const { isOpen: open, setIsOpen: onOpenChange } = useSubmitDrawer()
   const { data: session } = useSession()
+  const { address } = useAccount()
   const [contentUrl, setContentUrl] = useState("")
   const [resolvedContentUrl, setResolvedContentUrl] = useState<string | null>(null)
   const [contentType, setContentType] = useState<ContentType | null>(null)
@@ -35,14 +42,83 @@ export function ContentSubmissionDrawer() {
   const [submissionStep, setSubmissionStep] = useState<"idle" | "processing_payment" | "submitting">("idle")
   const [detectedTikTokAspectRatio, setDetectedTikTokAspectRatio] = useState<"16:9" | "9:16">("9:16")
   const [isInputFocused, setIsInputFocused] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("standard")
   const { toast } = useToast()
 
   // Use ref to track if we're currently processing to prevent race conditions
   const isProcessingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  const { mintSlot, isProcessing, resetPaymentState, slotPrice } = usePayment()
+  const {
+    mintSlot,
+    mintSlotWithDiscount,
+    mintSlotWithTokens,
+    isProcessing,
+    resetPaymentState,
+    slotPrice,
+    discountBurnCost,
+    freeSlotCost,
+    discountAmount,
+  } = usePayment()
+
   const slotPriceDisplay = (Number(slotPrice) / 1_000_000).toFixed(2)
+  const discountedPriceDisplay = ((Number(slotPrice) - Number(discountAmount)) / 1_000_000).toFixed(2)
+  const discountBurnDisplay = Math.round(Number(formatUnits(discountBurnCost, 18))).toLocaleString()
+  const freeSlotCostDisplay = Math.round(Number(formatUnits(freeSlotCost, 18))).toLocaleString()
+  const tokenEnabled = TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000"
+
+  // Queue status
+  const { data: queueSizeRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "getQueueSize",
+    query: { refetchInterval: 15_000 },
+  })
+  const { data: maxQueueSizeRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "maxQueueSize",
+  })
+  const { data: queueEndTimeRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "queueEndTime",
+    query: { refetchInterval: 15_000 },
+  })
+  const { data: slotDurationRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "slotDuration",
+  })
+
+  const queueSize = Number(queueSizeRaw ?? 0n)
+  const maxQueue = Number(maxQueueSizeRaw ?? 96n)
+  const isQueueFull = queueSize >= maxQueue
+
+  function formatTimeUntil(unixSeconds: number): string {
+    const diff = unixSeconds - Math.floor(Date.now() / 1000)
+    if (diff <= 0) return "soon"
+    if (diff < 60) return `${diff}s`
+    if (diff < 3600) return `~${Math.ceil(diff / 60)} min`
+    return `~${Math.ceil(diff / 3600)} hr`
+  }
+
+  const nextOpenTime = isQueueFull && queueEndTimeRaw && slotDurationRaw
+    ? Number(queueEndTimeRaw as bigint) - (maxQueue - 1) * Number(slotDurationRaw as bigint)
+    : null
+
+  // BOOZ balance
+  const { data: boozBalanceRaw } = useReadContract({
+    address: TOKEN_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: tokenEnabled && !!address },
+  })
+  const boozBalance = boozBalanceRaw ? Number(formatUnits(boozBalanceRaw as bigint, 18)) : 0
+  const boozFormatted = boozBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
+  const canDiscount = tokenEnabled && boozBalance >= Number(formatUnits(discountBurnCost, 18))
+  const canFree = tokenEnabled && boozBalance >= Number(formatUnits(freeSlotCost, 18))
 
   // Reset state when sheet closes
   useEffect(() => {
@@ -59,6 +135,7 @@ export function ContentSubmissionDrawer() {
       setIsPreviewLoading(false)
       setPreviewError(null)
       setSubmissionStep("idle")
+      setPaymentMethod("standard")
       isProcessingRef.current = false
       resetPaymentState()
     } else {
@@ -70,6 +147,7 @@ export function ContentSubmissionDrawer() {
   }, [open, resetPaymentState])
 
   const detectContentType = (url: string): ContentType | null => {
+    if (url.includes("youtube.com/shorts/")) return "youtubeshorts"
     if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube"
     if (url.includes("tiktok.com") || url.includes("vm.tiktok.com") || url.includes("vt.tiktok.com")) return "tiktok"
     if (url.includes("twitter.com") || url.includes("x.com")) return "twitter"
@@ -88,13 +166,14 @@ export function ContentSubmissionDrawer() {
   const validateUrl = (url: string, type: ContentType | null): boolean => {
     if (!type || !url) return false
     switch (type) {
+      case "youtubeshorts":
+        return /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/.test(url)
       case "youtube":
         const patterns = [
           /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
           /^(https?:\/\/)?(youtu\.be\/)([a-zA-Z0-9_-]{11})/,
           /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
           /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-          /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
           /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/,
           /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/playlist\?list=)([a-zA-Z0-9_-]+)/,
         ]
@@ -206,7 +285,8 @@ export function ContentSubmissionDrawer() {
       if (abortControllerRef.current?.signal.aborted) return null
 
       switch (contentType) {
-        case "youtube": {
+        case "youtube":
+      case "youtubeshorts": {
           const videoId = extractYouTubeId(contentUrl)
           if (videoId) {
             const metadata = await getYouTubeMetadata(videoId)
@@ -274,6 +354,7 @@ export function ContentSubmissionDrawer() {
     // Fallback thumbnail based on content type
     const fallbackThumbnails = {
       youtube: "/placeholder.svg?height=180&width=320&text=YouTube+Video",
+      youtubeshorts: "/placeholder.svg?height=320&width=180&text=YouTube+Shorts",
       tiktok: "/placeholder.svg?height=320&width=180&text=TikTok+Video",
       twitter: "/placeholder.svg?height=180&width=320&text=Twitter+Post",
       vimeo: "/placeholder.svg?height=180&width=320&text=Vimeo+Video",
@@ -338,8 +419,10 @@ export function ContentSubmissionDrawer() {
 
       const getAspectRatio = (): "16:9" | "9:16" => {
         switch (contentType) {
+          case "youtubeshorts":
+            return "9:16"
           case "youtube":
-            return urlToSubmit.includes("shorts") || isYouTubeShort(urlToSubmit) ? "9:16" : "16:9"
+            return isYouTubeShort(urlToSubmit) ? "9:16" : "16:9"
           case "twitter":
           case "vimeo":
           case "spotify":
@@ -352,17 +435,24 @@ export function ContentSubmissionDrawer() {
         }
       }
 
-      // Step 2: Approve USDC + mint slot on-chain
-      console.log("💳 Minting slot on-chain...")
+      // Step 2: Mint slot on-chain via selected payment path
+      console.log("💳 Minting slot on-chain via:", paymentMethod)
       setSubmissionStep("processing_payment")
-      const mintResult = await mintSlot({
+      // Strip " and \ — contract rejects them to prevent JSON injection in tokenURI
+      const sanitize = (s: string) => s.replace(/["\\]/g, "")
+      const slotData = {
         contentUrl: urlToSubmit,
         contentType: contentType,
         aspectRatio: getAspectRatio(),
-        title: metadata?.title || "",
-        authorName: metadata?.authorName || "",
+        title: sanitize(metadata?.title || ""),
+        authorName: sanitize(metadata?.authorName || ""),
         imageUrl: metadata?.thumbnailUrl || "/placeholder.svg?height=180&width=320&text=Content",
-      })
+      }
+      const mintResult = await (
+        paymentMethod === "discount" ? mintSlotWithDiscount(slotData) :
+        paymentMethod === "free"     ? mintSlotWithTokens(slotData) :
+                                       mintSlot(slotData)
+      )
 
       if (abortControllerRef.current?.signal.aborted) return
 
@@ -434,6 +524,12 @@ export function ContentSubmissionDrawer() {
             <YouTubeIcon />
           </div>
         )
+      case "youtubeshorts":
+        return (
+          <div className="pointer-events-none">
+            <YouTubeShortsIcon />
+          </div>
+        )
       case "tiktok":
         return (
           <div className="pointer-events-none">
@@ -471,8 +567,10 @@ export function ContentSubmissionDrawer() {
 
   const getPlaceholderText = () => {
     switch (contentType) {
+      case "youtubeshorts":
+        return "https://youtube.com/shorts/VIDEO_ID"
       case "youtube":
-        return "https://youtube.com/watch?v=ID, youtu.be/ID, /shorts/ID, /live/ID, etc."
+        return "https://youtube.com/watch?v=ID, youtu.be/ID, /live/ID, etc."
       case "tiktok":
         return "https://tiktok.com/@username/video/ID or vm.tiktok.com/XYZ"
       case "twitter":
@@ -492,8 +590,8 @@ export function ContentSubmissionDrawer() {
 
   const getPreviewContainerStyle = () => {
     const isPortrait =
-      (contentType === "tiktok" && detectedTikTokAspectRatio === "9:16") ||
-      (contentType === "youtube" && urlForPreview.includes("shorts"))
+      contentType === "youtubeshorts" ||
+      (contentType === "tiktok" && detectedTikTokAspectRatio === "9:16")
     if (isPortrait) {
       const width = 200 * (9 / 16)
       return { maxHeight: "200px", height: "200px", width: `${width}px`, margin: "0 auto" }
@@ -504,19 +602,22 @@ export function ContentSubmissionDrawer() {
   const getButtonText = () => {
     if (!session?.user?.id) return "Connect Wallet to Submit"
 
-    if (isSubmitting) {
+    if (isSubmitting || isProcessing) {
       switch (submissionStep) {
-        case "processing_payment":
-          return "Processing Payment..."
-        case "submitting":
-          return "Submitting..."
-        default:
-          return "Submitting..."
+        case "processing_payment": return "Processing Payment..."
+        case "submitting": return "Submitting..."
+        default: return "Processing..."
       }
     }
 
-    if (isProcessing) return "Processing Payment..."
+    if (isQueueFull) {
+      return nextOpenTime
+        ? `Queue Full — opens in ${formatTimeUntil(nextOpenTime)}`
+        : "Queue Full — Check Back Later"
+    }
 
+    if (paymentMethod === "discount") return `Pay ${discountedPriceDisplay} USDC + Burn ${discountBurnDisplay} $BOOZ`
+    if (paymentMethod === "free") return `Burn ${freeSlotCostDisplay} $BOOZ to Submit`
     return `Pay ${slotPriceDisplay} USDC to Submit`
   }
 
@@ -546,7 +647,26 @@ export function ContentSubmissionDrawer() {
               <label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
                 Content URL
               </label>
-              {contentType && <div className="flex-shrink-0">{renderPlatformIcon()}</div>}
+              {contentType ? (
+                <div className="flex-shrink-0">{renderPlatformIcon()}</div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/youtube.svg" alt="YouTube" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/youtubeshorts.svg" alt="YouTube Shorts" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/tiktok.svg" alt="TikTok" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/x.svg" alt="X" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/spotify.svg" alt="Spotify" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/vimeo.svg" alt="Vimeo" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/twitch.svg" alt="Twitch" width={14} height={14} />
+                </div>
+              )}
             </div>
             <div className="relative">
               {contentUrl && previewError && !isInputFocused && (
@@ -590,10 +710,10 @@ export function ContentSubmissionDrawer() {
                     contentType={contentType}
                     contentUrl={urlForPreview}
                     aspectRatio={
-                      contentType === "tiktok"
-                        ? detectedTikTokAspectRatio
-                        : contentType === "youtube" && urlForPreview.includes("shorts")
-                          ? "9:16"
+                      contentType === "youtubeshorts"
+                        ? "9:16"
+                        : contentType === "tiktok"
+                          ? detectedTikTokAspectRatio
                           : "16:9"
                     }
                     isPreview={true}
@@ -608,12 +728,84 @@ export function ContentSubmissionDrawer() {
           )}
         </div>
 
+        {/* Payment method selector — pinned above button, only when authenticated + token enabled */}
+        {session?.user?.id && tokenEnabled && (
+          <div className="flex-shrink-0 px-4 pt-3 pb-0 bg-white space-y-2">
+            <label className="text-gray-900 font-medium text-xs">Payment Method</label>
+            <div className="grid grid-cols-3 gap-2">
+              {/* Standard */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("standard")}
+                disabled={isAnyOperationInProgress}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                  paymentMethod === "standard"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                )}
+              >
+                <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
+                <span className="text-[10px] text-gray-500">Standard</span>
+              </button>
+
+              {/* Discount */}
+              <button
+                type="button"
+                onClick={() => canDiscount && setPaymentMethod("discount")}
+                disabled={isAnyOperationInProgress || !canDiscount}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                  paymentMethod === "discount"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 bg-white",
+                  !canDiscount && "opacity-40 cursor-not-allowed"
+                )}
+              >
+                <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
+                <div className="flex items-center gap-0.5">
+                  <HiBolt className="text-yellow-500" size={10} />
+                  <span className="text-[10px] text-gray-500">-{discountBurnDisplay} $BOOZ</span>
+                </div>
+              </button>
+
+              {/* Free */}
+              <button
+                type="button"
+                onClick={() => canFree && setPaymentMethod("free")}
+                disabled={isAnyOperationInProgress || !canFree}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                  paymentMethod === "free"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 bg-white",
+                  !canFree && "opacity-40 cursor-not-allowed"
+                )}
+              >
+                <span className="text-xs font-bold text-gray-900">Free</span>
+                <div className="flex items-center gap-0.5">
+                  <HiBolt className="text-yellow-500" size={10} />
+                  <span className="text-[10px] text-gray-500">{freeSlotCostDisplay} $BOOZ</span>
+                </div>
+              </button>
+            </div>
+
+            {/* BOOZ balance hint when a burn option is selected */}
+            {paymentMethod !== "standard" && (
+              <div className="flex items-center gap-1.5 pb-1">
+                <HiBolt className="text-yellow-500" size={11} />
+                <span className="text-xs text-gray-500">Balance: {boozFormatted} $BOOZ</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Button — always pinned at bottom */}
         <div className="flex-shrink-0 px-4 pt-3 pb-3 mt-0.5 border-t border-gray-100 bg-white">
           <button
             className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50"
             onClick={handleSubmit}
-            disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id}
+            disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id || isQueueFull}
           >
             {isAnyOperationInProgress ? (
               <>

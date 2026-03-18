@@ -10,7 +10,7 @@ import { BOOZTORY_ADDRESS } from "@/lib/contract"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { UsersOnline } from "@/components/layout/usersOnline"
 
-type ContentType = "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify"
+type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
 
 interface ContentCardProps {
   username: string

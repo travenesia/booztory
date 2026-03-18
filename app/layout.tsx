@@ -1,21 +1,21 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Nunito } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { ScrollToTop } from "@/components/layout/scrollToTop"
 import { Toaster } from "@/components/ui/toaster"
 import { SessionProvider } from "@/providers/session-provider"
-import { WagmiRainbowProvider } from "@/providers/wagmi-provider"
+import { WagmiClientWrapper } from "@/providers/wagmi-client-wrapper"
 import { MiniAppInit } from "@/components/miniapp-init"
 import { FlickeringGrid } from "@/components/ui/flickering-grid"
 import { SubmitDrawerProvider } from "@/providers/submit-drawer-provider"
 import { ContentSubmissionDrawer } from "@/components/modals/submitContent"
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-nunito",
   display: "swap",
   preload: true,
 })
@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${inter.variable} font-sans bg-elegance-ethereal-ivory min-h-screen`}>
+      <body suppressHydrationWarning className={`${nunito.variable} font-sans bg-elegance-ethereal-ivory min-h-screen`}>
         <FlickeringGrid
           className="fixed inset-0 z-0 pointer-events-none"
           color="#000000"
@@ -77,7 +77,7 @@ export default function RootLayout({
           gridGap={6}
         />
         <SessionProvider>
-          <WagmiRainbowProvider>
+          <WagmiClientWrapper>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
               <SubmitDrawerProvider>
                 <MiniAppInit />
@@ -87,7 +87,7 @@ export default function RootLayout({
                 <Toaster />
               </SubmitDrawerProvider>
             </ThemeProvider>
-          </WagmiRainbowProvider>
+          </WagmiClientWrapper>
         </SessionProvider>
       </body>
     </html>

@@ -19,7 +19,7 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["var(--font-nunito)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       borderRadius: {
         base: "5px",
