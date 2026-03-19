@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAccount, useReadContract, useWriteContract } from "wagmi"
+import { useAccount, useReadContract, useWriteContract, usePublicClient } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/lib/wagmi"
 import { formatUnits } from "viem"
@@ -33,15 +33,19 @@ import { BadgeCheck, Ticket } from "lucide-react"
 
 const EXPLORER = APP_CHAIN.blockExplorers?.default.url ?? "https://basescan.org"
 
-function WinnerRow({ rank, address, ticketCount, prize, isYou }: {
+function WinnerRow({ rank, address, ticketCount, prize, isYou, drawTxHash }: {
   rank: number
   address: string
   ticketCount: number
   prize: bigint
   isYou: boolean
+  drawTxHash?: string | null
 }) {
   const name = useWalletName(address)
-  const prizeUSDC = (Number(prize) / 1_000_000).toFixed(2)
+  const prizeUSDC = Number(prize) / 1_000_000
+  const linkHref = drawTxHash
+    ? `${EXPLORER}/tx/${drawTxHash}`
+    : `${EXPLORER}/address/${address}`
   return (
     <div className={cn(
       "grid grid-cols-[56px_1fr_auto] items-center gap-3 py-3 border-b border-gray-100 last:border-0",
@@ -61,7 +65,7 @@ function WinnerRow({ rank, address, ticketCount, prize, isYou }: {
         {isYou ? " (you)" : ""}
       </span>
       <a
-        href={`${EXPLORER}/address/${address}`}
+        href={linkHref}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-1.5 bg-blue-900 text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-blue-800 transition-colors whitespace-nowrap"
@@ -104,10 +108,12 @@ function buildPrizeTiers(prizes: bigint[]): string[] {
 
 export default function RewardPage() {
   const { address } = useAccount()
+  const publicClient = usePublicClient()
   const isMobile = useIsMobile()
   const [tab, setTab] = useState<"raffle" | "streak">("raffle")
   const [gmOpen, setGmOpen] = useState(false)
   const [isDrawing, setIsDrawing] = useState(false)
+  const [drawTxHash, setDrawTxHash] = useState<string | null>(null)
   const [isResetting, setIsResetting] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
   const [thresholdInput, setThresholdInput] = useState("")
@@ -123,29 +129,41 @@ export default function RewardPage() {
   const { writeContractAsync } = useWriteContract()
 
   // ── Raffle reads ─────────────────────────────────────────────────────────────
-  const { data: currentWeek } = useReadContract({
+  const { data: currentRaffleRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "currentWeek",
+    functionName: "currentRaffle",
   })
-  const week = currentWeek as bigint | undefined
-  const lastWeek = week !== undefined ? week - 1n : undefined
+  const raffle = currentRaffleRaw as bigint | undefined
+  const lastRaffle = raffle !== undefined ? raffle - 1n : undefined
 
-  const LAUNCH_WEEK = 2932n
+  const { data: epochStartRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "epochStart",
+  })
+  const epochStart = epochStartRaw as bigint | undefined
+
+  const { data: contractRaffleDurationRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "raffleDuration",
+  })
+  const contractRaffleDuration = (contractRaffleDurationRaw as bigint | undefined) ?? 604800n
 
   const { data: entryCountRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "getWeeklyEntryCount",
-    args: week !== undefined ? [week] : undefined,
-    query: { enabled: week !== undefined },
+    functionName: "getRaffleEntryCount",
+    args: raffle !== undefined ? [raffle] : undefined,
+    query: { enabled: raffle !== undefined },
   })
   const { data: uniqueCountRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "weeklyUniqueCount",
-    args: week !== undefined ? [week] : undefined,
-    query: { enabled: week !== undefined },
+    functionName: "raffleUniqueCount",
+    args: raffle !== undefined ? [raffle] : undefined,
+    query: { enabled: raffle !== undefined },
   })
   const { data: thresholdRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -166,53 +184,72 @@ export default function RewardPage() {
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "hasMinted",
-    args: week !== undefined && address ? [week, address] : undefined,
-    query: { enabled: week !== undefined && !!address },
+    args: raffle !== undefined && address ? [raffle, address] : undefined,
+    query: { enabled: raffle !== undefined && !!address },
   })
   const { data: weeklyEntriesRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "getWeeklyEntries",
-    args: week !== undefined ? [week] : undefined,
-    query: { enabled: week !== undefined && !!address },
+    functionName: "getRaffleEntries",
+    args: raffle !== undefined ? [raffle] : undefined,
+    query: { enabled: raffle !== undefined && !!address },
   })
-  // browseWeek — week selected in the Prize Pool dropdown (defaults to lastWeek)
-  const activeViewWeek = browseWeek ?? week
+  // browseRaffle — raffle selected in the Prize Pool dropdown (defaults to current)
+  const activeViewRaffle = browseWeek ?? raffle
   const { data: browseDrawnRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "weekDrawn",
-    args: activeViewWeek !== undefined ? [activeViewWeek] : undefined,
-    query: { enabled: activeViewWeek !== undefined },
+    functionName: "raffleDrawn",
+    args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseWinnersRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "getWeeklyWinners",
-    args: activeViewWeek !== undefined ? [activeViewWeek] : undefined,
-    query: { enabled: activeViewWeek !== undefined },
+    functionName: "getRaffleWinners",
+    args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseEntriesRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "getWeeklyEntries",
-    args: activeViewWeek !== undefined ? [activeViewWeek] : undefined,
-    query: { enabled: activeViewWeek !== undefined },
+    functionName: "getRaffleEntries",
+    args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseEntryCountRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "getWeeklyEntryCount",
-    args: activeViewWeek !== undefined ? [activeViewWeek] : undefined,
-    query: { enabled: activeViewWeek !== undefined },
+    functionName: "getRaffleEntryCount",
+    args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseUniqueCountRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "weeklyUniqueCount",
-    args: activeViewWeek !== undefined ? [activeViewWeek] : undefined,
-    query: { enabled: activeViewWeek !== undefined },
+    functionName: "raffleUniqueCount",
+    args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    query: { enabled: activeViewRaffle !== undefined },
   })
+
+  // Historical prize snapshot for the selected past raffle
+  const { data: browseWeeklyPrizesRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "getRafflePrizes",
+    args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    query: { enabled: activeViewRaffle !== undefined && activeViewRaffle !== raffle && browseDrawnRaw === true },
+  })
+
+  // Block number stored on-chain when VRF fulfilled — used for instant draw tx lookup
+  const { data: raffleDrawBlockRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "raffleDrawBlock",
+    args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    query: { enabled: activeViewRaffle !== undefined && browseDrawnRaw === true },
+  })
+  const raffleDrawBlock = raffleDrawBlockRaw as bigint | undefined
 
   // ── Owner ─────────────────────────────────────────────────────────────────────
   const { data: raffleOwnerRaw } = useReadContract({
@@ -231,26 +268,43 @@ export default function RewardPage() {
     args: [RAFFLE_ADDRESS],
   })
 
-  // ── Selected week draw status ─────────────────────────────────────────────────
-  const targetWeek = selectedDrawWeek ?? lastWeek
+  // ── Selected raffle draw status ───────────────────────────────────────────────
+  const targetRaffle = selectedDrawWeek ?? lastRaffle
   const { data: selectedWeekDrawnRaw, refetch: refetchSelectedDrawn } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "weekDrawn",
-    args: targetWeek !== undefined ? [targetWeek] : undefined,
-    query: { enabled: targetWeek !== undefined },
+    functionName: "raffleDrawn",
+    args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    query: { enabled: targetRaffle !== undefined },
   })
   const selectedWeekDrawn = selectedWeekDrawnRaw as boolean | undefined
 
   const { data: targetWeekWinnersRaw, refetch: refetchTargetWinners } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
-    functionName: "getWeeklyWinners",
-    args: targetWeek !== undefined ? [targetWeek] : undefined,
-    query: { enabled: targetWeek !== undefined },
+    functionName: "getRaffleWinners",
+    args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    query: { enabled: targetRaffle !== undefined },
   })
   const targetWeekWinners = (targetWeekWinnersRaw as string[] | undefined) ?? []
   const isStuckDraw = selectedWeekDrawn === true && targetWeekWinners.length === 0
+
+  const { data: targetEntryCountRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "getRaffleEntryCount",
+    args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    query: { enabled: targetRaffle !== undefined },
+  })
+  const { data: targetUniqueCountRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "raffleUniqueCount",
+    args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    query: { enabled: targetRaffle !== undefined },
+  })
+  const targetEntryCount = Number(targetEntryCountRaw ?? 0n)
+  const targetUniqueCount = Number(targetUniqueCountRaw ?? 0n)
 
   // ── Streak / balance reads ────────────────────────────────────────────────────
   const { data: boozBalanceRaw } = useReadContract({
@@ -288,6 +342,10 @@ export default function RewardPage() {
   const minUnique = Number(minUniqueRaw ?? 10n)
   const userEntered = userEnteredRaw as boolean | undefined
 
+  const targetEntriesOk = targetEntryCount >= threshold
+  const targetUniqueOk = targetUniqueCount >= minUnique && targetUniqueCount >= winnerCount
+  const targetDrawEligible = targetEntriesOk && targetUniqueOk
+
   const allEntries = (weeklyEntriesRaw as string[] | undefined) ?? []
   const userEntryCount = address
     ? allEntries.filter(e => e.toLowerCase() === address.toLowerCase()).length
@@ -298,15 +356,16 @@ export default function RewardPage() {
   const drawEligible = entriesOk && uniqueOk
   const progressPct = Math.min((entries / threshold) * 100, 100)
 
-  // ── Week countdown ────────────────────────────────────────────────────────────
+  // ── Raffle countdown ──────────────────────────────────────────────────────────
   const [weekCountdown, setWeekCountdown] = useState("")
   useEffect(() => {
-    const WEEK_SECONDS = 604800
+    const periodSeconds = Number(contractRaffleDuration)
+    const epoch = Number(epochStart ?? 0n)
     const update = () => {
       const now = Math.floor(Date.now() / 1000)
-      const currentW = Math.floor(now / WEEK_SECONDS)
-      const weekEnd = (currentW + 1) * WEEK_SECONDS
-      const diff = weekEnd - now
+      const currentR = Math.floor((now - epoch) / periodSeconds)
+      const raffleEnd = epoch + (currentR + 1) * periodSeconds
+      const diff = raffleEnd - now
       if (diff <= 0) { setWeekCountdown("Ending..."); return }
       const d = Math.floor(diff / 86400)
       const h = Math.floor((diff % 86400) / 3600)
@@ -317,32 +376,70 @@ export default function RewardPage() {
     update()
     const id = setInterval(update, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [contractRaffleDuration, epochStart])
 
   const browseDrawn = browseDrawnRaw as boolean | undefined
   const browseWinners = ((browseWinnersRaw as string[] | undefined) ?? []).slice(0, 10)
   const browseEntries = (browseEntriesRaw as string[] | undefined) ?? []
   const browseEntryCount = Number(browseEntryCountRaw ?? 0n)
   const browseUniqueCount = Number(browseUniqueCountRaw ?? 0n)
-  const browseDisplayWeek = activeViewWeek !== undefined ? activeViewWeek - LAUNCH_WEEK + 1n : undefined
-  const isCurrentWeek = activeViewWeek === week
+  const isCurrentWeek = activeViewRaffle === raffle
+
+  // Historical prizes: use snapshot for past drawn weeks; fall back to current config
+  const browseWeeklyPrizes = browseWeeklyPrizesRaw as bigint[] | undefined
+  const displayPrizesArr = isCurrentWeek
+    ? prizesArr
+    : (browseWeeklyPrizes && browseWeeklyPrizes.length > 0 ? browseWeeklyPrizes : prizesArr)
+  const displayTotalPrize = displayPrizesArr ? displayPrizesArr.reduce((a, b) => a + b, 0n) : 0n
+  const displayTotalPrizeUSDC = Number(displayTotalPrize) / 1_000_000
+  const displayWinnerCount = displayPrizesArr?.length ?? 0
   function ticketsFor(addr: string) {
     return browseEntries.filter(e => e.toLowerCase() === addr.toLowerCase()).length || 1
   }
+
+  // Fetch DrawCompleted tx hash using on-chain raffleDrawBlock for instant lookup
+  useEffect(() => {
+    setDrawTxHash(null)
+    if (isCurrentWeek || !browseDrawn || browseWinners.length === 0 || !publicClient || activeViewRaffle === undefined) return
+    if (!raffleDrawBlock || raffleDrawBlock === 0n) return
+    let cancelled = false
+    const EVENT_DEF = {
+      type: "event",
+      name: "DrawCompleted",
+      inputs: [
+        { type: "uint256", name: "raffle", indexed: true },
+        { type: "address[]", name: "winners", indexed: false },
+      ],
+    } as const
+    // Query the exact block where VRF fulfilled — single call, no scanning needed
+    publicClient.getLogs({
+      address: RAFFLE_ADDRESS,
+      event: EVENT_DEF,
+      args: { raffle: activeViewRaffle },
+      fromBlock: raffleDrawBlock,
+      toBlock: raffleDrawBlock,
+    }).then(logs => {
+      if (!cancelled && logs.length > 0) setDrawTxHash(logs[0].transactionHash)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCurrentWeek, browseDrawn, browseWinners.length, activeViewRaffle, raffleDrawBlock])
 
   const raffleUsdc = raffleUsdcRaw as bigint | undefined
   const raffleUsdcNum = raffleUsdc !== undefined ? Number(raffleUsdc) / 1_000_000 : undefined
   const isFunded = raffleUsdc !== undefined && totalPrize > 0n && raffleUsdc >= totalPrize
 
-  // All weeks (LAUNCH_WEEK → current) for the browse dropdown
+  // All raffles for the browse dropdown — capped at 52 to prevent freeze
+  // when raffleDuration is short (e.g. 600s on testnet, giving many raffle numbers)
   const allWeeks: { raw: bigint; display: bigint }[] = []
-  if (week !== undefined) {
-    for (let w = LAUNCH_WEEK - 1n; w <= week; w++) {
-      allWeeks.push({ raw: w, display: w - LAUNCH_WEEK + 1n })
+  if (raffle !== undefined) {
+    const startRaffle = raffle > 52n ? raffle - 52n : 0n
+    for (let r = startRaffle; r <= raffle; r++) {
+      allWeeks.push({ raw: r, display: r })
     }
   }
-  // Past weeks only — for owner draw panel
-  const pastWeeks = allWeeks.filter(w => w.raw < (week ?? 0n))
+  // Past raffles only — for owner draw panel
+  const pastWeeks = allWeeks.filter(w => w.raw < (raffle ?? 0n))
 
   // ── Computed — streak ─────────────────────────────────────────────────────────
   const boozNum = boozBalanceRaw
@@ -365,24 +462,23 @@ export default function RewardPage() {
   const progressPctStreak = Math.min((streakDay / 90) * 100, 100)
 
   async function handleDraw() {
-    if (targetWeek === undefined || !isOwner) return
+    if (targetRaffle === undefined || !isOwner) return
     setIsDrawing(true)
     try {
       const tx = await writeContractAsync({
         address: RAFFLE_ADDRESS,
         abi: RAFFLE_ABI,
-        functionName: "requestWeeklyDraw",
-        args: [targetWeek],
+        functionName: "requestRaffleDraw",
+        args: [targetRaffle],
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchSelectedDrawn()
       refetchRaffleUsdc()
-      const displayWk = targetWeek - LAUNCH_WEEK + 1n
       toast({
         title: "Draw Triggered!",
         description: (
           <span>
-            Week {displayWk.toString()} draw submitted.{" "}
+            Raffle #{targetRaffle.toString()} draw submitted.{" "}
             <a href={`${EXPLORER}/tx/${tx}`} target="_blank" rel="noopener noreferrer" className="underline">
               View transaction
             </a>
@@ -392,11 +488,11 @@ export default function RewardPage() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Transaction failed"
       if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      const clean = msg.includes("AlreadyDrawn") ? "This week was already drawn."
-        : msg.includes("BelowThreshold") ? "Not enough entries this week to draw."
-        : msg.includes("NotEnoughUniqueMinters") ? "Not enough unique wallets this week."
+      const clean = msg.includes("AlreadyDrawn") ? "This raffle was already drawn."
+        : msg.includes("BelowThreshold") ? "Not enough entries this raffle to draw."
+        : msg.includes("NotEnoughUniqueMinters") ? "Not enough unique wallets this raffle."
         : msg.includes("InsufficientPrizeFunds") ? "Raffle contract doesn't have enough USDC. Fund it first."
-        : msg.includes("WeekNotEnded") ? "This week hasn't ended yet. Wait until Thursday."
+        : msg.includes("RaffleNotEnded") ? "This raffle period hasn't ended yet."
         : "Transaction failed. Try again."
       toast({ title: "Draw Failed", description: clean, variant: "destructive" })
     } finally {
@@ -405,22 +501,21 @@ export default function RewardPage() {
   }
 
   async function handleResetDraw() {
-    if (targetWeek === undefined || !isOwner) return
+    if (targetRaffle === undefined || !isOwner) return
     setIsResetting(true)
     try {
       const tx = await writeContractAsync({
         address: RAFFLE_ADDRESS,
         abi: RAFFLE_ABI,
         functionName: "resetDraw",
-        args: [targetWeek],
+        args: [targetRaffle],
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchSelectedDrawn()
       refetchTargetWinners()
-      const displayWk = targetWeek - LAUNCH_WEEK + 1n
       toast({
         title: "Draw Reset",
-        description: `Week ${displayWk} is now ready to re-trigger.`,
+        description: `Raffle #${targetRaffle} is now ready to re-trigger.`,
       })
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Transaction failed"
@@ -572,7 +667,7 @@ export default function RewardPage() {
                     <span className="font-bold text-white tracking-wide">Prize Pool</span>
                   </div>
                   <Select
-                    value={activeViewWeek?.toString() ?? ""}
+                    value={activeViewRaffle?.toString() ?? ""}
                     onValueChange={v => setBrowseWeek(BigInt(v))}
                   >
                     <SelectTrigger className="w-36 text-xs font-semibold bg-white/20 text-white border border-white/30 rounded-full px-3 py-1.5 h-8 focus:ring-0 focus:ring-offset-0 backdrop-blur-sm [&>svg]:text-white">
@@ -580,14 +675,14 @@ export default function RewardPage() {
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1a1a] border border-white/10 text-white rounded-xl shadow-xl">
                       <SelectGroup>
-                        <SelectLabel className="text-white/40 text-xs pl-3">Week</SelectLabel>
+                        <SelectLabel className="text-white/40 text-xs pl-3">Raffle</SelectLabel>
                         {allWeeks.map(({ raw, display }) => (
                           <SelectItem
                             key={raw.toString()}
                             value={raw.toString()}
                             className="text-white text-sm focus:bg-white/10 focus:text-white pl-3 [&>span:first-child]:hidden"
                           >
-                            Week {display.toString()}{raw === week ? " (current)" : ""}
+                            Raffle #{display.toString()}{raw === raffle ? " (current)" : ""}
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -598,7 +693,7 @@ export default function RewardPage() {
                 {/* Prize amount — centered */}
                 <div className="flex flex-col items-center text-center py-6 mb-4">
                   <span className="text-5xl font-black tracking-tight mb-3">
-                    {totalPrizeUSDC > 0 ? `$${totalPrizeUSDC}` : "—"}
+                    {displayTotalPrizeUSDC > 0 ? `$${displayTotalPrizeUSDC}` : "—"}
                   </span>
                   {isCurrentWeek && weekCountdown && (
                     <span className="flex items-center gap-1.5 text-xs font-semibold text-white/70 bg-white/10 border border-white/15 rounded-full px-3 py-1">
@@ -609,7 +704,7 @@ export default function RewardPage() {
                 </div>
 
                 {/* Prize breakdown table */}
-                {prizesArr && prizesArr.length > 0 && (
+                {displayPrizesArr && displayPrizesArr.length > 0 && (
                   <div className="bg-white/10 rounded-xl overflow-hidden">
                     {/* Table header */}
                     <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
@@ -620,10 +715,10 @@ export default function RewardPage() {
                     {(() => {
                       const rows: { label: string; amount: bigint }[] = []
                       let i = 0
-                      while (i < prizesArr.length) {
-                        const amount = prizesArr[i]
+                      while (i < displayPrizesArr.length) {
+                        const amount = displayPrizesArr[i]
                         let count = 1
-                        while (i + count < prizesArr.length && prizesArr[i + count] === amount) count++
+                        while (i + count < displayPrizesArr.length && displayPrizesArr[i + count] === amount) count++
                         const start = i + 1
                         const end = i + count
                         rows.push({ label: count > 1 ? `${start}–${end}` : `${start}`, amount })
@@ -638,8 +733,8 @@ export default function RewardPage() {
                     })()}
                     {/* Footer — total */}
                     <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/10 bg-white/5">
-                      <span className="text-xs text-white/50">{winnerCount} winner{winnerCount !== 1 ? "s" : ""}</span>
-                      <span className="flex items-center gap-1.5 text-xs font-semibold text-white/70"><span>Total</span><span>${totalPrizeUSDC} USDC</span></span>
+                      <span className="text-xs text-white/50">{displayWinnerCount} winner{displayWinnerCount !== 1 ? "s" : ""}</span>
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-white/70"><span>Total</span><span>${displayTotalPrizeUSDC} USDC</span></span>
                     </div>
                   </div>
                 )}
@@ -743,7 +838,7 @@ export default function RewardPage() {
                     <HiTrophy className="text-yellow-300" size={16} />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Week {browseDisplayWeek?.toString()} Results</p>
+                    <p className="text-sm font-bold text-gray-900">Raffle #{activeViewRaffle?.toString()} Results</p>
                     <p className="text-xs text-gray-500">
                       {browseEntryCount} entries · {browseUniqueCount} unique minter{browseUniqueCount !== 1 ? "s" : ""}
                     </p>
@@ -757,8 +852,17 @@ export default function RewardPage() {
                   </div>
                 </div>
 
-                {/* Threshold status */}
+                {/* Threshold status — for undrawn weeks show current thresholds;
+                    for drawn weeks just confirm requirements were met */}
                 <div className="px-5 pt-4 pb-2 space-y-2">
+                  {browseDrawn ? (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">Requirements at draw time</span>
+                      <span className="font-semibold text-green-600">
+                        {browseEntryCount} entries · {browseUniqueCount} unique ✓
+                      </span>
+                    </div>
+                  ) : (<>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-500">Entries vs threshold</span>
                     <span className={cn(
@@ -777,6 +881,7 @@ export default function RewardPage() {
                       {browseUniqueCount} / {minUnique} {browseUniqueCount >= minUnique ? "✓" : "✗"}
                     </span>
                   </div>
+                  </>)}
                 </div>
 
                 {/* Winners or status */}
@@ -794,8 +899,9 @@ export default function RewardPage() {
                           rank={i + 1}
                           address={addr}
                           ticketCount={ticketsFor(addr)}
-                          prize={prizesArr?.[i] ?? 0n}
+                          prize={displayPrizesArr?.[i] ?? 0n}
                           isYou={!!(address && addr.toLowerCase() === address.toLowerCase())}
+                          drawTxHash={drawTxHash}
                         />
                       ))}
                     </div>
@@ -827,20 +933,20 @@ export default function RewardPage() {
                   </span>
                 </div>
 
-                {/* Week selector */}
+                {/* Raffle selector */}
                 <div className="space-y-1">
-                  <p className="text-xs text-amber-600">Select week to draw</p>
+                  <p className="text-xs text-amber-600">Select raffle to draw</p>
                   <select
-                    value={targetWeek?.toString() ?? ""}
+                    value={targetRaffle?.toString() ?? ""}
                     onChange={e => setSelectedDrawWeek(BigInt(e.target.value))}
                     className="w-full rounded-lg border border-amber-200 bg-white text-sm px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                   >
                     {pastWeeks.length === 0 && (
-                      <option disabled>No past weeks yet</option>
+                      <option disabled>No past raffles yet</option>
                     )}
                     {pastWeeks.map(({ raw, display }) => (
                       <option key={raw.toString()} value={raw.toString()}>
-                        Week {display.toString()}
+                        Raffle #{display.toString()}
                       </option>
                     ))}
                   </select>
@@ -848,12 +954,14 @@ export default function RewardPage() {
 
                 <button
                   onClick={handleDraw}
-                  disabled={isDrawing || (selectedWeekDrawn === true && !isStuckDraw) || !isFunded || pastWeeks.length === 0}
+                  disabled={isDrawing || (selectedWeekDrawn === true && !isStuckDraw) || !isFunded || !targetDrawEligible || pastWeeks.length === 0}
                   className={cn(
                     "w-full py-3 rounded-xl text-sm font-bold transition-all",
                     selectedWeekDrawn && !isStuckDraw
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                       : !isFunded
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : !targetDrawEligible
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                       : isDrawing
                       ? "bg-amber-200 text-amber-600 cursor-wait"
@@ -863,7 +971,9 @@ export default function RewardPage() {
                   {isDrawing ? "Requesting VRF..."
                     : selectedWeekDrawn && !isStuckDraw ? "Already Drawn"
                     : !isFunded ? "Fund Contract First"
-                    : "Request Weekly Draw"}
+                    : !targetEntriesOk ? `Not Enough Entries (${targetEntryCount}/${threshold})`
+                    : !targetUniqueOk ? `Not Enough Unique Wallets (${targetUniqueCount}/${minUnique})`
+                    : "Request Raffle Draw"}
                 </button>
 
                 {/* Stuck VRF warning + reset */}

@@ -14,12 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+import { Drawer } from "vaul"
 
 // Milestones matching the contract
 const MILESTONES = [
@@ -117,7 +112,6 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   return (
     <div
       className="flex flex-col items-center w-full px-6 py-4"
-      style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
     >
       {/* Flame + title */}
       <div className="text-6xl mb-3 select-none leading-none">🔥</div>
@@ -274,7 +268,7 @@ export function GMButton() {
   )
 }
 
-// ── Mobile: icon + Sheet ──────────────────────────────────────────────────────
+// ── Mobile: icon + Vaul Drawer ───────────────────────────────────────────────
 
 export function GMMobileButton() {
   const [open, setOpen] = useState(false)
@@ -288,15 +282,19 @@ export function GMMobileButton() {
       >
         <HiBolt size={14} />
       </span>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="p-0 rounded-tl-2xl rounded-tr-2xl border-gray-200 overflow-hidden" style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>Daily GM</SheetTitle>
-          </SheetHeader>
-          <GMContent onClose={() => setOpen(false)} />
-          <div className="pb-[env(safe-area-inset-bottom)]" />
-        </SheetContent>
-      </Sheet>
+      <Drawer.Root open={open} onOpenChange={setOpen}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
+          <Drawer.Content
+            className="fixed inset-x-0 bottom-0 z-50 rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none"
+            style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
+          >
+            <Drawer.Title className="sr-only">Daily GM</Drawer.Title>
+            <Drawer.Description className="sr-only">Daily GM streak claim</Drawer.Description>
+            <GMContent onClose={() => setOpen(false)} />
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     </>
   )
 }

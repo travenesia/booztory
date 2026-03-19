@@ -159,6 +159,8 @@ Booztory is a solo-founder project. There are no co-founders.
 - ENS + Basename display for creators and donors
 - Farcaster Mini App support (works inside Warpcast)
 - FAQ page, mobile-responsive UI with bottom navigation
+- Mobile-native drawer (Vaul) for GM streak, no safe-area gaps on any device
+- Skeleton loading states across all data-driven pages (Home, History, Upcoming, Reward, FAQ)
 
 **19. How long have you been working on this?**
 

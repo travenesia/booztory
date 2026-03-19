@@ -1,10 +1,30 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function FAQPage() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen pt-12 pb-12">
+        <PageTopbar title="FAQ" />
+        <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
+          <Skeleton className="h-16 w-full rounded-lg" />
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+          ))}
+        </section>
+        <Navbar />
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="FAQ" />

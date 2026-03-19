@@ -105,7 +105,7 @@ Components are organized into subfolders. Import using `@/components/<subfolder>
 ### `components/modals/`
 - `submitContent.tsx` — Full submission drawer: URL validation, TikTok short URL resolution, content preview, approve + mintSlot flow (standard / discount / free token-burn paths), mobile keyboard detection
 - `donationModal.tsx` — Donation dialog: preset amounts (1/5/10 USDC). Calls `processDonation(amount, tokenId)`. Resolves recipient and donor addresses via `useWalletName` for ENS/Basename display.
-- `gmModal.tsx` — GM daily streak modal (desktop) and mobile bottom sheet. Shows streak day, rewards, milestone progress, confetti on claim.
+- `gmModal.tsx` — GM daily streak modal (desktop Dialog) and mobile bottom sheet (Vaul `Drawer`). Shows streak day, rewards, milestone progress, confetti on claim. Background gradient lives on the wrapper (`DialogContent` / `Drawer.Content`), not on `GMContent` itself.
 
 ### `components/wallet/`
 - `connectWallet.tsx` — RainbowKit connect button with auto SIWE sign-in via `useAccountEffect`. Farcaster Mini App detection via `sdk.isInMiniApp()` — uses QuickAuth instead of SIWE. Resolves ENS (mainnet) and Basename (Base L2). Desktop: click-outside dropdown. Mobile: bottom Sheet.
@@ -236,7 +236,8 @@ donations  (uint256, cumulative total donated before fee split, 6-decimal units)
 - [ ] **More platforms**: Instagram, custom uploads — mentioned in FAQ, not implemented
 - [ ] **Optimism Superchain expansion** — planned but not started
 - [ ] **Creator dashboard** — no analytics or revenue history
-- [ ] Contracts need redeployment with latest changes (contentTypeImage mapping, NFT name/symbol, tokenURI)
+- [ ] BooztoryRaffle needs redeployment on Base Sepolia (weeklyPrizes snapshot + setWeekDuration); Booztory.sol and BooztoryToken.sol are up to date
+- [ ] Set content type images on-chain via `setContentTypeImage()` after redeploy
 
 ---
 
@@ -257,8 +258,10 @@ donations  (uint256, cumulative total donated before fee split, 6-decimal units)
 | BOOZ balance in wallet dropdown | Implemented |
 | Reward page (/reward) | Implemented |
 | YouTube / TikTok / Twitter / Vimeo / Spotify / Twitch embeds | Working |
-| History & Upcoming pages | Working |
-| FAQ page | Working |
-| Contract deployment (Base Sepolia) | Pending redeploy — set env vars after |
+| History & Upcoming pages | Working — skeleton shows only on first load (no cached data) |
+| FAQ page | Working — mount-based skeleton on first render |
+| GM modal mobile drawer | Working — Vaul Drawer (replaces shadcn Sheet), handles safe areas natively |
+| BooztoryRaffle redeployment (Base Sepolia) | Pending |
+| Base Mainnet deployment | Pending |
 | Rate limiting | Not implemented |
 | Creator dashboard | Not implemented |

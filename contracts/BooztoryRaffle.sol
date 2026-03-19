@@ -12,12 +12,16 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  *
  *         Entry:      Booztory.sol calls addEntry(minter) on each paid mint.
  *                     Each mint = 1 entry; multiple mints = multiple entries.
- *         Draw:       Owner triggers requestWeeklyDraw(week) after week ends.
- *                     Requires ≥ drawThreshold entries and ≥ minUniqueMinters.
+ *         Draw:       Owner triggers requestRaffleDraw(raffle) after raffle period ends.
+ *                     Requires >= drawThreshold entries and >= minUniqueMinters.
  *         Prizes:     Configurable winner count and prize amounts via setPrizes().
  *                     Auto-sent in USDC on draw completion.
  *                     One prize per wallet — duplicates are re-rolled.
  *         Funding:    Owner transfers USDC to this contract before triggering draw.
+ *
+ *         Raffle numbering: Raffle #0 starts at epochStart (deployment time).
+ *                           Raffle #1 starts after one raffleDuration, etc.
+ *                           For testnet use setRaffleDuration() to shorten cycles.
  *
  *         Ownership is provided by Chainlink's ConfirmedOwner (inherited via
  *         VRFConsumerBaseV2Plus), not OpenZeppelin Ownable.
@@ -42,6 +46,15 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
     uint32  public callbackGasLimit = 500_000;
     uint16  public requestConfirmations = 3;
 
+    // ---- Raffle timing ----
+
+    /// @notice Timestamp at deployment — Raffle #0 starts here.
+    uint256 public immutable epochStart;
+
+    /// @notice Duration of each raffle period in seconds.
+    ///         Default: 1 weeks (604800). Use setRaffleDuration() on testnet only.
+    uint256 public raffleDuration = 1 weeks;
+
     // ---- Raffle config ----
 
     /// @notice Minimum entries required to trigger a draw.
@@ -52,46 +65,55 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
     uint256 public minUniqueMinters = 20;
 
     /// @notice Prize amounts in USDC (6 decimals). Array length = winner count.
-    ///         Default: 10 winners, top-heavy — $25/$20/$15/$10/$5×6 = $100 USDC total.
+    ///         Default: 10 winners, top-heavy — $25/$20/$15/$10/$5x6 = $100 USDC total.
     uint256[] public prizes;
 
-    // ---- Weekly data ----
+    // ---- Per-raffle data ----
 
-    /// @notice All entries for a given week (duplicates = multiple chances).
-    mapping(uint256 => address[]) internal _weeklyEntries;
+    /// @notice All entries for a given raffle (duplicates = multiple chances).
+    mapping(uint256 => address[]) internal _raffleEntries;
 
-    /// @notice Whether an address has minted in a given week (for unique count).
+    /// @notice Whether an address has minted in a given raffle (for unique count).
     mapping(uint256 => mapping(address => bool)) public hasMinted;
 
-    /// @notice Number of unique minters per week.
-    mapping(uint256 => uint256) public weeklyUniqueCount;
+    /// @notice Number of unique minters per raffle.
+    mapping(uint256 => uint256) public raffleUniqueCount;
 
-    /// @notice Whether a week's draw has been triggered.
-    mapping(uint256 => bool) public weekDrawn;
+    /// @notice Whether a raffle's draw has been triggered.
+    mapping(uint256 => bool) public raffleDrawn;
 
-    /// @notice Maps VRF requestId → week number.
-    mapping(uint256 => uint256) internal _requestToWeek;
+    /// @notice Snapshot of prizes[] at draw-request time for each raffle.
+    ///         Allows the UI to show accurate historical prize amounts even after setPrizes() is called.
+    mapping(uint256 => uint256[]) public rafflePrizes;
 
-    /// @notice The active (latest) VRF requestId per week. Stale requests are ignored.
+    /// @notice Block number when fulfillRandomWords ran for each raffle.
+    ///         Used by the UI to find the draw transaction hash directly — no log scanning needed.
+    mapping(uint256 => uint256) public raffleDrawBlock;
+
+    /// @notice Maps VRF requestId -> raffle number.
+    mapping(uint256 => uint256) internal _requestToRaffle;
+
+    /// @notice The active (latest) VRF requestId per raffle. Stale requests are ignored.
     mapping(uint256 => uint256) internal _activeRequestId;
 
-    /// @notice Winning addresses per week (set after VRF fulfillment).
-    mapping(uint256 => address[]) public weeklyWinners;
+    /// @notice Winning addresses per raffle (set after VRF fulfillment).
+    mapping(uint256 => address[]) public raffleWinners;
 
     // -------------------------------------------------------------------------
     // Events
     // -------------------------------------------------------------------------
 
-    event EntryAdded(uint256 indexed week, address indexed minter, uint256 totalEntries);
-    event DrawRequested(uint256 indexed week, uint256 requestId);
-    event DrawCompleted(uint256 indexed week, address[] winners);
+    event EntryAdded(uint256 indexed raffle, address indexed minter, uint256 totalEntries);
+    event DrawRequested(uint256 indexed raffle, uint256 requestId);
+    event DrawCompleted(uint256 indexed raffle, address[] winners);
     event PrizesChanged(uint256[] newPrizes);
     event DrawThresholdChanged(uint256 newThreshold);
     event MinUniqueMinterChanged(uint256 newMin);
     event VrfConfigChanged(uint256 subscriptionId, bytes32 keyHash, uint32 callbackGasLimit, uint16 requestConfirmations);
     event BooztoryChanged(address indexed newBooztory);
-    event DrawReset(uint256 indexed week);
+    event DrawReset(uint256 indexed raffle);
     event Withdrawn(address indexed token, address indexed to, uint256 amount);
+    event RaffleDurationChanged(uint256 newDuration);
 
     // -------------------------------------------------------------------------
     // Errors
@@ -99,7 +121,7 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
 
     error OnlyBooztory();
     error AlreadyDrawn();
-    error WeekNotEnded();
+    error RaffleNotEnded();
     error BelowThreshold();
     error NotEnoughUniqueMinters();
     error InsufficientPrizeFunds();
@@ -145,7 +167,10 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
 
-        // Default: 10 winners, top-heavy — $25/$20/$15/$10/$5×6 = $100 USDC total
+        // Raffle #0 starts at deployment time
+        epochStart = block.timestamp;
+
+        // Default: 10 winners, top-heavy — $25/$20/$15/$10/$5x6 = $100 USDC total
         prizes.push(25_000_000); // 1st — $25
         prizes.push(20_000_000); // 2nd — $20
         prizes.push(15_000_000); // 3rd — $15
@@ -159,12 +184,12 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
     }
 
     // -------------------------------------------------------------------------
-    // Week calculation
+    // Raffle number calculation
     // -------------------------------------------------------------------------
 
-    /// @notice Returns the current week number (UTC weeks since epoch, starts Thursday).
-    function currentWeek() public view returns (uint256) {
-        return block.timestamp / 1 weeks;
+    /// @notice Returns the current raffle number. Raffle #0 starts at epochStart.
+    function currentRaffle() public view returns (uint256) {
+        return (block.timestamp - epochStart) / raffleDuration;
     }
 
     // -------------------------------------------------------------------------
@@ -177,41 +202,47 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
      * @param minter  The address that minted a slot.
      */
     function addEntry(address minter) external onlyBooztory {
-        uint256 week = currentWeek();
-        _weeklyEntries[week].push(minter);
+        uint256 raffle = currentRaffle();
+        _raffleEntries[raffle].push(minter);
 
-        if (!hasMinted[week][minter]) {
-            hasMinted[week][minter] = true;
-            weeklyUniqueCount[week]++;
+        if (!hasMinted[raffle][minter]) {
+            hasMinted[raffle][minter] = true;
+            raffleUniqueCount[raffle]++;
         }
 
-        emit EntryAdded(week, minter, _weeklyEntries[week].length);
+        emit EntryAdded(raffle, minter, _raffleEntries[raffle].length);
     }
 
     // -------------------------------------------------------------------------
-    // Draw — owner triggers after week ends
+    // Draw — owner triggers after raffle period ends
     // -------------------------------------------------------------------------
 
     /**
-     * @notice Request a weekly draw via Chainlink VRF.
-     *         Requires: week has ended, thresholds met, USDC funded.
-     * @param week  The week number to draw for.
+     * @notice Request a raffle draw via Chainlink VRF.
+     *         Requires: raffle period has ended, thresholds met, USDC funded.
+     * @param raffle  The raffle number to draw for.
      */
-    function requestWeeklyDraw(uint256 week) external onlyOwner {
+    function requestRaffleDraw(uint256 raffle) external onlyOwner {
         uint256 winnerCount = prizes.length;
         if (winnerCount == 0) revert NoPrizes();
-        if (weekDrawn[week]) revert AlreadyDrawn();
-        if (week >= currentWeek()) revert WeekNotEnded();
-        if (_weeklyEntries[week].length < drawThreshold) revert BelowThreshold();
+        if (raffleDrawn[raffle]) revert AlreadyDrawn();
+        if (raffle >= currentRaffle()) revert RaffleNotEnded();
+        if (_raffleEntries[raffle].length < drawThreshold) revert BelowThreshold();
         // Both the business minimum and safety minimum (>= winner count) must pass
-        if (weeklyUniqueCount[week] < minUniqueMinters) revert NotEnoughUniqueMinters();
-        if (weeklyUniqueCount[week] < winnerCount) revert NotEnoughUniqueMinters();
+        if (raffleUniqueCount[raffle] < minUniqueMinters) revert NotEnoughUniqueMinters();
+        if (raffleUniqueCount[raffle] < winnerCount) revert NotEnoughUniqueMinters();
 
         uint256 totalPrize;
         for (uint256 i = 0; i < winnerCount; i++) totalPrize += prizes[i];
         if (usdc.balanceOf(address(this)) < totalPrize) revert InsufficientPrizeFunds();
 
-        weekDrawn[week] = true;
+        raffleDrawn[raffle] = true;
+
+        // Snapshot current prizes for historical UI display
+        delete rafflePrizes[raffle];
+        for (uint256 i = 0; i < winnerCount; i++) {
+            rafflePrizes[raffle].push(prizes[i]);
+        }
 
         uint256 requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
@@ -226,9 +257,9 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
             })
         );
 
-        _requestToWeek[requestId] = week;
-        _activeRequestId[week] = requestId;
-        emit DrawRequested(week, requestId);
+        _requestToRaffle[requestId] = raffle;
+        _activeRequestId[raffle] = requestId;
+        emit DrawRequested(raffle, requestId);
     }
 
     /**
@@ -238,10 +269,11 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
      *      Prizes are auto-sent in USDC.
      */
     function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
-        uint256 week = _requestToWeek[requestId];
+        uint256 raffle = _requestToRaffle[requestId];
         // Ignore stale callbacks from requests superseded by resetDraw + re-trigger
-        if (_activeRequestId[week] != requestId) return;
-        address[] storage entries = _weeklyEntries[week];
+        if (_activeRequestId[raffle] != requestId) return;
+
+        address[] storage entries = _raffleEntries[raffle];
         uint256 seed = randomWords[0];
         uint256 len = entries.length;
         uint256 winnerCount = prizes.length;
@@ -270,8 +302,9 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
             usdc.safeTransfer(candidate, prizes[i]);
         }
 
-        weeklyWinners[week] = winners;
-        emit DrawCompleted(week, winners);
+        raffleWinners[raffle] = winners;
+        raffleDrawBlock[raffle] = block.number;
+        emit DrawCompleted(raffle, winners);
     }
 
     // -------------------------------------------------------------------------
@@ -279,30 +312,30 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
     // -------------------------------------------------------------------------
 
     /**
-     * @notice Reset a week's draw status so it can be re-triggered.
+     * @notice Reset a raffle's draw status so it can be re-triggered.
      *         Use only if Chainlink VRF fails to deliver the callback.
-     * @param week  The week number to reset.
+     * @param raffle  The raffle number to reset.
      */
-    function resetDraw(uint256 week) external onlyOwner {
-        if (!weekDrawn[week]) revert NotDrawn();
-        weekDrawn[week] = false;
-        emit DrawReset(week);
+    function resetDraw(uint256 raffle) external onlyOwner {
+        if (!raffleDrawn[raffle]) revert NotDrawn();
+        raffleDrawn[raffle] = false;
+        emit DrawReset(raffle);
     }
 
     // -------------------------------------------------------------------------
     // Views
     // -------------------------------------------------------------------------
 
-    function getWeeklyEntryCount(uint256 week) external view returns (uint256) {
-        return _weeklyEntries[week].length;
+    function getRaffleEntryCount(uint256 raffle) external view returns (uint256) {
+        return _raffleEntries[raffle].length;
     }
 
-    function getWeeklyEntries(uint256 week) external view returns (address[] memory) {
-        return _weeklyEntries[week];
+    function getRaffleEntries(uint256 raffle) external view returns (address[] memory) {
+        return _raffleEntries[raffle];
     }
 
-    function getWeeklyWinners(uint256 week) external view returns (address[] memory) {
-        return weeklyWinners[week];
+    function getRaffleWinners(uint256 raffle) external view returns (address[] memory) {
+        return raffleWinners[raffle];
     }
 
     function getPrizes() external view returns (uint256[] memory) {
@@ -313,14 +346,19 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
         return prizes.length;
     }
 
+    /// @notice Returns the prize snapshot for a specific raffle (set at draw-request time).
+    function getRafflePrizes(uint256 raffle) external view returns (uint256[] memory) {
+        return rafflePrizes[raffle];
+    }
+
     // -------------------------------------------------------------------------
     // Admin — owner only (Chainlink ConfirmedOwner)
     // -------------------------------------------------------------------------
 
     /**
      * @notice Set prize amounts. Array length = winner count.
-     *         e.g. [10e6, 10e6, 10e6] = 3 winners × 10 USDC.
-     *         Ensure minUniqueMinters ≥ prizes.length.
+     *         e.g. [10e6, 10e6, 10e6] = 3 winners x 10 USDC.
+     *         Ensure minUniqueMinters >= prizes.length.
      */
     function setPrizes(uint256[] calldata _prizes) external onlyOwner {
         if (_prizes.length == 0) revert NoPrizes();
@@ -359,6 +397,15 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
         if (_booztory == address(0)) revert InvalidAddress();
         booztory = _booztory;
         emit BooztoryChanged(_booztory);
+    }
+
+    /// @notice Set the raffle duration in seconds. Default: 604800 (1 week).
+    ///         For testnet only — e.g. setRaffleDuration(600) for 10-minute raffles.
+    ///         Do NOT call on mainnet.
+    function setRaffleDuration(uint256 _duration) external onlyOwner {
+        require(_duration > 0, "Invalid duration");
+        raffleDuration = _duration;
+        emit RaffleDurationChanged(_duration);
     }
 
     /// @notice Withdraw all USDC from this contract (unused prize funds).

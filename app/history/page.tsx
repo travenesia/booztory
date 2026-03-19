@@ -56,7 +56,7 @@ function HistoryPage() {
     }
   }, [isLoadingMore, loadMoreItems, visibleCount, sortedItems.length])
 
-  if (isLoading) {
+  if (isLoading && sortedItems.length === 0) {
     return (
       <main className="min-h-screen pt-12 pb-12">
         <PageTopbar title="History" />

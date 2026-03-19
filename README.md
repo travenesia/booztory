@@ -384,12 +384,19 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] Weekly raffle (Chainlink VRF v2.5)
 - [x] Reward page (`/reward`) — BOOZ balance, streak, raffle entries
 - [x] SuperchainERC20 / IERC7802 support (cross-chain ready)
-- [x] Base Sepolia deployment
+- [x] Skeleton loading states across all pages
+- [x] Mobile drawer (Vaul) for GM streak — safe-area safe on all devices
+- [x] Base Sepolia deployment (Booztory + BooztoryToken)
+- [ ] BooztoryRaffle redeployment to Base Sepolia (weeklyPrizes snapshot fix)
+- [ ] Set content type images on-chain (`setContentTypeImage`)
+- [ ] Verify all 3 contracts on Basescan
 - [ ] Base Mainnet deployment
 - [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
 - [ ] World Chain deployment (World Mini App)
 - [ ] Superchain expansion (OP Mainnet, etc.)
 - [ ] Creator analytics dashboard
+- [ ] Rate limiting on API endpoints
+- [ ] Instagram and custom upload support
 
 ---
 

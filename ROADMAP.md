@@ -155,6 +155,13 @@ At 96 mints/day (672/week): treasury keeps 572 USDC after 100 USDC payout (~85% 
 - `setMinUniqueMinters(uint256)` — minimum unique wallets (keep ≥ winner count)
 - `setVrfConfig(...)` — update subscription ID, key hash, gas limit, confirmations
 - `setBooztory(address)` — update Booztory contract address
+- `setWeekDuration(uint256)` — **testnet only**: shorten week for faster testing (e.g. `3600` = 1 hour). Default is `1 weeks` (604800). Never call this on mainnet.
+
+### Weekly Prize Snapshot
+- `weeklyPrizes` mapping stores a snapshot of `prizes[]` at draw time (inside `requestWeeklyDraw`)
+- `getWeeklyPrizes(uint256 week)` — returns the prizes that were active when a specific week was drawn
+- This prevents historical prize display from changing when `setPrizes()` is updated for a new week
+- **Important**: only weeks drawn after this fix was deployed will have a snapshot. Prior weeks return empty array.
 
 ### Randomness
 - **Chainlink VRF v2.5** — `block.timestamp`/`block.prevrandao` are manipulable by validators
@@ -216,43 +223,74 @@ Always verify these addresses at https://docs.chain.link/vrf/v2-5/supported-netw
 
 ## 4. Deployed Addresses (Base Sepolia — Testnet)
 
-> ⚠️ These addresses are from a previous deployment. Contracts need redeployment with latest changes:
-> contentTypeImage mapping, ERC-721 name/symbol (Booztory Spotlight / BOOST), tokenURI cleanup.
+> ⚠️ BooztoryRaffle needs redeployment (weeklyPrizes snapshot + getWeeklyPrizes + setWeekDuration).
+> Booztory.sol and BooztoryToken.sol are current — do NOT redeploy them.
 
-| Contract | Address |
-|---|---|
-| Booztory | `0xeA31644aC7b2E03bd8951795A6ccE0c858F2B12b` |
-| BooztoryToken | `0x3B648BE7E66E89d5b7f5AEA78F5559Ce60E62721` |
-| BooztoryRaffle | `0x96ce8856e8D9D789E58FDd171887e104e95204Db` |
+| Contract | Address | Status |
+|---|---|---|
+| Booztory | `0x9D644381cd8bFA5fdba46C94BdB2A131aaeEF892` | ✅ Current |
+| BooztoryToken (BOOZ) | `0x3b3C0EF1f9072A435BE1B5860d674e9E0e47FAfE` | ✅ Current |
+| BooztoryRaffle | `0xee7a205dA0D3E16ca9384Feb1852A78aBf34285e` | ⚠️ Needs redeploy |
 
-Previously confirmed on old deploy:
+Confirmed on current deploy:
 - `setRewardToken()` and `setRaffle()` called on Booztory ✅
 - Mint → 1,000 BOOZ confirmed working ✅
-- Donation flow confirmed working ✅
+- Donation flow (approve + donate, 95/5 split) confirmed working ✅
 - GM streak claim → BOOZ in wallet confirmed working ✅
 
 ---
 
-## 5. Build Order
+## 5. Build Order & Checklist
 
-1. ~~Implement BooztoryToken.sol~~ ✅ Done
-2. ~~Integrate rewards into Booztory.sol~~ ✅ Done (3 mint paths, GM streak, discount)
-3. ~~Build BooztoryRaffle.sol~~ ✅ Done (Chainlink VRF v2.5, 10 winners, configurable)
-4. ~~Write deploy script for all 3 contracts~~ ✅ Done
-5. **Redeploy to Base Sepolia** — pending (contracts updated: contentTypeImage, NFT name/symbol, tokenURI)
-   - After deploy: call `setRewardToken()`, `setRaffle()` on Booztory
-   - Add BooztoryRaffle as consumer on Chainlink VRF subscription
-6. Frontend integration:
-   - ~~BOOZ balance in wallet dropdown~~ ✅ Done
-   - ~~GM streak claim UI (modal + mobile drawer + confetti)~~ ✅ Done
-   - ~~`/reward` page (raffle progress, streak history, BOOZ stats)~~ ✅ Done
-   - ~~`mintSlotWithDiscount()` path in submission drawer~~ ✅ Done
-   - ~~`mintSlotWithTokens()` path in submission drawer~~ ✅ Done
-   - ~~Farcaster Mini App + QuickAuth~~ ✅ Done
-7. Verify all 3 contracts on Basescan
-8. Resolve remaining burn sinks (boost, badge, governance) before making token tradeable
-9. Mainnet deployment (Base) — after testnet validation complete
-10. Phase 2: `setSoulbound(false)` → `mintTreasury()` → seed Uniswap v3 BOOZ/USDC pool
+### Completed ✅
+- [x] Implement BooztoryToken.sol (ERC-20, soulbound, SuperchainERC20)
+- [x] Integrate rewards into Booztory.sol (3 mint paths, GM streak, discount)
+- [x] Build BooztoryRaffle.sol (Chainlink VRF v2.5, 10 winners, configurable prizes)
+- [x] Write deploy script for all 3 contracts with wiring
+- [x] Frontend — BOOZ balance in wallet dropdown
+- [x] Frontend — GM streak claim UI (modal + Vaul mobile drawer + confetti + milestones)
+- [x] Frontend — `/reward` page (raffle entries, weekly draw status, BOOZ stats, streak display)
+- [x] Frontend — `mintSlotWithDiscount()` path in submission drawer
+- [x] Frontend — `mintSlotWithTokens()` path in submission drawer
+- [x] Frontend — Farcaster Mini App + QuickAuth
+- [x] Frontend — Skeleton loading states (History, Upcoming, FAQ, Reward, Home)
+- [x] Frontend — History/Upcoming: show cached data on background refresh (no skeleton flash)
+- [x] Frontend — GM modal mobile drawer migrated to Vaul (safe-area safe, rounded corners)
+- [x] Base Sepolia deployment: Booztory + BooztoryToken
+
+### Testnet — Immediate Next Steps
+- [ ] Redeploy BooztoryRaffle to Base Sepolia
+  - `npx hardhat compile`
+  - `npx hardhat run scripts/redeploy-raffle.ts --network base-sepolia` (or full deploy script)
+  - Call `setRaffle(newRaffleAddress)` on Booztory
+  - Update `NEXT_PUBLIC_RAFFLE_ADDRESS` in `.env.local`
+  - Add new BooztoryRaffle as consumer at vrf.chain.link
+  - Call `setWeekDuration(3600)` on raffle for 1-hour test weeks
+- [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform (youtube, tiktok, twitter, vimeo, spotify, twitch)
+- [ ] Verify all 3 contracts on Basescan (`npx hardhat verify ...`)
+- [ ] End-to-end testnet QA: mint → earn BOOZ → streak → raffle draw
+
+### Mainnet Launch
+- [ ] Deploy all 3 contracts to Base Mainnet
+- [ ] Add BooztoryRaffle (mainnet) as VRF consumer
+- [ ] Set content type images on mainnet
+- [ ] Update `.env.local` with mainnet addresses
+- [ ] Verify all 3 contracts on Basescan (mainnet)
+- [ ] Fund raffle contract with USDC for first draw
+- [ ] Set up Dune analytics dashboard
+
+### Post-Launch
+- [ ] Rate limiting on API endpoints (spam prevention beyond slot cost)
+- [ ] Creator analytics dashboard — slot history, earnings, donation breakdown
+- [ ] More platforms: Instagram embed, custom video upload
+- [ ] BOOZ Phase 2: `setSoulbound(false)` → `mintTreasury()` → seed Uniswap v3 BOOZ/USDC pool
+- [ ] Additional BOOZ burn sinks: slot boost (visibility/position), leaderboard badge, governance
+
+### Superchain Expansion
+- [ ] Deploy BooztoryToken via CREATE2 factory (deterministic address across chains)
+- [ ] World Chain deployment (World Mini App, World ID for sybil-resistant GM streaks)
+- [ ] OP Mainnet and other OP Stack chains
+- [ ] Frontend chain toggle in regular browser (Base ↔ World Chain)
 
 ---
 

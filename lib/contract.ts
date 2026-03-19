@@ -132,22 +132,33 @@ export const BOOZTORY_ABI = [
 
 // ─── Raffle ABI ───────────────────────────────────────────────────────────────
 export const RAFFLE_ABI = [
-  { inputs: [], name: "currentWeek", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "getWeeklyEntryCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "weeklyUniqueCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  // Events
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffle", type: "uint256" }, { indexed: false, internalType: "address[]", name: "winners", type: "address[]" }], name: "DrawCompleted", type: "event" },
+
+  // Views
+  { inputs: [], name: "currentRaffle", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "epochStart", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRaffleEntryCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleUniqueCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "drawThreshold", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "minUniqueMinters", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [{ internalType: "uint256", name: "", type: "uint256" }, { internalType: "address", name: "", type: "address" }], name: "hasMinted", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "getPrizes", outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "getWeeklyWinners", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "getWeeklyEntries", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "weekDrawn", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRafflePrizes", outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRaffleWinners", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRaffleEntries", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleDrawn", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "raffleDuration", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleDrawBlock", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "owner", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "requestWeeklyDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "week", type: "uint256" }], name: "resetDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+
+  // Writes
+  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "requestRaffleDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "resetDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "uint256", name: "_threshold", type: "uint256" }], name: "setDrawThreshold", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "uint256", name: "_min", type: "uint256" }], name: "setMinUniqueMinters", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "uint256[]", name: "_prizes", type: "uint256[]" }], name: "setPrizes", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_duration", type: "uint256" }], name: "setRaffleDuration", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [], name: "withdraw", outputs: [], stateMutability: "nonpayable", type: "function" },
 ] as const
 
