@@ -114,6 +114,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   return (
     <div
       className="flex flex-col items-center w-full px-6 py-4"
+      data-vaul-no-drag
     >
       {/* Flame + title */}
       <div className="text-6xl mb-3 select-none leading-none">🔥</div>
