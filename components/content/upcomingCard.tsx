@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Clock } from "iconoir-react"
+import { HiClock } from "react-icons/hi2"
 import { YouTubeIcon, TikTokIcon, TwitterIcon, YouTubeShortsIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "./icon"
 import type { ContentItem } from "@/lib/contract"
 import { isYouTubeShort } from "@/lib/youtubeMetadata"
@@ -94,7 +95,7 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
         className="flex items-center justify-between h-9 px-3 border-b border-gray-200"
         style={{ background: isOwn ? "linear-gradient(160deg, #fffbeb 0%, #fef3c7 40%, #fffdf0 100%)" : "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
       >
-        <div className="text-xs font-medium text-gray-700">{isOwn ? "Posted by You" : `Posted by @${displayUsername}`}</div>
+        <div className="text-xs font-bold text-gray-700">{isOwn ? "Posted by You" : `Posted by @${displayUsername}`}</div>
         <div className="flex-shrink-0">{getPlatformIcon()}</div>
       </div>
       <div className="p-3">
@@ -128,7 +129,10 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
         )}
       </div>
       <div className="flex items-center justify-between w-full h-9 px-3 border-t border-border bg-gray-0">
-        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Queued</span>
+        <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-700 flex items-center gap-1">
+            <HiClock size={13} />
+            Queued
+          </span>
         <div className="flex items-center gap-1 text-gray-900">
           <p className="text-xs">Scheduled:</p>
           <Clock width={14} height={14} />

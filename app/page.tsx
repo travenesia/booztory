@@ -7,7 +7,6 @@ import { Navbar } from "@/components/layout/navbar"
 import { ContentCard } from "@/components/content/contentCard"
 import { Button } from "@/components/ui/button"
 import { RotatingWords } from "@/components/ui/rotating-words"
-import { HiMiniPlus } from "react-icons/hi2"
 import { useToast } from "@/hooks/use-toast"
 import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
 import { useSession } from "next-auth/react"
@@ -161,9 +160,8 @@ export default function Home() {
           </p>
           <Button
             onClick={handleFabClick}
-            className="w-fit px-6 py-3 text-white font-medium elegance-button shadow-custom-sm hover:shadow-custom-sm flex items-center gap-2"
+            className="w-fit px-6 py-3 text-white font-semibold elegance-button shadow-custom-sm hover:shadow-custom-sm"
           >
-            <HiMiniPlus size={18} />
             Submit Content
           </Button>
         </div>

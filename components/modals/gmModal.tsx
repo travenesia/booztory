@@ -8,6 +8,7 @@ import confetti from "canvas-confetti"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
+import { APP_CHAIN } from "@/lib/wagmi"
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     abi: BOOZTORY_ABI,
     functionName: "gmStreaks",
     args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: !!address },
   })
 
@@ -104,7 +106,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
 
   const handleClaim = () => {
     if (!address) return
-    writeContract({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM" })
+    writeContract({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", chainId: APP_CHAIN.id })
   }
 
   const isLoading = isWritePending || isConfirming

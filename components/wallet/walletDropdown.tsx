@@ -4,10 +4,11 @@ import { useAccount, useDisconnect } from "wagmi"
 import { useReadContract } from "wagmi"
 import { useSession, signOut } from "next-auth/react"
 import { useState } from "react"
-import { Copy, Check, LogOut } from "lucide-react"
-import { HiBolt } from "react-icons/hi2"
+import { Copy, Check } from "lucide-react"
+import { HiBolt, HiOutlinePower } from "react-icons/hi2"
 import { useWalletName } from "@/hooks/useWalletName"
 import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS } from "@/lib/contract"
+import { APP_CHAIN } from "@/lib/wagmi"
 import { cache } from "@/lib/cache"
 
 // ── Gradient avatar from address ─────────────────────────────────────────────
@@ -22,7 +23,7 @@ function addressToGradient(addr: string): string {
 function formatUsdc(raw: bigint | undefined): string {
   if (raw === undefined) return "—"
   const val = Number(raw) / 1_000_000
-  return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `$${val.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 function formatBooz(raw: bigint | undefined): string {
@@ -48,6 +49,7 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: !!address },
   })
 
@@ -56,6 +58,7 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: !!address && TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" },
   })
 
@@ -81,7 +84,7 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <div
           className="w-10 h-10 rounded-full flex-shrink-0"
-          style={{ background: addressToGradient(address) }}
+          style={{ background: "#d1d5db" }}
         />
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-sm font-semibold text-gray-900 truncate">{displayName}</span>
@@ -104,18 +107,20 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
       <div className="grid grid-cols-2 gap-2 px-4 py-3">
         {/* USDC */}
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
-          <img src="/usdc.svg" alt="USDC" width={32} height={32} className="flex-shrink-0" />
+          <img src="/usdc.svg" alt="USDC" width={24} height={24} className="flex-shrink-0" />
           <div className="flex flex-col">
-            <span className="text-lg font-black text-blue-900 leading-tight">{formatUsdc(usdcBalance as bigint | undefined)}</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-400">USDC</span>
+            <span className="text-[9px] font-semibold text-blue-600 uppercase tracking-wide leading-none mb-0.5">$USDC</span>
+            <span className="text-sm font-black text-blue-900 leading-tight">{formatUsdc(usdcBalance as bigint | undefined)}</span>
           </div>
         </div>
         {/* BOOZ */}
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-          <HiBolt size={32} className="text-red-400 flex-shrink-0" />
+          <div className="w-[24px] h-[24px] flex items-center justify-center rounded-full bg-red-200 flex-shrink-0">
+            <HiBolt size={13} className="text-red-600" />
+          </div>
           <div className="flex flex-col">
-            <span className="text-lg font-black text-red-900 leading-tight">{formatBooz(boozBalance as bigint | undefined)}</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-red-400">BOOZ</span>
+            <span className="text-[9px] font-semibold text-red-600 uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
+            <span className="text-sm font-black text-red-900 leading-tight">{formatBooz(boozBalance as bigint | undefined)}</span>
           </div>
         </div>
       </div>
@@ -128,7 +133,7 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
           onClick={handleDisconnect}
           className="w-full flex items-center justify-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg px-3 py-2 transition-colors"
         >
-          <LogOut className="w-4 h-4" />
+          <HiOutlinePower className="w-4 h-4" />
           Disconnect
         </button>
       </div>

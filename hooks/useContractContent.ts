@@ -1,8 +1,10 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
 import { useReadContract } from "wagmi"
+import { readContract } from "wagmi/actions"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI, parseSlot, getPlaceholderContent, type ContentItem, type OnChainSlot } from "@/lib/contract"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { APP_CHAIN, wagmiConfig } from "@/lib/wagmi"
 
 export function useCurrentSlot() {
   const { data, isLoading, refetch } = useReadContract({
@@ -53,7 +55,13 @@ export function useUpcomingSlots() {
 const PAGE_SIZE = 50n
 
 export function useAllPastSlots() {
-  const { data, isLoading, refetch } = useReadContract({
+  const [allItems, setAllItems] = useState<ContentItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [nextOffset, setNextOffset] = useState(PAGE_SIZE)
+  const [isFetchingMore, setIsFetchingMore] = useState(false)
+
+  // Fetch the first page via hook (benefits from wagmi cache)
+  const { data, isLoading } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "getPastSlots",
@@ -61,11 +69,40 @@ export function useAllPastSlots() {
     chainId: APP_CHAIN.id,
   })
 
-  const items: ContentItem[] = data
-    ? (data[0] as bigint[]).map((id, i) => parseSlot(id, data[1][i] as OnChainSlot))
-    : []
+  useEffect(() => {
+    if (!data) return
+    const parsed = (data[0] as bigint[]).map((id, i) =>
+      parseSlot(id, (data[1] as OnChainSlot[])[i])
+    )
+    setAllItems(parsed)
+    setTotal(Number(data[2]))
+    setNextOffset(PAGE_SIZE)
+  }, [data])
 
-  const total = data ? Number(data[2]) : 0
+  const hasMore = nextOffset < BigInt(total)
 
-  return { items, total, isLoading, refetch }
+  const fetchMore = useCallback(async () => {
+    if (isFetchingMore || !hasMore) return
+    setIsFetchingMore(true)
+    try {
+      const result = await readContract(wagmiConfig, {
+        address: BOOZTORY_ADDRESS,
+        abi: BOOZTORY_ABI,
+        functionName: "getPastSlots",
+        args: [nextOffset, PAGE_SIZE],
+        chainId: APP_CHAIN.id,
+      })
+      const parsed = (result[0] as bigint[]).map((id, i) =>
+        parseSlot(id, (result[1] as OnChainSlot[])[i])
+      )
+      setAllItems(prev => [...prev, ...parsed])
+      setNextOffset(prev => prev + PAGE_SIZE)
+    } catch {
+      // silently ignore — user can scroll again to retry
+    } finally {
+      setIsFetchingMore(false)
+    }
+  }, [isFetchingMore, hasMore, nextOffset])
+
+  return { items: allItems, total, isLoading, isFetchingMore, fetchMore, hasMore }
 }

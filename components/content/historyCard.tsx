@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { DollarCircle } from "iconoir-react"
+import { HiMiniCheckBadge } from "react-icons/hi2"
 import { YouTubeIcon, TikTokIcon, TwitterIcon, YouTubeShortsIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "./icon"
 import type { ContentItem } from "@/lib/contract"
 import { isYouTubeShort } from "@/lib/youtubeMetadata"
@@ -97,7 +98,7 @@ export function HistoryCard({ content, isOwn = false }: HistoryCardProps) {
         className="flex items-center justify-between h-9 px-3 border-b border-gray-200"
         style={{ background: isOwn ? "linear-gradient(160deg, #fffbeb 0%, #fef3c7 40%, #fffdf0 100%)" : "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
       >
-        <div className="text-xs font-medium text-gray-700">{isOwn ? "Posted by You" : `Posted by @${displayUsername}`}</div>
+        <div className="text-xs font-bold text-gray-700">{isOwn ? "Posted by You" : `Posted by @${displayUsername}`}</div>
         <div className="flex-shrink-0">{getPlatformIcon()}</div>
       </div>
       <div className="p-3">
@@ -132,7 +133,10 @@ export function HistoryCard({ content, isOwn = false }: HistoryCardProps) {
       </div>
       <div className="flex items-center justify-between w-full h-9 px-3 border-t border-border bg-gray-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Completed</span>
+          <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+            <HiMiniCheckBadge size={13} />
+            Completed
+          </span>
           <span className="text-xs text-gray-500">{formatRelativeTime(content.endTime)}</span>
         </div>
         <div className="flex items-center text-gray-900">

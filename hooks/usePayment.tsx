@@ -54,21 +54,25 @@ export function usePayment() {
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "slotPrice",
+    chainId: APP_CHAIN.id,
   })
   const { data: onChainDiscountBurnCost } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "discountBurnCost",
+    chainId: APP_CHAIN.id,
   })
   const { data: onChainFreeSlotCost } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "freeSlotCost",
+    chainId: APP_CHAIN.id,
   })
   const { data: onChainDiscountAmount } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "discountAmount",
+    chainId: APP_CHAIN.id,
   })
 
   const slotPrice = (onChainSlotPrice as bigint | undefined) ?? FALLBACK_SLOT_PRICE

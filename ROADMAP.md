@@ -271,10 +271,15 @@ Confirmed on current deploy:
 - [ ] End-to-end testnet QA: mint → earn BOOZ → streak → raffle draw
 
 ### Mainnet Launch
-- [ ] Deploy all 3 contracts to Base Mainnet
-- [ ] Add BooztoryRaffle (mainnet) as VRF consumer
-- [ ] Set content type images on mainnet
-- [ ] Update `.env.local` with mainnet addresses
+- [ ] In `lib/wagmi.ts` — change `APP_CHAIN = baseSepolia` → `APP_CHAIN = base` (single line, all reads/writes propagate automatically)
+- [ ] Deploy all 3 contracts to Base Mainnet (`npx hardhat run scripts/deploy.ts --network base`)
+- [ ] Add BooztoryRaffle (mainnet) as VRF consumer at vrf.chain.link
+- [ ] Set content type images on mainnet via `setContentTypeImage()`
+- [ ] Update `.env.local` with mainnet contract addresses:
+  - `NEXT_PUBLIC_BOOZTORY_ADDRESS`
+  - `NEXT_PUBLIC_TOKEN_ADDRESS`
+  - `NEXT_PUBLIC_RAFFLE_ADDRESS`
+  - `NEXT_PUBLIC_USDC_ADDRESS` — `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` (already correct default)
 - [ ] Verify all 3 contracts on Basescan (mainnet)
 - [ ] Fund raffle contract with USDC for first draw
 - [ ] Set up Dune analytics dashboard

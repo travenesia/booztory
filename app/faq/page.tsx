@@ -46,10 +46,10 @@ export default function FAQPage() {
               className="bg-gray-0 rounded-lg border border-gray-300"
             >
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">Is Booztory available in my country?</span>
+                <span className="font-bold text-gray-900">Is Booztory available in my country?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-2">
+                <div className="text-xs text-gray-700 space-y-2">
                   <p>
                     <strong>Yes — Booztory is globally accessible.</strong>
                   </p>
@@ -60,10 +60,10 @@ export default function FAQPage() {
 
             <AccordionItem value="payments" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">How do payments work?</span>
+                <span className="font-bold text-gray-900">How do payments work?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-3">
+                <div className="text-xs text-gray-700 space-y-3">
                   <p>
                     Each 15-minute slot costs <strong>1 USDC</strong>. Submitting is a two-step on-chain flow:
                   </p>
@@ -90,10 +90,10 @@ export default function FAQPage() {
 
             <AccordionItem value="platforms" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">Which platforms are supported?</span>
+                <span className="font-bold text-gray-900">Which platforms are supported?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-4">
+                <div className="text-xs text-gray-700 space-y-4">
                   <div>
                     <p className="font-medium text-gray-900 mb-2">Currently supported:</p>
                     <ul className="space-y-1 ml-4">
@@ -146,10 +146,10 @@ export default function FAQPage() {
 
             <AccordionItem value="features" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">What can I do on Booztory?</span>
+                <span className="font-bold text-gray-900">What can I do on Booztory?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-3">
+                <div className="text-xs text-gray-700 space-y-3">
                   <div className="flex items-start space-x-3">
                     <span className="w-2 h-2 bg-red-700 rounded-full mt-2 flex-shrink-0"></span>
                     <div>
@@ -185,10 +185,10 @@ export default function FAQPage() {
             {/* ── Rewards & $BOOZ ── */}
             <AccordionItem value="booz-token" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">What is $BOOZ?</span>
+                <span className="font-bold text-gray-900">What is $BOOZ?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-3">
+                <div className="text-xs text-gray-700 space-y-3">
                   <p>
                     <strong>$BOOZ is the native reward token of Booztory.</strong> It is earned by participating in the platform — no purchase required.
                   </p>
@@ -222,10 +222,10 @@ export default function FAQPage() {
 
             <AccordionItem value="gm-streak" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">How does the Daily GM streak work?</span>
+                <span className="font-bold text-gray-900">How does the Daily GM streak work?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-3">
+                <div className="text-xs text-gray-700 space-y-3">
                   <p>
                     Tap the bolt icon in the top bar once per day to claim your daily GM reward. Each consecutive day builds your 90-day journey with escalating rewards and one-time milestone bonuses.
                   </p>
@@ -281,10 +281,10 @@ export default function FAQPage() {
 
             <AccordionItem value="raffle" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">How does the weekly raffle work?</span>
+                <span className="font-bold text-gray-900">How does the weekly raffle work?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-3">
+                <div className="text-xs text-gray-700 space-y-3">
                   <p>
                     Every paid slot mint (1 USDC) automatically earns you one raffle entry for the current week. Mint more slots to increase your chances.
                   </p>
@@ -330,10 +330,10 @@ export default function FAQPage() {
 
             <AccordionItem value="roadmap" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-medium text-gray-900">What's next for Booztory?</span>
+                <span className="font-bold text-gray-900">What's next for Booztory?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
-                <div className="text-sm text-gray-700 space-y-3">
+                <div className="text-xs text-gray-700 space-y-3">
                   <div>
                     <p className="font-medium text-green-700 mb-2">Already live:</p>
                     <ul className="space-y-1 ml-4">

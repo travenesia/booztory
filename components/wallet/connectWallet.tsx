@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { cache, CACHE_DURATIONS } from "@/lib/cache"
 import { sdk } from "@farcaster/miniapp-sdk"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Drawer } from "vaul"
 import { WalletDropdownContent } from "@/components/wallet/walletDropdown"
 
 const USER_PROFILE_CACHE_KEY = "user_profile"
@@ -214,7 +214,7 @@ export function ConnectWalletButton() {
       <div className="flex flex-col items-center">
         <Button
           variant="noShadow"
-          className="h-9 px-4 text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
+          className="h-9 px-4 text-xs font-semibold flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
           onClick={isMiniApp ? undefined : (isWalletConnected && address ? () => handleSignIn(address, APP_CHAIN.id) : handleConnect)}
           disabled={isDisabled}
         >
@@ -224,28 +224,29 @@ export function ConnectWalletButton() {
     )
   }
 
-  // ── Mobile — bottom Sheet ───────────────────────────────────────────────────
+  // ── Mobile — Vaul bottom drawer ─────────────────────────────────────────────
   if (isMobile) {
     return (
       <>
         <div className="flex flex-col items-center">
           <Button
             variant="noShadow"
-            className="h-9 px-4 text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
+            className="h-9 px-4 text-xs font-semibold flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
             onClick={() => setOpen(true)}
           >
             {buttonContent()}
           </Button>
         </div>
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="bottom" className="p-0 rounded-t-xl">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Wallet</SheetTitle>
-            </SheetHeader>
-            <WalletDropdownContent onClose={() => setOpen(false)} />
-            <div className="h-6" />
-          </SheetContent>
-        </Sheet>
+        <Drawer.Root open={open} onOpenChange={setOpen}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
+            <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 bg-white outline-none">
+              <Drawer.Title className="sr-only">Wallet</Drawer.Title>
+              <Drawer.Description className="sr-only">Wallet details and disconnect</Drawer.Description>
+              <WalletDropdownContent onClose={() => setOpen(false)} />
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
       </>
     )
   }

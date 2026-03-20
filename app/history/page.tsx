@@ -15,7 +15,7 @@ function HistoryPage() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
-  const { items: allItems, isLoading } = useAllPastSlots()
+  const { items: allItems, isLoading, isFetchingMore, fetchMore, hasMore } = useAllPastSlots()
   const { address } = useAccount()
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
 
@@ -26,26 +26,41 @@ function HistoryPage() {
         return aOwn + bOwn
       })
     : allItems
+
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const displayedContent = sortedItems.slice(0, visibleCount)
 
-  const loadMoreItems = useCallback(() => {
+  const loadMoreItems = useCallback(async () => {
+    if (isLoadingMore || isFetchingMore) return
     setIsLoadingMore(true)
-    setTimeout(() => {
-      setVisibleCount((c) => Math.min(c + ITEMS_PER_PAGE, sortedItems.length))
+
+    if (visibleCount < sortedItems.length) {
+      // More client-side items available — just reveal them
+      setTimeout(() => {
+        setVisibleCount((c) => Math.min(c + ITEMS_PER_PAGE, sortedItems.length))
+        setIsLoadingMore(false)
+      }, 300)
+    } else if (hasMore) {
+      // All client items shown — fetch next page from contract
+      await fetchMore()
+      setVisibleCount((c) => c + ITEMS_PER_PAGE)
       setIsLoadingMore(false)
-    }, 500)
-  }, [sortedItems.length])
+    } else {
+      setIsLoadingMore(false)
+    }
+  }, [isLoadingMore, isFetchingMore, visibleCount, sortedItems.length, hasMore, fetchMore])
+
+  const showLoadMoreTrigger = visibleCount < sortedItems.length || hasMore
 
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect()
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMore && visibleCount < sortedItems.length) {
+        if (entries[0].isIntersecting && !isLoadingMore && !isFetchingMore && showLoadMoreTrigger) {
           loadMoreItems()
         }
       },
@@ -57,7 +72,7 @@ function HistoryPage() {
     return () => {
       if (observerRef.current) observerRef.current.disconnect()
     }
-  }, [isLoadingMore, loadMoreItems, visibleCount, sortedItems.length])
+  }, [isLoadingMore, isFetchingMore, loadMoreItems, showLoadMoreTrigger])
 
   if (!mounted || (isLoading && sortedItems.length === 0)) {
     return (
@@ -109,7 +124,7 @@ function HistoryPage() {
             ))}
           </div>
         )}
-        {isLoadingMore && (
+        {(isLoadingMore || isFetchingMore) && (
           <div className="space-y-4 mt-4">
             {[...Array(2)].map((_, i) => (
               <div
@@ -133,10 +148,10 @@ function HistoryPage() {
             ))}
           </div>
         )}
-        {visibleCount < sortedItems.length && !isLoadingMore && (
+        {showLoadMoreTrigger && !isLoadingMore && !isFetchingMore && (
           <div ref={loadMoreRef} style={{ height: "20px", margin: "10px 0" }} />
         )}
-        {displayedContent.length > 0 && visibleCount >= sortedItems.length && !isLoadingMore && (
+        {displayedContent.length > 0 && !showLoadMoreTrigger && !isLoadingMore && !isFetchingMore && (
           <div className="text-center py-4 text-gray-500 text-sm">All history content loaded.</div>
         )}
       </section>

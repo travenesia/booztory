@@ -2,11 +2,14 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { HiOutlineMegaphone } from "react-icons/hi2"
+import { useState } from "react"
+import { HiMiniBars3BottomLeft, HiMiniShieldCheck } from "react-icons/hi2"
+import { HiBolt } from "react-icons/hi2"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
-import { GMButton, GMMobileButton } from "@/components/modals/gmModal"
+import { GMButton, GMContent } from "@/components/modals/gmModal"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { Drawer } from "vaul"
 
 const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "Home", href: "/" },
@@ -18,47 +21,60 @@ const navItems: { name: string; href: string; badge?: boolean }[] = [
 
 export function Topbar() {
   const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [gmOpen, setGmOpen] = useState(false)
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
-      <div className="flex items-center h-full px-6 md:px-12">
+      <div className="flex items-center h-full px-4 md:px-12">
+
+        {/* Hamburger — mobile only */}
+        <span
+          onClick={() => setMenuOpen(true)}
+          className="md:hidden flex items-center justify-center w-8 h-8 mr-1 text-gray-900 hover:text-[#cc0000] cursor-pointer transition-colors"
+          aria-label="Open menu"
+          role="button"
+        >
+          <HiMiniBars3BottomLeft size={22} />
+        </span>
+
         {/* Left: logo + nav */}
         <div className="flex items-center gap-4 flex-1">
           <Link href="/" className="flex items-center gap-2">
             <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
-            <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
+            <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
             <span className="hidden md:inline text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">Testnet</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors duration-150",
-                pathname === item.href
-                  ? "text-[#aa0000]"
-                  : "text-gray-900 hover:text-[#aa0000]"
-              )}
-            >
-              {item.name}
-              {item.badge && (
-                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
-                  New
-                </span>
-              )}
-            </Link>
-          ))}
+            {navItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors duration-150",
+                  pathname === item.href
+                    ? "text-[#aa0000]"
+                    : "text-gray-900 hover:text-[#aa0000]"
+                )}
+              >
+                {item.name}
+                {item.badge && (
+                  <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                    New
+                  </span>
+                )}
+              </Link>
+            ))}
           </nav>
         </div>
 
-        {/* Right: mobile icons + wallet */}
+        {/* Right: icons + wallet */}
         <div className="flex items-center gap-2">
-          {/* GM button — desktop */}
+          {/* GM button — desktop only */}
           <GMButton />
 
-          {/* X icon — desktop */}
+          {/* X icon — desktop only */}
           <a
             href="https://x.com/booztory"
             target="_blank"
@@ -69,17 +85,7 @@ export function Topbar() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/social/x.svg" alt="X" width={13} height={13} />
           </a>
-          {/* GM + X + FAQ icons — mobile/tablet only */}
-          <div className="md:hidden flex items-center">
-            <GMMobileButton />
-            <a href="https://x.com/booztory" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-7 h-7 rounded-base transition-colors" aria-label="Follow on X">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/social/x.svg" alt="X" width={14} height={14} />
-            </a>
-            <Link href="/faq" className="flex items-center justify-center w-7 h-7 rounded-base transition-colors text-gray-900 hover:text-[#cc0000]" aria-label="FAQ">
-              <HiOutlineMegaphone size={16} />
-            </Link>
-          </div>
+
           {["/history", "/upcoming", "/faq", "/reward"].includes(pathname) ? (
             <div className="hidden md:block">
               <ConnectWalletButton />
@@ -89,6 +95,83 @@ export function Topbar() {
           )}
         </div>
       </div>
+
+      {/* ── Hamburger Vaul Drawer (left) — mobile only ──────────────────────────── */}
+      <Drawer.Root direction="left" open={menuOpen} onOpenChange={setMenuOpen}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
+          <Drawer.Content
+            className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-white outline-none"
+          >
+            <Drawer.Title className="sr-only">Menu</Drawer.Title>
+            <Drawer.Description className="sr-only">Navigation menu</Drawer.Description>
+
+            {/* Header */}
+            <div className="px-5 pt-6 pb-4">
+              <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
+            </div>
+
+            <div className="mx-5 border-t border-gray-200" />
+
+            {/* Primary items */}
+            <div className="flex flex-col px-3 py-3 gap-0.5">
+              <button
+                onClick={() => { setMenuOpen(false); setTimeout(() => setGmOpen(true), 200) }}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-800 hover:bg-gray-100 active:bg-gray-100 transition-colors text-sm font-semibold w-full text-left"
+              >
+                <HiBolt size={18} className="text-yellow-400 flex-shrink-0" />
+                Daily GM
+              </button>
+
+              <a
+                href="https://x.com/booztory"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-800 hover:bg-gray-100 active:bg-gray-100 transition-colors text-sm font-semibold"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/social/x.svg" alt="X" width={17} height={17} className="flex-shrink-0" />
+                Follow Us
+              </a>
+            </div>
+
+            <div className="mx-5 border-t border-gray-200" />
+
+            {/* Secondary items */}
+            <div className="flex flex-col px-3 py-3 gap-0.5">
+              <Link
+                href="/faq"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-800 hover:bg-gray-100 active:bg-gray-100 transition-colors text-sm font-semibold"
+              >
+                <HiMiniShieldCheck size={18} className="text-gray-500 flex-shrink-0" />
+                FAQ
+              </Link>
+            </div>
+
+            {/* Version */}
+            <div className="mt-auto px-6 py-5">
+              <span className="text-xs text-gray-400">Booztory Version 0.1.0</span>
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+
+      {/* ── GM Drawer (triggered from hamburger) — mobile only ──────────────────── */}
+      <Drawer.Root open={gmOpen} onOpenChange={setGmOpen}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
+          <Drawer.Content
+            className="fixed inset-x-0 bottom-0 z-50 rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none"
+            style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
+          >
+            <Drawer.Title className="sr-only">Daily GM</Drawer.Title>
+            <Drawer.Description className="sr-only">Daily GM streak claim</Drawer.Description>
+            <GMContent onClose={() => setGmOpen(false)} />
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     </header>
   )
 }

@@ -20,9 +20,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet"
+import { Drawer } from "vaul"
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -1198,18 +1196,20 @@ export default function RewardPage() {
               <div className="grid grid-cols-2 gap-3">
                 {/* USDC */}
                 <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 flex items-center gap-3">
-                  <img src="/usdc.svg" alt="USDC" width={36} height={36} className="flex-shrink-0" />
+                  <img src="/usdc.svg" alt="USDC" width={42} height={42} className="flex-shrink-0" />
                   <div className="flex flex-col">
-                    <span className="text-3xl font-black text-blue-900 leading-tight">{usdcFormatted}</span>
-                    <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">USDC</span>
+                    <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide leading-none mb-0.5">$USDC</span>
+                    <span className="text-2xl font-black text-blue-900 leading-tight">{usdcFormatted}</span>
                   </div>
                 </div>
                 {/* BOOZ */}
                 <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-4 flex items-center gap-3">
-                  <HiBolt size={36} className="text-red-400 flex-shrink-0" />
+                  <div className="self-stretch aspect-square flex items-center justify-center rounded-full bg-red-200 flex-shrink-0">
+                    <HiBolt size={16} className="text-red-600" />
+                  </div>
                   <div className="flex flex-col">
-                    <span className="text-3xl font-black text-red-900 leading-tight">{boozFormatted}</span>
-                    <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">BOOZ</span>
+                    <span className="text-[10px] font-semibold text-red-600 uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
+                    <span className="text-2xl font-black text-red-900 leading-tight">{boozFormatted}</span>
                   </div>
                 </div>
               </div>
@@ -1346,21 +1346,21 @@ export default function RewardPage() {
 
       <Navbar />
 
-      {/* GM Modal / Sheet */}
+      {/* GM Modal — Vaul drawer (mobile) / Dialog (desktop) */}
       {isMobile ? (
-        <Sheet open={gmOpen} onOpenChange={setGmOpen}>
-          <SheetContent
-            side="bottom"
-            className="p-0 rounded-tl-2xl rounded-tr-2xl border-gray-200 overflow-hidden"
-            style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
-          >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Daily GM</SheetTitle>
-            </SheetHeader>
-            <GMContent onClose={() => setGmOpen(false)} />
-            <div className="h-6" style={{ background: "#0d0d0d" }} />
-          </SheetContent>
-        </Sheet>
+        <Drawer.Root open={gmOpen} onOpenChange={setGmOpen}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
+            <Drawer.Content
+              className="fixed inset-x-0 bottom-0 z-50 rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none overflow-hidden"
+              style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
+            >
+              <Drawer.Title className="sr-only">Daily GM</Drawer.Title>
+              <Drawer.Description className="sr-only">Daily GM streak claim</Drawer.Description>
+              <GMContent onClose={() => setGmOpen(false)} />
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
       ) : (
         <Dialog open={gmOpen} onOpenChange={setGmOpen}>
           <DialogContent

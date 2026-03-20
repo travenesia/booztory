@@ -23,6 +23,7 @@ import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
 import { getTwitchMetadata, extractTwitchInfo } from "@/lib/twitchMetadata"
 import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
 import { TOKEN_ADDRESS, ERC20_ABI, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
+import { APP_CHAIN } from "@/lib/wagmi"
 
 type PaymentMethod = "standard" | "discount" | "free"
 
@@ -72,23 +73,27 @@ export function ContentSubmissionDrawer() {
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "getQueueSize",
+    chainId: APP_CHAIN.id,
     query: { refetchInterval: 15_000 },
   })
   const { data: maxQueueSizeRaw } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "maxQueueSize",
+    chainId: APP_CHAIN.id,
   })
   const { data: queueEndTimeRaw } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "queueEndTime",
+    chainId: APP_CHAIN.id,
     query: { refetchInterval: 15_000 },
   })
   const { data: slotDurationRaw } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "slotDuration",
+    chainId: APP_CHAIN.id,
   })
 
   const queueSize = Number(queueSizeRaw ?? 0n)
@@ -113,6 +118,7 @@ export function ContentSubmissionDrawer() {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: tokenEnabled && !!address },
   })
   const boozBalance = boozBalanceRaw ? Number(formatUnits(boozBalanceRaw as bigint, 18)) : 0

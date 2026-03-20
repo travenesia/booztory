@@ -42,7 +42,7 @@ export function PageTopbar({ title }: PageTopbarProps) {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors duration-150",
+                  "flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold transition-colors duration-150",
                   pathname === item.href
                     ? "text-[#aa0000]"
                     : "text-gray-900 hover:text-[#aa0000]"
