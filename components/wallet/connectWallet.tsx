@@ -35,7 +35,6 @@ export function ConnectWalletButton() {
   const isMobile = useIsMobile()
 
   const isAuthenticated = status === "authenticated"
-  const isSigningIn = isWalletConnected && !isAuthenticated && status !== "loading"
 
   const resolvedName = useWalletName(address)
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
@@ -181,18 +180,7 @@ export function ConnectWalletButton() {
   }
 
   const buttonContent = () => {
-    if (isLoading) {
-      return (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Connecting...</span>
-        </>
-      )
-    }
-    if (isAuthenticated) {
-      return <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
-    }
-    if (isSigningIn || (isMiniApp && !isAuthenticated)) {
+    if (isLoading || status === "loading") {
       return (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -200,11 +188,25 @@ export function ConnectWalletButton() {
         </>
       )
     }
+    if (isAuthenticated) {
+      return <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
+    }
+    if (isMiniApp && !isAuthenticated) {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Signing in...</span>
+        </>
+      )
+    }
+    if (isWalletConnected) {
+      return <span>Sign in</span>
+    }
     if (!isMiniAppChecked) return null
     return <span>Connect</span>
   }
 
-  const isDisabled = isLoading || isSigningIn || status === "loading" || (isMiniApp && !isAuthenticated)
+  const isDisabled = isLoading || status === "loading" || (isMiniApp && !isAuthenticated)
 
   // ── Unauthenticated / mini app — plain connect button ──────────────────────
   if (!isAuthenticated || isMiniApp) {
@@ -213,7 +215,7 @@ export function ConnectWalletButton() {
         <Button
           variant="noShadow"
           className="h-9 px-4 text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
-          onClick={isMiniApp ? undefined : handleConnect}
+          onClick={isMiniApp ? undefined : (isWalletConnected && address ? () => handleSignIn(address, APP_CHAIN.id) : handleConnect)}
           disabled={isDisabled}
         >
           {buttonContent()}

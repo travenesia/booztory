@@ -12,6 +12,9 @@ import { useAccount } from "wagmi"
 const ITEMS_PER_PAGE = 5
 
 export default function UpcomingPage() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
   const { items: allItems, isLoading } = useUpcomingSlots()
   const { address } = useAccount()
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
@@ -56,7 +59,7 @@ export default function UpcomingPage() {
     }
   }, [isLoadingMore, loadMoreItems, visibleCount, sortedItems.length])
 
-  if (isLoading && sortedItems.length === 0) {
+  if (!mounted || (isLoading && sortedItems.length === 0)) {
     return (
       <main className="min-h-screen pt-12 pb-12">
         <PageTopbar title="Upcoming" />

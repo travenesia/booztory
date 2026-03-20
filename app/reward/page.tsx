@@ -133,6 +133,8 @@ export default function RewardPage() {
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "currentRaffle",
+    chainId: APP_CHAIN.id,
+    query: { refetchInterval: 30_000 },
   })
   const raffle = currentRaffleRaw as bigint | undefined
   const lastRaffle = raffle !== undefined ? raffle - 1n : undefined
@@ -141,6 +143,7 @@ export default function RewardPage() {
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "epochStart",
+    chainId: APP_CHAIN.id,
   })
   const epochStart = epochStartRaw as bigint | undefined
 
@@ -148,6 +151,7 @@ export default function RewardPage() {
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "raffleDuration",
+    chainId: APP_CHAIN.id,
   })
   const contractRaffleDuration = (contractRaffleDurationRaw as bigint | undefined) ?? 604800n
 
@@ -156,43 +160,50 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "getRaffleEntryCount",
     args: raffle !== undefined ? [raffle] : undefined,
-    query: { enabled: raffle !== undefined },
+    chainId: APP_CHAIN.id,
+    query: { enabled: raffle !== undefined, refetchInterval: 30_000 },
   })
   const { data: uniqueCountRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "raffleUniqueCount",
     args: raffle !== undefined ? [raffle] : undefined,
-    query: { enabled: raffle !== undefined },
+    chainId: APP_CHAIN.id,
+    query: { enabled: raffle !== undefined, refetchInterval: 30_000 },
   })
   const { data: thresholdRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "drawThreshold",
+    chainId: APP_CHAIN.id,
   })
   const { data: minUniqueRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "minUniqueMinters",
+    chainId: APP_CHAIN.id,
   })
   const { data: prizesRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "getPrizes",
+    chainId: APP_CHAIN.id,
   })
   const { data: userEnteredRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "hasMinted",
     args: raffle !== undefined && address ? [raffle, address] : undefined,
-    query: { enabled: raffle !== undefined && !!address },
+    chainId: APP_CHAIN.id,
+    query: { enabled: raffle !== undefined && !!address, refetchInterval: 30_000 },
   })
   const { data: weeklyEntriesRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "getRaffleEntries",
     args: raffle !== undefined ? [raffle] : undefined,
-    query: { enabled: raffle !== undefined && !!address },
+    chainId: APP_CHAIN.id,
+    query: { enabled: raffle !== undefined && !!address, refetchInterval: 30_000 },
   })
   // browseRaffle — raffle selected in the Prize Pool dropdown (defaults to current)
   const activeViewRaffle = browseWeek ?? raffle
@@ -201,6 +212,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "raffleDrawn",
     args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseWinnersRaw } = useReadContract({
@@ -208,6 +220,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "getRaffleWinners",
     args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseEntriesRaw } = useReadContract({
@@ -215,6 +228,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "getRaffleEntries",
     args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseEntryCountRaw } = useReadContract({
@@ -222,6 +236,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "getRaffleEntryCount",
     args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: activeViewRaffle !== undefined },
   })
   const { data: browseUniqueCountRaw } = useReadContract({
@@ -229,6 +244,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "raffleUniqueCount",
     args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: activeViewRaffle !== undefined },
   })
 
@@ -238,6 +254,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "getRafflePrizes",
     args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: activeViewRaffle !== undefined && activeViewRaffle !== raffle && browseDrawnRaw === true },
   })
 
@@ -247,6 +264,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "raffleDrawBlock",
     args: activeViewRaffle !== undefined ? [activeViewRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: activeViewRaffle !== undefined && browseDrawnRaw === true },
   })
   const raffleDrawBlock = raffleDrawBlockRaw as bigint | undefined
@@ -256,6 +274,7 @@ export default function RewardPage() {
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "owner",
+    chainId: APP_CHAIN.id,
   })
   const raffleOwner = raffleOwnerRaw as string | undefined
   const isOwner = !!(address && raffleOwner && address.toLowerCase() === raffleOwner.toLowerCase())
@@ -266,6 +285,8 @@ export default function RewardPage() {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [RAFFLE_ADDRESS],
+    chainId: APP_CHAIN.id,
+    query: { refetchInterval: 30_000 },
   })
 
   // ── Selected raffle draw status ───────────────────────────────────────────────
@@ -275,6 +296,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "raffleDrawn",
     args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: targetRaffle !== undefined },
   })
   const selectedWeekDrawn = selectedWeekDrawnRaw as boolean | undefined
@@ -284,6 +306,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "getRaffleWinners",
     args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: targetRaffle !== undefined },
   })
   const targetWeekWinners = (targetWeekWinnersRaw as string[] | undefined) ?? []
@@ -294,6 +317,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "getRaffleEntryCount",
     args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: targetRaffle !== undefined },
   })
   const { data: targetUniqueCountRaw } = useReadContract({
@@ -301,6 +325,7 @@ export default function RewardPage() {
     abi: RAFFLE_ABI,
     functionName: "raffleUniqueCount",
     args: targetRaffle !== undefined ? [targetRaffle] : undefined,
+    chainId: APP_CHAIN.id,
     query: { enabled: targetRaffle !== undefined },
   })
   const targetEntryCount = Number(targetEntryCountRaw ?? 0n)
@@ -312,21 +337,24 @@ export default function RewardPage() {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    chainId: APP_CHAIN.id,
+    query: { enabled: !!address, refetchInterval: 30_000 },
   })
   const { data: usdcBalanceRaw } = useReadContract({
     address: USDC_ADDRESS,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    chainId: APP_CHAIN.id,
+    query: { enabled: !!address, refetchInterval: 30_000 },
   })
   const { data: streakRaw } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
     functionName: "gmStreaks",
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    chainId: APP_CHAIN.id,
+    query: { enabled: !!address, refetchInterval: 30_000 },
   })
 
   // ── Computed — raffle ─────────────────────────────────────────────────────────
