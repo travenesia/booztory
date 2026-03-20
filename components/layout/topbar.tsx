@@ -10,6 +10,7 @@ import { GMButton, GMContent } from "@/components/modals/gmModal"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Drawer } from "vaul"
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 
 const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "Home", href: "/" },
@@ -158,20 +159,18 @@ export function Topbar() {
         </Drawer.Portal>
       </Drawer.Root>
 
-      {/* ── GM Drawer (triggered from hamburger) — mobile only ──────────────────── */}
-      <Drawer.Root open={gmOpen} onOpenChange={setGmOpen}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
-          <Drawer.Content
-            className="fixed inset-x-0 bottom-0 z-50 rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none"
-            style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
-          >
-            <Drawer.Title className="sr-only">Daily GM</Drawer.Title>
-            <Drawer.Description className="sr-only">Daily GM streak claim</Drawer.Description>
-            <GMContent onClose={() => setGmOpen(false)} />
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+      {/* ── GM Sheet (triggered from hamburger) — mobile only ───────────────────── */}
+      <Sheet open={gmOpen} onOpenChange={setGmOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none p-0"
+          style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
+        >
+          <SheetTitle className="sr-only">Daily GM</SheetTitle>
+          <SheetDescription className="sr-only">Daily GM streak claim</SheetDescription>
+          <GMContent onClose={() => setGmOpen(false)} />
+        </SheetContent>
+      </Sheet>
     </header>
   )
 }

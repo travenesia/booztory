@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Drawer } from "vaul"
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 
 // Milestones matching the contract
 const MILESTONES = [
@@ -112,10 +112,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   const isLoading = isWritePending || isConfirming
 
   return (
-    <div
-      className="flex flex-col items-center w-full px-6 py-4 overflow-y-auto max-h-[85dvh]"
-      data-vaul-no-drag
-    >
+    <div className="flex flex-col items-center w-full px-6 py-4 overflow-y-auto max-h-[85dvh]">
       {/* Flame + title */}
       <div className="text-6xl mb-3 select-none leading-none">🔥</div>
       <h2 className="text-gray-800 font-black uppercase tracking-[0.12em] text-lg mb-1">
@@ -229,7 +226,6 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
       ) : (
         <button
           onClick={handleClaim}
-          onPointerDown={(e) => e.stopPropagation()}
           disabled={isLoading}
           className="w-full bg-gray-900 text-white font-black uppercase tracking-widest py-4 rounded-2xl text-sm hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
         >
@@ -273,7 +269,7 @@ export function GMButton() {
   )
 }
 
-// ── Mobile: icon + Vaul Drawer ───────────────────────────────────────────────
+// ── Mobile: icon + Sheet ─────────────────────────────────────────────────────
 
 export function GMMobileButton() {
   const [open, setOpen] = useState(false)
@@ -287,19 +283,17 @@ export function GMMobileButton() {
       >
         <HiBolt size={14} />
       </span>
-      <Drawer.Root open={open} onOpenChange={setOpen}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
-          <Drawer.Content
-            className="fixed inset-x-0 bottom-0 z-50 rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none"
-            style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
-          >
-            <Drawer.Title className="sr-only">Daily GM</Drawer.Title>
-            <Drawer.Description className="sr-only">Daily GM streak claim</Drawer.Description>
-            <GMContent onClose={() => setOpen(false)} />
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none p-0"
+          style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
+        >
+          <SheetTitle className="sr-only">Daily GM</SheetTitle>
+          <SheetDescription className="sr-only">Daily GM streak claim</SheetDescription>
+          <GMContent onClose={() => setOpen(false)} />
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
