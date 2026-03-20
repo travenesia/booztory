@@ -1,6 +1,9 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit"
 import { http, fallback } from "wagmi"
 import { base as baseChain, baseSepolia, mainnet } from "wagmi/chains"
+import { Attribution } from "ox/erc8021"
+
+const DATA_SUFFIX = Attribution.toDataSuffix({ codes: ["bc_qaqhzzqp"] })
 
 // Toggle this to switch between testnet and mainnet.
 // Change to `APP_CHAIN = base` when deploying to production.
@@ -35,4 +38,5 @@ export const wagmiConfig = getDefaultConfig({
     [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`),
   },
   ssr: true,
+  dataSuffix: DATA_SUFFIX,
 })
