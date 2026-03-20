@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useSession, signIn } from "next-auth/react"
-import { useAccount, useSignMessage, useAccountEffect, useSwitchChain, useConnect, injected } from "wagmi"
+import { useAccount, useSignMessage, useAccountEffect, useSwitchChain } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { useWalletName } from "@/hooks/useWalletName"
@@ -24,7 +24,6 @@ export function ConnectWalletButton() {
   const { signMessageAsync } = useSignMessage()
   const { switchChainAsync } = useSwitchChain()
   const { openConnectModal } = useConnectModal()
-  const { connect } = useConnect()
   const [isLoading, setIsLoading] = useState(false)
   const [isMiniApp, setIsMiniApp] = useState(false)
   const [isMiniAppChecked, setIsMiniAppChecked] = useState(false)
@@ -54,25 +53,11 @@ export function ConnectWalletButton() {
 
   // Detect mini app on mount
   useEffect(() => {
-    sdk.isInMiniApp().then(async (inMiniApp) => {
+    sdk.isInMiniApp().then((inMiniApp) => {
       setIsMiniApp(inMiniApp)
       setIsMiniAppChecked(true)
-      if (inMiniApp && !isWalletConnected) {
-        connect({
-          connector: injected({
-            target() {
-              return {
-                id: "farcaster",
-                name: "Farcaster",
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                provider: () => sdk.wallet.ethProvider as any,
-              }
-            },
-          }),
-        })
-      }
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // Cache user profile when session changes
   useEffect(() => {

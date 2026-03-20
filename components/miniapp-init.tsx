@@ -13,10 +13,9 @@ export function MiniAppInit() {
     if (initialized.current) return
     initialized.current = true
 
-    sdk.actions.ready()
-
     sdk.isInMiniApp().then(async (inMiniApp) => {
       if (!inMiniApp) return
+      sdk.actions.ready()
       const provider = await sdk.wallet.getEthereumProvider()
       if (!provider) return
       connect({
