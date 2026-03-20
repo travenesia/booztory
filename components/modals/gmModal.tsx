@@ -113,7 +113,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
 
   return (
     <div
-      className="flex flex-col items-center w-full px-6 py-4"
+      className="flex flex-col items-center w-full px-6 py-4 overflow-y-auto max-h-[85dvh]"
       data-vaul-no-drag
     >
       {/* Flame + title */}
@@ -170,7 +170,8 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
         </div>
       ) : (
         <div className="w-full bg-white/70 border border-gray-200 rounded-2xl flex flex-col items-center py-5 mb-5 shadow-sm">
-          <HiBolt className="text-[32px] text-yellow-400 mb-2" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/booz.svg" alt="BOOZ" width={32} height={32} className="mb-2" />
           <div className="flex items-baseline gap-1.5 mb-1">
             <span className="text-gray-900 font-bold text-2xl leading-none">
               {claimedToday ? getDailyReward(streakCount) : displayReward} BOOZ
@@ -228,6 +229,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
       ) : (
         <button
           onClick={handleClaim}
+          onPointerDown={(e) => e.stopPropagation()}
           disabled={isLoading}
           className="w-full bg-gray-900 text-white font-black uppercase tracking-widest py-4 rounded-2xl text-sm hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
         >

@@ -1204,9 +1204,8 @@ export default function RewardPage() {
                 </div>
                 {/* BOOZ */}
                 <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-4 flex items-center gap-3">
-                  <div className="self-stretch aspect-square flex items-center justify-center rounded-full bg-red-200 flex-shrink-0">
-                    <HiBolt size={16} className="text-red-600" />
-                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/booz.svg" alt="BOOZ" width={42} height={42} className="flex-shrink-0" />
                   <div className="flex flex-col">
                     <span className="text-[10px] font-semibold text-red-600 uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
                     <span className="text-2xl font-black text-red-900 leading-tight">{boozFormatted}</span>
