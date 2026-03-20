@@ -5,7 +5,6 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { HiBolt } from "react-icons/hi2"
 import { Loader2 } from "lucide-react"
 import confetti from "canvas-confetti"
-import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
@@ -43,8 +42,6 @@ function getDailyReward(streakCount: number): number {
 
 export function GMContent({ onClose }: { onClose?: () => void }) {
   const { address } = useAccount()
-  const { status } = useSession()
-  const isAuthenticated = status === "authenticated"
   const [countdown, setCountdown] = useState("")
 
   const { data: streakRaw, refetch: refetchStreak } = useReadContract({
@@ -209,7 +206,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
         >
           Journey Complete 🔱
         </button>
-      ) : !isAuthenticated ? (
+      ) : !address ? (
         <button
           disabled
           className="w-full bg-gray-200 text-gray-400 font-black uppercase tracking-widest py-4 rounded-2xl text-sm cursor-not-allowed"
