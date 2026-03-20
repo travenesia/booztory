@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi"
 import { HiBolt } from "react-icons/hi2"
 import { Loader2 } from "lucide-react"
 import confetti from "canvas-confetti"
@@ -53,8 +53,10 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     query: { enabled: !!address },
   })
 
-  const { writeContract, data: txHash, isPending: isWritePending, reset } = useWriteContract()
+  const { writeContractAsync, data: txHash, isPending: isWritePending, reset } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
+  const chainId = useChainId()
+  const { switchChainAsync } = useSwitchChain()
 
   const today = BigInt(getUtcDay())
   const streakData = streakRaw as [bigint, number, number] | undefined
@@ -101,9 +103,14 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     reset()
   }, [isSuccess, refetchStreak, reset])
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     if (!address) return
-    writeContract({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", chainId: APP_CHAIN.id })
+    try {
+      if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
+      await writeContractAsync({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM" })
+    } catch {
+      // user rejected or chain switch failed — button reverts naturally
+    }
   }
 
   const isLoading = isWritePending || isConfirming
