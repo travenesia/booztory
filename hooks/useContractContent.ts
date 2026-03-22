@@ -21,7 +21,7 @@ export function useCurrentSlot() {
     functionName: "balanceOf",
     args: [BOOZTORY_ADDRESS],
     chainId: APP_CHAIN.id,
-    query: { refetchInterval: 30_000 },
+    query: { refetchInterval: 60_000 },
   })
 
   const content: ContentItem = data
@@ -42,7 +42,7 @@ export function useUpcomingSlots() {
     abi: BOOZTORY_ABI,
     functionName: "getUpcomingSlots",
     chainId: APP_CHAIN.id,
-    query: { refetchInterval: 30_000 },
+    query: { refetchInterval: 60_000 },
   })
 
   const items: ContentItem[] = data

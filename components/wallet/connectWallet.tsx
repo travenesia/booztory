@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useSession, signIn } from "next-auth/react"
-import { useAccount, useSignMessage, useAccountEffect, useSwitchChain } from "wagmi"
+import { useAccount, useSignMessage, useAccountEffect, useSwitchChain, useDisconnect } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { useWalletName } from "@/hooks/useWalletName"
@@ -12,6 +12,7 @@ import { SiweMessage } from "siwe"
 import { useToast } from "@/hooks/use-toast"
 import { cache, CACHE_DURATIONS } from "@/lib/cache"
 import { sdk } from "@farcaster/miniapp-sdk"
+import { isMiniApp } from "@/lib/miniapp-flag"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Drawer } from "vaul"
 import { WalletDropdownContent } from "@/components/wallet/walletDropdown"
@@ -23,10 +24,9 @@ export function ConnectWalletButton() {
   const { address, isConnected: isWalletConnected } = useAccount()
   const { signMessageAsync } = useSignMessage()
   const { switchChainAsync } = useSwitchChain()
+  const { disconnect } = useDisconnect()
   const { openConnectModal } = useConnectModal()
   const [isLoading, setIsLoading] = useState(false)
-  const [isMiniApp, setIsMiniApp] = useState(false)
-  const [isMiniAppChecked, setIsMiniAppChecked] = useState(false)
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const isSigningInRef = useRef(false)
@@ -50,14 +50,6 @@ export function ConnectWalletButton() {
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [open, isMobile])
-
-  // Detect mini app on mount
-  useEffect(() => {
-    sdk.isInMiniApp().then((inMiniApp) => {
-      setIsMiniApp(inMiniApp)
-      setIsMiniAppChecked(true)
-    })
-  }, [])
 
   // Cache user profile when session changes
   useEffect(() => {
@@ -122,6 +114,7 @@ export function ConnectWalletButton() {
     [signMessageAsync, toast, switchChainAsync],
   )
 
+  // QuickAuth — only used in Farcaster mini app context (isMiniApp() = true)
   const handleQuickAuth = useCallback(
     async (walletAddress: string) => {
       if (isSigningInRef.current) return
@@ -146,21 +139,22 @@ export function ConnectWalletButton() {
     [handleSignIn],
   )
 
+  // isMiniApp() is synchronous — MiniAppInit sets the flag before calling connect(),
+  // so by the time onConnect fires here, the flag is already correct.
   useAccountEffect({
     onConnect({ address, chainId }) {
       if (status === "unauthenticated") {
-        sdk.isInMiniApp().then((inMiniApp) => {
-          if (inMiniApp) {
-            handleQuickAuth(address)
-          } else {
-            handleSignIn(address, chainId)
-          }
-        })
+        if (isMiniApp()) {
+          handleQuickAuth(address)
+        } else {
+          handleSignIn(address, chainId)
+        }
       }
     },
   })
 
   const handleConnect = () => {
+    if (isMiniApp()) return // MiniAppInit handles wallet connect for Farcaster users
     if (openConnectModal) openConnectModal()
   }
 
@@ -176,35 +170,35 @@ export function ConnectWalletButton() {
     if (isAuthenticated) {
       return <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
     }
-    if (isMiniApp && !isAuthenticated) {
-      return (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Signing in...</span>
-        </>
-      )
-    }
     if (isWalletConnected) {
       return <span>Sign in</span>
     }
-    if (!isMiniAppChecked) return null
     return <span>Connect</span>
   }
 
-  const isDisabled = isLoading || status === "loading" || (isMiniApp && !isAuthenticated)
+  const isDisabled = isLoading || status === "loading"
 
-  // ── Unauthenticated / mini app — plain connect button ──────────────────────
-  if (!isAuthenticated || isMiniApp) {
+  // ── Unauthenticated — plain connect button ──────────────────────────────────
+  if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center">
         <Button
           variant="noShadow"
           className="h-9 px-4 text-xs font-semibold flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
-          onClick={isMiniApp ? undefined : (isWalletConnected && address ? () => handleSignIn(address, APP_CHAIN.id) : handleConnect)}
+          onClick={isWalletConnected && address ? () => handleSignIn(address, APP_CHAIN.id) : handleConnect}
           disabled={isDisabled}
         >
           {buttonContent()}
         </Button>
+        {/* Escape hatch: wallet connected but SIWE not completed — allow reset */}
+        {isWalletConnected && !isAuthenticated && !isLoading && (
+          <button
+            onClick={() => disconnect()}
+            className="text-[10px] text-gray-400 hover:text-gray-600 mt-0.5 underline underline-offset-2"
+          >
+            disconnect
+          </button>
+        )}
       </div>
     )
   }

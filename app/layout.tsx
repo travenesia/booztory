@@ -11,6 +11,7 @@ import { MiniAppInit } from "@/components/miniapp-init"
 import { FlickeringGrid } from "@/components/ui/flickering-grid"
 import { SubmitDrawerProvider } from "@/providers/submit-drawer-provider"
 import { ContentSubmissionDrawer } from "@/components/modals/submitContent"
+import { SponsorAdSidebar } from "@/components/ads/sponsorAd"
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -83,6 +84,7 @@ export default function RootLayout({
                 <MiniAppInit />
                 <ScrollToTop />
                 <div className="mx-auto max-w-[650px] min-h-screen relative z-10">{children}</div>
+                <SponsorAdSidebar />
                 <ContentSubmissionDrawer />
                 <Toaster />
               </SubmitDrawerProvider>

@@ -14,10 +14,9 @@ interface IBooztoryToken {
     function burnFrom(address from, uint256 amount) external;
 }
 
-/// @notice Minimal interface for BooztoryRaffle calls.
+/// @notice Minimal interface for BooztoryRaffle entry calls.
 interface IRaffle {
     function addEntry(address minter) external;
-    function creditTickets(address user, uint256 amount) external;
 }
 
 /**
@@ -70,29 +69,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
 
     /// @notice Maximum slots allowed in the queue at any time. Default: 96 (24h at 15 min slots).
     uint256 public maxQueueSize = 96;
-
-    // ---- Points & Tickets ----
-
-    /// @notice Points earned per paid slot mint (standard + discount paths). Default: 15.
-    uint256 public mintPointReward = 15;
-
-    /// @notice Points earned per donate action (once per 24h, donor != creator). Default: 5.
-    uint256 public donatePointReward = 5;
-
-    /// @notice BOOZ reward for first 1 USDC donated per 24h (donor != creator). Default: 1,000.
-    uint256 public donateBoozReward = 1_000 ether;
-
-    /// @notice Points required to convert to 1 raffle ticket. Default: 5.
-    uint256 public pointsPerTicket = 5;
-
-    /// @notice Accumulated points per wallet.
-    mapping(address => uint256) public points;
-
-    /// @notice Highest consecutive GM streak ever reached per wallet (never resets).
-    mapping(address => uint16) public highestStreak;
-
-    /// @notice Timestamp of last donate point award per wallet (for 24h cooldown).
-    mapping(address => uint256) public donateCooldown;
 
     /// @notice Custom NFT image per content type. If set, overrides the creator's submitted imageUrl.
     ///         e.g. contentTypeImage["youtube"] = "https://booztory.com/nft/youtube.png"
@@ -186,9 +162,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
     event RaffleChanged(address indexed newRaffle);
     event MaxQueueSizeChanged(uint256 newSize);
     event ContentTypeImageChanged(string contentType, string imageUrl);
-    event PointsEarned(address indexed user, uint256 amount, string reason);
-    event TicketsConverted(address indexed user, uint256 pointsBurned, uint256 ticketsMinted);
-    event DonateBoozRewardChanged(uint256 newAmount);
 
     error QueueFull();
 
@@ -222,23 +195,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         }
     }
 
-    /// @dev Blocks "://" and "www." substrings to prevent link spam in text slots.
-    function _requireNoLinks(string calldata s) internal pure {
-        bytes memory b = bytes(s);
-        for (uint256 i = 0; i + 2 < b.length; i++) {
-            require(
-                !(b[i] == 0x3A && b[i+1] == 0x2F && b[i+2] == 0x2F),
-                "Links not allowed in text"
-            );
-        }
-        for (uint256 i = 0; i + 3 < b.length; i++) {
-            require(
-                !(b[i] == 0x77 && b[i+1] == 0x77 && b[i+2] == 0x77 && b[i+3] == 0x2E),
-                "Links not allowed in text"
-            );
-        }
-    }
-
     function _createSlot(
         string calldata contentUrl,
         string calldata contentType,
@@ -247,14 +203,8 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         string calldata authorName,
         string calldata imageUrl
     ) internal returns (uint256 tokenId) {
+        require(bytes(contentUrl).length > 0,  "Content URL required");
         require(bytes(contentType).length > 0, "Content type required");
-        bool isText = keccak256(bytes(contentType)) == keccak256(bytes("text"));
-        if (isText) {
-            require(bytes(contentUrl).length > 0 && bytes(contentUrl).length <= 200, "Text must be 1-200 chars");
-            _requireNoLinks(contentUrl);
-        } else {
-            require(bytes(contentUrl).length > 0, "Content URL required");
-        }
 
         // Check queue capacity — O(1) math, no loop
         uint256 queuedCount = queueEndTime > block.timestamp
@@ -319,12 +269,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
             try IBooztoryToken(rewardToken).mintReward(msg.sender, slotMintReward) {} catch {}
         }
 
-        // Award points (non-blocking)
-        if (mintPointReward > 0) {
-            points[msg.sender] += mintPointReward;
-            emit PointsEarned(msg.sender, mintPointReward, "mint");
-        }
-
         // Raffle entry for paid mint (non-blocking)
         if (raffle != address(0)) {
             try IRaffle(raffle).addEntry(msg.sender) {} catch {}
@@ -352,12 +296,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         IBooztoryToken(rewardToken).burnFrom(msg.sender, freeSlotCost);
 
         uint256 tokenId = _createSlot(contentUrl, contentType, aspectRatio, title, authorName, imageUrl);
-
-        // Award points (non-blocking)
-        if (mintPointReward > 0) {
-            points[msg.sender] += mintPointReward;
-            emit PointsEarned(msg.sender, mintPointReward, "mint");
-        }
 
         emit FreeSlotMinted(tokenId, msg.sender, freeSlotCost);
     }
@@ -390,12 +328,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         // Full BOOZ reward — discount path still earns tokens (non-blocking)
         if (slotMintReward > 0) {
             try IBooztoryToken(rewardToken).mintReward(msg.sender, slotMintReward) {} catch {}
-        }
-
-        // Award points (non-blocking)
-        if (mintPointReward > 0) {
-            points[msg.sender] += mintPointReward;
-            emit PointsEarned(msg.sender, mintPointReward, "mint");
         }
 
         emit DiscountSlotMinted(tokenId, msg.sender, discountBurnCost, discountAmount);
@@ -477,24 +409,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
 
         s.donations += amount;
 
-        // Award points + BOOZ to donor once per 24h if donating to someone else's slot
-        if (
-            msg.sender != creator &&
-            block.timestamp >= donateCooldown[msg.sender] + 1 days
-        ) {
-            donateCooldown[msg.sender] = block.timestamp;
-
-            if (donatePointReward > 0) {
-                points[msg.sender] += donatePointReward;
-                emit PointsEarned(msg.sender, donatePointReward, "donate");
-            }
-
-            // BOOZ reward — first donation per 24h earns 1,000 BOOZ regardless of amount (non-blocking)
-            if (rewardToken != address(0) && donateBoozReward > 0) {
-                try IBooztoryToken(rewardToken).mintReward(msg.sender, donateBoozReward) {} catch {}
-            }
-        }
-
         emit DonationReceived(tokenId, msg.sender, creatorAmount, feeAmount);
     }
 
@@ -513,6 +427,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         uint256 today = block.timestamp / 1 days;
         GMStreak storage streak = gmStreaks[msg.sender];
 
+        require(streak.streakCount < 90, "Journey complete");
         require(streak.lastClaimDay != today, "Already claimed today");
 
         uint16 newCount;
@@ -527,78 +442,32 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         streak.lastClaimDay = today;
         streak.streakCount = newCount;
 
-        // Update highest streak if current surpasses it
-        if (newCount > highestStreak[msg.sender]) {
-            highestStreak[msg.sender] = newCount;
-        }
-
-        // Daily BOOZ reward:
-        //   Days 1–7: escalating rewards
-        //   Days 8–90: flat reward
-        //   Day 91+: veteran mode — flat reward continues
+        // Daily reward: days 1–7 escalate, days 8–90 flat, day 90 = journey complete
         uint256 reward;
         if (newCount <= 7) {
             reward = gmDayRewards[newCount - 1];
-        } else {
+        } else if (newCount <= 90) {
             reward = gmFlatDailyReward;
         }
+        // newCount > 90: journey already complete, no daily reward
         if (reward > 0) {
             IBooztoryToken(rewardToken).mintReward(msg.sender, reward);
             emit GMClaimed(msg.sender, newCount, reward);
         }
 
-        // Daily point award
-        uint256 gmPoints = 1;
-
-        // Milestone point bonuses (Phase 1: days 7, 14, 30, 60, 90)
-        if (newCount <= 90) {
-            for (uint256 i = 0; i < 5; i++) {
-                if (newCount == gmMilestoneDays[i]) {
-                    // BOOZ one-time milestone bonus
-                    uint8 bit = uint8(1 << i);
-                    if (streak.claimedMilestones & bit == 0) {
-                        streak.claimedMilestones |= bit;
-                        uint256 bonus = gmMilestoneRewards[i];
-                        IBooztoryToken(rewardToken).mintReward(msg.sender, bonus);
-                        emit GMMilestoneReached(msg.sender, gmMilestoneDays[i], bonus);
-                    }
-
-                    // Point milestone bonuses: day7=+1, day14=+1, day30=+2, day60=+2, day90=+3
-                    uint256[5] memory pointBonuses = [uint256(1), 1, 2, 2, 3];
-                    gmPoints += pointBonuses[i];
-                    break;
+        // Milestone check — one-time bonuses at days 7, 14, 30, 60, 90
+        for (uint256 i = 0; i < 5; i++) {
+            if (newCount == gmMilestoneDays[i]) {
+                uint8 bit = uint8(1 << i);
+                if (streak.claimedMilestones & bit == 0) {
+                    streak.claimedMilestones |= bit;
+                    uint256 bonus = gmMilestoneRewards[i];
+                    IBooztoryToken(rewardToken).mintReward(msg.sender, bonus);
+                    emit GMMilestoneReached(msg.sender, gmMilestoneDays[i], bonus);
                 }
-            }
-        } else {
-            // Veteran mode (day 91+): +3 bonus points every 30 days
-            // streakCount resets on miss, so (newCount - 90) tracks days since entering veteran mode
-            uint256 veteranDay = newCount - 90;
-            if (veteranDay % 30 == 0) {
-                gmPoints += 3;
+                break;
             }
         }
-
-        points[msg.sender] += gmPoints;
-        emit PointsEarned(msg.sender, gmPoints, "gm");
-    }
-
-    // -------------------------------------------------------------------------
-    // Points → Tickets conversion
-    // -------------------------------------------------------------------------
-
-    /**
-     * @notice Convert accumulated points into raffle tickets.
-     *         Burns `pointsPerTicket` points per ticket. Calls raffle.creditTickets().
-     * @param amount  Number of tickets to mint. Must have amount * pointsPerTicket points.
-     */
-    function convertToTickets(uint256 amount) external {
-        require(raffle != address(0), "Raffle not set");
-        require(amount > 0, "Amount must be > 0");
-        uint256 cost = amount * pointsPerTicket;
-        require(points[msg.sender] >= cost, "Insufficient points");
-        points[msg.sender] -= cost;
-        IRaffle(raffle).creditTickets(msg.sender, amount);
-        emit TicketsConverted(msg.sender, cost, amount);
     }
 
     // -------------------------------------------------------------------------
@@ -771,28 +640,6 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
     function setRaffle(address _raffle) external onlyOwner {
         raffle = _raffle;
         emit RaffleChanged(_raffle);
-    }
-
-    /// @notice Set points awarded per slot mint (all paths).
-    function setMintPointReward(uint256 _amount) external onlyOwner {
-        mintPointReward = _amount;
-    }
-
-    /// @notice Set points awarded per donate action (once per 24h).
-    function setDonatePointReward(uint256 _amount) external onlyOwner {
-        donatePointReward = _amount;
-    }
-
-    /// @notice Set BOOZ reward for first donation per 24h (18 decimals). 0 = disabled.
-    function setDonateBoozReward(uint256 _amount) external onlyOwner {
-        donateBoozReward = _amount;
-        emit DonateBoozRewardChanged(_amount);
-    }
-
-    /// @notice Set points required per raffle ticket conversion.
-    function setPointsPerTicket(uint256 _amount) external onlyOwner {
-        require(_amount > 0, "Must be > 0");
-        pointsPerTicket = _amount;
     }
 
     /**

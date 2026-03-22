@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 import { sdk } from "@farcaster/miniapp-sdk"
 import { useConnect } from "wagmi"
 import { injected } from "wagmi/connectors"
+import { setMiniApp } from "@/lib/miniapp-flag"
 
 export function MiniAppInit() {
   const { connect } = useConnect()
@@ -15,7 +16,9 @@ export function MiniAppInit() {
 
     sdk.isInMiniApp().then(async (inMiniApp) => {
       if (!inMiniApp) return
-      sdk.actions.ready()
+      // Set flag BEFORE connecting wallet so that useAccountEffect.onConnect
+      // in ConnectWalletButton can read it synchronously.
+      setMiniApp(true)
       const provider = await sdk.wallet.getEthereumProvider()
       if (!provider) return
       connect({

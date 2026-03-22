@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { sdk } from "@farcaster/miniapp-sdk"
+import { callReady } from "@/lib/miniapp-flag"
 import { Topbar } from "@/components/layout/topbar"
 import { Navbar } from "@/components/layout/navbar"
 import { ContentCard } from "@/components/content/contentCard"
@@ -14,6 +14,7 @@ import { useCurrentSlot } from "@/hooks/useContractContent"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SponsorAdToggle, SponsorAdDesktopPopover } from "@/components/ads/sponsorAd"
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -37,9 +38,7 @@ export default function Home() {
   useEffect(() => {
     if (!isLoading && !readyCalled.current) {
       readyCalled.current = true
-      sdk.isInMiniApp().then((inMiniApp) => {
-        if (inMiniApp) sdk.actions.ready()
-      })
+      callReady()
     }
   }, [isLoading])
 
@@ -114,6 +113,7 @@ export default function Home() {
       {/* Mobile + tablet layout */}
       <div className="xl:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
         <div className="w-full max-w-md flex flex-col gap-2">
+          {!isLoading && !isDesktop && <SponsorAdDesktopPopover />}
           {isLoading ? (
             <div className="w-full animate-pulse">
               <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />
@@ -168,6 +168,7 @@ export default function Home() {
 
         {/* Right: content card */}
         <div className="flex flex-col items-center justify-center py-4 gap-2">
+          {!isLoading && isDesktop && <SponsorAdDesktopPopover className="max-w-sm" />}
           {isLoading ? (
             <div className="w-full animate-pulse">
               <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />

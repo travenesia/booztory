@@ -281,49 +281,110 @@ export default function FAQPage() {
 
             <AccordionItem value="raffle" className="bg-gray-0 rounded-lg border border-gray-300">
               <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
-                <span className="font-bold text-gray-900">How does the weekly raffle work?</span>
+                <span className="font-bold text-gray-900">How does the raffle work?</span>
               </AccordionTrigger>
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-xs text-gray-700 space-y-3">
                   <p>
-                    Every paid slot mint (1 USDC) automatically earns you one raffle entry for the current week. Mint more slots to increase your chances.
+                    Earn points through platform activity, then convert them into raffle tickets on the Rewards page. More tickets = higher chance to win.
                   </p>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">Ways to earn points:</p>
+                    <ul className="space-y-1 ml-4">
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Mint any slot — 15 points</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Daily GM claim — 1 point per day + streak bonuses</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Donate to another creator — 5 points (once per 24h)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="font-medium text-gray-900 text-xs mb-1">Points → Tickets</p>
+                    <p className="text-xs text-gray-600">5 points = 1 raffle ticket (burned on conversion — irreversible). Unused tickets carry over to any future raffle.</p>
+                  </div>
                   <div>
                     <p className="font-medium text-gray-900 mb-2">How the draw works:</p>
                     <ul className="space-y-1 ml-4">
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        <span>A minimum number of total entries must be reached</span>
+                        <span>Commit tickets to a raffle — tickets are burned on entry</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        <span>A minimum number of unique wallets must participate</span>
+                        <span>A minimum number of entries and unique wallets must participate</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        <span>Winners are selected using Chainlink VRF (verifiable randomness)</span>
+                        <span>Winners selected by Chainlink VRF (verifiable randomness)</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        <span>USDC prizes are sent directly to winners on-chain</span>
+                        <span>Prizes sent directly to winners on-chain (USDC or $BOOZ)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <p className="text-gray-500">
+                    Free entry path: GM daily streak costs nothing — earn ~6 tickets per 30-day raffle for free.
+                  </p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="sponsorship" className="bg-gray-0 rounded-lg border border-gray-300">
+              <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
+                <span className="font-bold text-gray-900">How can I sponsor Booztory?</span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 pt-2 px-4">
+                <div className="text-xs text-gray-700 space-y-3">
+                  <p>
+                    Sponsors get their ad displayed to all Booztory visitors for the duration of a raffle — alongside a prize pool funded by the sponsor.
+                  </p>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">How it works:</p>
+                    <ul className="space-y-1 ml-4">
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                        <span>Submit your ad on the <strong>Sponsor</strong> page — image, embed, or text</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                        <span>Pay the prize pool + platform fee in USDC upfront</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                        <span>Team reviews and accepts or rejects within 3 days</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                        <span>If rejected — full refund, no questions asked</span>
                       </li>
                     </ul>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
-                    <p className="font-medium text-gray-900 text-xs mb-1">Raffle entry eligibility:</p>
+                    <p className="font-medium text-gray-900 text-xs mb-1">Sponsorship tiers:</p>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Standard mint (1 USDC)</span>
-                      <span className="text-green-600 font-medium">✓ Entry + 1,000 $BOOZ</span>
+                      <span className="text-gray-600">7 days</span>
+                      <span className="text-gray-800 font-medium">200 USDC total (100 prize + 100 fee)</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Discount mint (0.9 USDC + burn 1K $BOOZ)</span>
-                      <span className="text-green-600 font-medium">✓ Entry + 1,000 $BOOZ</span>
+                      <span className="text-gray-600">14 days</span>
+                      <span className="text-gray-800 font-medium">400 USDC total (200 prize + 200 fee)</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Free mint (burn 10K $BOOZ)</span>
-                      <span className="text-red-500 font-medium">✗ No entry, no reward</span>
+                      <span className="text-gray-600">30 days</span>
+                      <span className="text-gray-800 font-medium">700 USDC total (400 prize + 300 fee)</span>
                     </div>
                   </div>
+                  <p className="text-gray-500">
+                    Your ad appears as a toggle on the homepage and as sidebar panels on desktop. Sponsors can queue consecutive periods — ads chain automatically with no overlap.
+                  </p>
                 </div>
               </AccordionContent>
             </AccordionItem>

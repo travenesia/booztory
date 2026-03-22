@@ -1,88 +1,54 @@
 import hre from "hardhat"
 import { ethers } from "hardhat"
 
-// ── CREATE2 factory (Arachnid) — deployed on every EVM chain ──────────────────
-// Guarantees BooztoryToken lands at the same address on Base, World Chain, etc.
-const CREATE2_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-const CREATE2_SALT    = ethers.ZeroHash // bytes32(0)
+// ── Addresses from the partial deploy ─────────────────────────────────────────
+const BOOZTORY_ADDRESS = "0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68"
+const TOKEN_ADDRESS    = "0x02A2830552Da5caA0173a0fcbbc005FC70339855"
 
 // ── USDC addresses ────────────────────────────────────────────────────────────
 const USDC_BASE    = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 const USDC_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
 
 // ── Chainlink VRF v2.5 coordinator addresses ──────────────────────────────────
-// Source: https://docs.chain.link/vrf/v2-5/supported-networks
 const VRF_COORDINATOR_BASE    = "0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634"
 const VRF_COORDINATOR_SEPOLIA = "0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE"
 
-// ── Chainlink VRF v2.5 key hashes (gas lanes) ─────────────────────────────────
-// 30 gwei gas lane — suitable for both networks
 const KEY_HASH_BASE    = "0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71"
 const KEY_HASH_SEPOLIA = "0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71"
 
-// ── VRF Subscription ID ───────────────────────────────────────────────────────
-// Set this in your environment: VRF_SUBSCRIPTION_ID=<your id from vrf.chain.link>
-// Must fund the subscription with LINK before the raffle can request randomness.
 const VRF_SUBSCRIPTION_ID = BigInt(process.env.VRF_SUBSCRIPTION_ID || "0")
 
 async function main() {
   const network = hre.network.name
   const isBase  = network === "base"
 
-  const paymentToken     = isBase ? USDC_BASE         : USDC_SEPOLIA
-  const vrfCoordinator   = isBase ? VRF_COORDINATOR_BASE : VRF_COORDINATOR_SEPOLIA
-  const keyHash          = isBase ? KEY_HASH_BASE     : KEY_HASH_SEPOLIA
-
-  if (VRF_SUBSCRIPTION_ID === 0n) {
-    console.warn("⚠  VRF_SUBSCRIPTION_ID not set — BooztoryRaffle will deploy but cannot request randomness.")
-    console.warn("   Set it via: VRF_SUBSCRIPTION_ID=<id> npx hardhat run scripts/deploy.ts --network <network>")
-  }
+  const paymentToken   = isBase ? USDC_BASE         : USDC_SEPOLIA
+  const vrfCoordinator = isBase ? VRF_COORDINATOR_BASE : VRF_COORDINATOR_SEPOLIA
+  const keyHash        = isBase ? KEY_HASH_BASE     : KEY_HASH_SEPOLIA
 
   const [deployer] = await ethers.getSigners()
-  console.log(`\nDeploying on: ${network}`)
-  console.log(`Deployer:     ${deployer.address}`)
-  console.log(`USDC:         ${paymentToken}`)
-  console.log(`VRF:          ${vrfCoordinator}`)
-  console.log(`Sub ID:       ${VRF_SUBSCRIPTION_ID}\n`)
+  console.log(`\nContinuing deployment on: ${network}`)
+  console.log(`Deployer:      ${deployer.address}`)
+  console.log(`Booztory:      ${BOOZTORY_ADDRESS}  (already deployed)`)
+  console.log(`BooztoryToken: ${TOKEN_ADDRESS}  (already deployed)`)
+  console.log(`Sub ID:        ${VRF_SUBSCRIPTION_ID}\n`)
 
   // Read nonce once from "pending" (includes mempool), then increment locally.
   // Avoids RPC propagation lag where "latest" hasn't updated yet after a confirmed tx.
   let _nonce = await deployer.provider!.getTransactionCount(deployer.address, "pending")
   const nextNonce = () => _nonce++
 
-  // ── 1. Deploy Booztory ──────────────────────────────────────────────────────
-  console.log("1/7  Deploying Booztory...")
-  const BooztoryFactory = await ethers.getContractFactory("contracts/Booztory.sol:Booztory")
-  const booztory = await BooztoryFactory.deploy(paymentToken, { nonce: await nextNonce() })
-  await booztory.waitForDeployment()
-  const booztoryAddress = await booztory.getAddress()
-  console.log(`     Booztory:       ${booztoryAddress}`)
-
-  // ── 2. Deploy BooztoryToken via CREATE2 ────────────────────────────────────
-  // Owner is passed as constructor arg — msg.sender inside CREATE2 factory is
-  // the factory itself, not the deployer EOA, so we encode the owner explicitly.
-  // Same deployer wallet on every chain = same initcode = same CREATE2 address.
-  console.log("2/7  Deploying BooztoryToken via CREATE2...")
-  const TokenFactory  = await ethers.getContractFactory("contracts/BooztoryToken.sol:BooztoryToken")
-  const initcode      = ethers.concat([
-    (TokenFactory as any).bytecode,
-    ethers.AbiCoder.defaultAbiCoder().encode(["address"], [deployer.address]),
-  ])
-  const deployData    = CREATE2_SALT + initcode.slice(2) // salt(32) + initcode
-  const deployTx      = await deployer.sendTransaction({ to: CREATE2_FACTORY, data: deployData, nonce: await nextNonce() })
-  await deployTx.wait()
-  const tokenAddress  = ethers.getCreate2Address(CREATE2_FACTORY, CREATE2_SALT, ethers.keccak256(initcode))
-  const token         = await ethers.getContractAt("contracts/BooztoryToken.sol:BooztoryToken", tokenAddress)
-  console.log(`     BooztoryToken:  ${tokenAddress}`)
+  const booztory = await ethers.getContractAt("contracts/Booztory.sol:Booztory", BOOZTORY_ADDRESS)
+  const token    = await ethers.getContractAt("contracts/BooztoryToken.sol:BooztoryToken", TOKEN_ADDRESS)
 
   // ── 3. Deploy BooztoryRaffle ────────────────────────────────────────────────
   console.log("3/7  Deploying BooztoryRaffle...")
   const RaffleFactory = await ethers.getContractFactory("contracts/BooztoryRaffle.sol:BooztoryRaffle")
   const raffle = await RaffleFactory.deploy(
     vrfCoordinator,
-    booztoryAddress,
+    BOOZTORY_ADDRESS,
     paymentToken,
-    tokenAddress,
+    TOKEN_ADDRESS,
     VRF_SUBSCRIPTION_ID,
     keyHash,
     { nonce: await nextNonce() }
@@ -93,7 +59,7 @@ async function main() {
 
   // ── 4. Wire: authorize Booztory as minter on BooztoryToken ─────────────────
   console.log("4/7  Calling setAuthorizedMinter on BooztoryToken (Booztory)...")
-  const tx0 = await token.setAuthorizedMinter(booztoryAddress, true, { nonce: await nextNonce() })
+  const tx0 = await token.setAuthorizedMinter(BOOZTORY_ADDRESS, true, { nonce: await nextNonce() })
   await tx0.wait()
   console.log(`     Done. (tx: ${tx0.hash})`)
 
@@ -105,7 +71,7 @@ async function main() {
 
   // ── 6. Wire: setRewardToken ─────────────────────────────────────────────────
   console.log("6/7  Calling setRewardToken on Booztory...")
-  const tx1 = await booztory.setRewardToken(tokenAddress, { nonce: await nextNonce() })
+  const tx1 = await booztory.setRewardToken(TOKEN_ADDRESS, { nonce: await nextNonce() })
   await tx1.wait()
   console.log(`     Done. (tx: ${tx1.hash})`)
 
@@ -120,24 +86,24 @@ async function main() {
 ╔══════════════════════════════════════════════════════════╗
 ║  Deployment complete — ${network.padEnd(33)}║
 ╠══════════════════════════════════════════════════════════╣
-║  Booztory:       ${booztoryAddress}  ║
-║  BooztoryToken:  ${tokenAddress}  ║
+║  Booztory:       ${BOOZTORY_ADDRESS}  ║
+║  BooztoryToken:  ${TOKEN_ADDRESS}  ║
 ║  BooztoryRaffle: ${raffleAddress}  ║
 ╚══════════════════════════════════════════════════════════╝
 
 Add to .env.local:
-  NEXT_PUBLIC_BOOZTORY_ADDRESS=${booztoryAddress}
+  NEXT_PUBLIC_BOOZTORY_ADDRESS=${BOOZTORY_ADDRESS}
   NEXT_PUBLIC_USDC_ADDRESS=${paymentToken}
   NEXT_PUBLIC_RAFFLE_ADDRESS=${raffleAddress}
-  NEXT_PUBLIC_TOKEN_ADDRESS=${tokenAddress}
+  NEXT_PUBLIC_TOKEN_ADDRESS=${TOKEN_ADDRESS}
 
 Next steps:
   1. Add BooztoryRaffle (${raffleAddress}) as a consumer on your Chainlink VRF subscription
   2. Fund the subscription with LINK at https://vrf.chain.link
   3. Run verification:
-       npx hardhat verify --network ${network} ${booztoryAddress} "${paymentToken}"
-       npx hardhat verify --network ${network} ${tokenAddress} "${deployer.address}"
-       npx hardhat verify --network ${network} ${raffleAddress} "${vrfCoordinator}" "${booztoryAddress}" "${paymentToken}" "${tokenAddress}" ${VRF_SUBSCRIPTION_ID} "${keyHash}"
+       npx hardhat verify --network ${network} ${BOOZTORY_ADDRESS} "${paymentToken}"
+       npx hardhat verify --network ${network} ${TOKEN_ADDRESS} "${deployer.address}"
+       npx hardhat verify --network ${network} ${raffleAddress} "${vrfCoordinator}" "${BOOZTORY_ADDRESS}" "${paymentToken}" "${TOKEN_ADDRESS}" ${VRF_SUBSCRIPTION_ID} "${keyHash}"
 `)
 }
 

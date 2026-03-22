@@ -26,8 +26,11 @@ import { TOKEN_ADDRESS, ERC20_ABI, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/
 import { APP_CHAIN } from "@/lib/wagmi"
 
 type PaymentMethod = "standard" | "discount" | "free"
+type InputMode = "url" | "text"
 
 type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
+
+const URL_LINK_PATTERN = /https?:\/\/|www\./i
 
 export function ContentSubmissionDrawer() {
   const { isOpen: open, setIsOpen: onOpenChange } = useSubmitDrawer()
@@ -44,6 +47,9 @@ export function ContentSubmissionDrawer() {
   const [detectedTikTokAspectRatio, setDetectedTikTokAspectRatio] = useState<"16:9" | "9:16">("9:16")
   const [isInputFocused, setIsInputFocused] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("standard")
+  const [inputMode, setInputMode] = useState<InputMode>("url")
+  const [textContent, setTextContent] = useState("")
+  const [textLinkError, setTextLinkError] = useState(false)
   const { toast } = useToast()
 
   // Use ref to track if we're currently processing to prevent race conditions
@@ -142,6 +148,9 @@ export function ContentSubmissionDrawer() {
       setPreviewError(null)
       setSubmissionStep("idle")
       setPaymentMethod("standard")
+      setInputMode("url")
+      setTextContent("")
+      setTextLinkError(false)
       isProcessingRef.current = false
       resetPaymentState()
     } else {
@@ -282,6 +291,12 @@ export function ContentSubmissionDrawer() {
     }
   }
 
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value
+    setTextContent(val)
+    setTextLinkError(URL_LINK_PATTERN.test(val))
+  }
+
   // Pre-fetch thumbnail and metadata
   const fetchContentMetadata = async (contentType: ContentType, contentUrl: string) => {
     console.log("🖼️ Pre-fetching thumbnail and metadata for:", contentType, contentUrl)
@@ -376,6 +391,63 @@ export function ContentSubmissionDrawer() {
   }
 
   const handleSubmit = async () => {
+    // ── Text mode path ──────────────────────────────────────────────────────────
+    if (inputMode === "text") {
+      const trimmed = textContent.trim().replace(/["\\]/g, "")
+      if (!trimmed) {
+        toast({ title: "Empty Text", description: "Please write something before submitting.", variant: "destructive" })
+        return
+      }
+      if (!session?.user?.id) {
+        toast({ title: "Authentication Required", description: "You must be signed in to submit content.", variant: "destructive" })
+        return
+      }
+      if (isProcessingRef.current || isSubmitting || isProcessing) return
+
+      isProcessingRef.current = true
+      setIsSubmitting(true)
+      try {
+        setSubmissionStep("processing_payment")
+        const slotData = {
+          contentUrl: trimmed,
+          contentType: "text",
+          aspectRatio: "16:9" as const,
+          title: trimmed.slice(0, 50),
+          authorName: "",
+          imageUrl: "",
+        }
+        const mintResult = await (
+          paymentMethod === "discount" ? mintSlotWithDiscount(slotData) :
+          paymentMethod === "free"     ? mintSlotWithTokens(slotData) :
+                                         mintSlot(slotData)
+        )
+        if (!mintResult.success) {
+          if (mintResult.error === "Payment was cancelled") {
+            toast({ title: "Payment Cancelled", description: "Content submission was cancelled." })
+            return
+          }
+          throw new Error(mintResult.error || "Mint failed")
+        }
+        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("contentSubmitted"))
+        if (!abortControllerRef.current?.signal.aborted) {
+          onOpenChange(false)
+          toast({ title: "Content Submitted!", description: "Your text has been scheduled and will appear shortly.", duration: 5000 })
+          confetti({ particleCount: 150, spread: 90, origin: { y: 0.5, x: 0.5 }, angle: 90, startVelocity: 45 })
+        }
+      } catch (error) {
+        if (error instanceof Error && (error.name === "AbortError" || abortControllerRef.current?.signal.aborted)) return
+        toast({ title: "Submission Failed", description: error instanceof Error ? error.message : "Failed to submit content. Please try again.", variant: "destructive" })
+      } finally {
+        if (!abortControllerRef.current?.signal.aborted) {
+          setIsSubmitting(false)
+          setSubmissionStep("idle")
+          isProcessingRef.current = false
+        }
+      }
+      return
+    }
+
+    // ── URL mode path ───────────────────────────────────────────────────────────
     const urlToSubmit = resolvedContentUrl || contentUrl
     if (!contentType || !urlToSubmit || !isValidUrl) {
       toast({
@@ -627,6 +699,11 @@ export function ContentSubmissionDrawer() {
     return `Pay ${slotPriceDisplay} USDC to Submit`
   }
 
+  const isTextValid = inputMode === "text"
+    ? textContent.trim().length > 0 && textContent.trim().length <= 200 && !textLinkError
+    : false
+  const canSubmit = inputMode === "url" ? isValidUrl : isTextValid
+
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
 
@@ -648,6 +725,75 @@ export function ContentSubmissionDrawer() {
 
         {/* Content area */}
         <div className="px-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+
+          {/* Mode toggle */}
+          <div className="flex rounded-[5px] border border-gray-200 overflow-hidden text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setInputMode("url")}
+              disabled={isAnyOperationInProgress}
+              className={cn("flex-1 py-1.5 transition-colors", inputMode === "url" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50")}
+            >
+              URL
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode("text")}
+              disabled={isAnyOperationInProgress}
+              className={cn("flex-1 py-1.5 transition-colors", inputMode === "text" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50")}
+            >
+              Text
+            </button>
+          </div>
+
+          {inputMode === "text" ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-gray-900 font-medium text-xs">Your Message</label>
+                <span className={cn("text-xs", textContent.length > 200 ? "text-red-500" : "text-gray-400")}>
+                  {textContent.length}/200
+                </span>
+              </div>
+              <textarea
+                rows={4}
+                placeholder={"Write up to 200 characters...\n\nTip: *italic*  **bold**"}
+                value={textContent}
+                onChange={handleTextChange}
+                disabled={isAnyOperationInProgress}
+                className={cn(
+                  "w-full rounded-[5px] border px-3 py-2 text-sm text-gray-900 outline-none transition-colors duration-200 resize-none disabled:cursor-not-allowed disabled:opacity-50",
+                  textLinkError
+                    ? "bg-red-50 border-red-300 focus:border-red-400"
+                    : textContent.length > 200
+                      ? "bg-red-50 border-red-300 focus:border-red-400"
+                      : textContent.length > 0
+                        ? "bg-green-50 border-green-200 focus:border-green-400"
+                        : "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
+                )}
+              />
+              {textLinkError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <HiExclamationTriangle className="h-3.5 w-3.5" />
+                  Links are not allowed in text posts
+                </p>
+              )}
+              {/* Live text preview */}
+              {textContent.trim().length > 0 && !textLinkError && textContent.length <= 200 && (
+                <div className="border rounded-[5px] p-3 bg-gray-50 border-gray-200">
+                  <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
+                  <p
+                    className="text-sm text-gray-900 leading-relaxed break-words whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{
+                      __html: textContent
+                        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                        .replace(/\*(.+?)\*/g, "<em>$1</em>"),
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+          <>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
@@ -732,6 +878,8 @@ export function ContentSubmissionDrawer() {
               )}
             </div>
           )}
+          </>
+          )}
         </div>
 
         {/* Payment method selector — pinned above button, only when authenticated + token enabled */}
@@ -811,7 +959,7 @@ export function ContentSubmissionDrawer() {
           <button
             className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50"
             onClick={handleSubmit}
-            disabled={!isValidUrl || isAnyOperationInProgress || !session?.user?.id || isQueueFull}
+            disabled={!canSubmit || isAnyOperationInProgress || !session?.user?.id || isQueueFull}
           >
             {isAnyOperationInProgress ? (
               <>

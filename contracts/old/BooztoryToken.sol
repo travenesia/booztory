@@ -38,8 +38,8 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     /// @notice When true, all transfers and cross-chain bridging are blocked.
     bool public soulbound = true;
 
-    /// @notice Addresses allowed to call mintReward and burnFrom (Booztory + Raffle).
-    mapping(address => bool) public authorizedMinters;
+    /// @notice The Booztory.sol contract — sole address allowed to mint/burn.
+    address public booztory;
 
     /// @notice Whether the one-time treasury mint has been used.
     bool public treasuryMinted;
@@ -56,7 +56,7 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     // -------------------------------------------------------------------------
 
     event SoulboundChanged(bool newValue);
-    event AuthorizedMinterChanged(address indexed minter, bool authorized);
+    event BooztoryAddressChanged(address indexed newAddress);
     event TreasuryMinted(address indexed to, uint256 amount);
 
     // -------------------------------------------------------------------------
@@ -64,7 +64,7 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     // -------------------------------------------------------------------------
 
     error TransferWhileSoulbound();
-    error NotAuthorized();
+    error OnlyBooztory();
     error OnlySuperchainBridge();
     error ZeroAddress();
     error TreasuryAlreadyMinted();
@@ -74,8 +74,8 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     // Modifiers
     // -------------------------------------------------------------------------
 
-    modifier onlyAuthorized() {
-        if (!authorizedMinters[msg.sender]) revert NotAuthorized();
+    modifier onlyBooztory() {
+        if (msg.sender != booztory) revert OnlyBooztory();
         _;
     }
 
@@ -117,13 +117,12 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     // -------------------------------------------------------------------------
 
     /**
-     * @notice Grant or revoke minting/burning rights for an address.
-     *         Use to authorize Booztory.sol and BooztoryRaffle.sol.
+     * @notice Update the authorized Booztory contract address.
      */
-    function setAuthorizedMinter(address _minter, bool _authorized) external onlyOwner {
-        if (_minter == address(0)) revert ZeroAddress();
-        authorizedMinters[_minter] = _authorized;
-        emit AuthorizedMinterChanged(_minter, _authorized);
+    function setBooztory(address _booztory) external onlyOwner {
+        if (_booztory == address(0)) revert ZeroAddress();
+        booztory = _booztory;
+        emit BooztoryAddressChanged(_booztory);
     }
 
     // -------------------------------------------------------------------------
@@ -157,7 +156,7 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
      * @param to      Recipient address.
      * @param amount  Token amount (18 decimals).
      */
-    function mintReward(address to, uint256 amount) external onlyAuthorized {
+    function mintReward(address to, uint256 amount) external onlyBooztory {
         _mint(to, amount);
     }
 
@@ -171,7 +170,7 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
      * @param from    Address to burn from.
      * @param amount  Token amount to burn (18 decimals).
      */
-    function burnFrom(address from, uint256 amount) external onlyAuthorized {
+    function burnFrom(address from, uint256 amount) external onlyBooztory {
         _burn(from, amount);
     }
 

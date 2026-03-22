@@ -10,7 +10,7 @@ import { SpotifyEmbed } from "@/components/embeds/spotifyEmbed"
 import { TwitchEmbed } from "@/components/embeds/twitchEmbed"
 
 interface ContentEmbedProps {
-  contentType: "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
+  contentType: "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch" | "text"
   contentUrl: string
   aspectRatio: "16:9" | "9:16"
   isPreview?: boolean
@@ -122,6 +122,21 @@ export const ContentEmbed = memo(function ContentEmbed({
   // If it's a Twitch embed, use the dedicated component
   if (contentType === "twitch") {
     return <TwitchEmbed url={contentUrl} aspectRatio={aspectRatio} isPreview={isPreview} responsive={responsive} />
+  }
+
+  // Text slot — render formatted text with basic bold/italic support
+  if (contentType === "text") {
+    const html = contentUrl
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    return (
+      <div className="flex items-center justify-center w-full h-full min-h-[200px] p-6 bg-gray-50 rounded">
+        <p
+          className="text-base text-gray-900 text-center leading-relaxed break-words whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
+    )
   }
 
   // This code should never be reached as all content types are handled above

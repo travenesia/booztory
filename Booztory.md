@@ -169,9 +169,9 @@ No database — wallet address is the user identity.
 
 | Contract | Address | Status |
 |---|---|---|
-| Booztory | `0x9D644381cd8bFA5fdba46C94BdB2A131aaeEF892` | ✅ Current |
-| BooztoryToken (BOOZ) | `0x3b3C0EF1f9072A435BE1B5860d674e9E0e47FAfE` | ✅ Current |
-| BooztoryRaffle | `0xee7a205dA0D3E16ca9384Feb1852A78aBf34285e` | ⚠️ Needs redeploy |
+| Booztory | `0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68` | ✅ Current |
+| BooztoryToken (BOOZ) | `0x02A2830552Da5caA0173a0fcbbc005FC70339855` | ✅ Current |
+| BooztoryRaffle | `0xd7f8AC77392f6C1D21eA6B5fb57861e759e250B5` | ✅ Current |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | — |
 
 ### Base Mainnet
@@ -218,7 +218,8 @@ Everything core to the product:
 ## Roadmap
 
 ### Immediate (Testnet)
-- [ ] Redeploy BooztoryRaffle to Base Sepolia
+- [x] Redeploy all 3 contracts to Base Sepolia ✅
+- [x] Add BooztoryRaffle as Chainlink VRF consumer ✅
 - [ ] Set content type images on-chain
 - [ ] Verify all 3 contracts on Basescan
 - [ ] End-to-end QA: mint → GM → raffle draw

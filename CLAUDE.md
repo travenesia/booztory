@@ -236,8 +236,7 @@ donations  (uint256, cumulative total donated before fee split, 6-decimal units)
 - [ ] **More platforms**: Instagram, custom uploads — mentioned in FAQ, not implemented
 - [ ] **Optimism Superchain expansion** — planned but not started
 - [ ] **Creator dashboard** — no analytics or revenue history
-- [ ] BooztoryRaffle needs redeployment on Base Sepolia (weeklyPrizes snapshot + setWeekDuration); Booztory.sol and BooztoryToken.sol are up to date
-- [ ] Set content type images on-chain via `setContentTypeImage()` after redeploy
+- [ ] Set content type images on-chain via `setContentTypeImage()` (owner, post-deploy)
 
 ---
 
@@ -261,7 +260,8 @@ donations  (uint256, cumulative total donated before fee split, 6-decimal units)
 | History & Upcoming pages | Working — skeleton shows only on first load (no cached data) |
 | FAQ page | Working — mount-based skeleton on first render |
 | GM modal mobile drawer | Working — Vaul Drawer (replaces shadcn Sheet), handles safe areas natively |
-| BooztoryRaffle redeployment (Base Sepolia) | Pending |
+| BooztoryRaffle redeployment (Base Sepolia) | Done ✅ |
+| Add BooztoryRaffle as VRF consumer (Base Sepolia) | Done ✅ |
 | Base Mainnet deployment | Pending |
 | Rate limiting | Not implemented |
 | Creator dashboard | Not implemented |

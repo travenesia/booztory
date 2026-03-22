@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
-import { HiMiniBars3BottomLeft, HiMiniShieldCheck } from "react-icons/hi2"
+import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone } from "react-icons/hi2"
 import { HiBolt } from "react-icons/hi2"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { GMButton, GMContent } from "@/components/modals/gmModal"
@@ -17,6 +17,7 @@ const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "Upcoming", href: "/upcoming" },
   { name: "History", href: "/history" },
   { name: "Reward", href: "/reward", badge: true },
+  { name: "Sponsor", href: "/sponsor" },
   { name: "FAQ", href: "/faq" },
 ]
 
@@ -87,13 +88,7 @@ export function Topbar() {
             <img src="/social/x.svg" alt="X" width={13} height={13} />
           </a>
 
-          {["/history", "/upcoming", "/faq", "/reward"].includes(pathname) ? (
-            <div className="hidden md:block">
-              <ConnectWalletButton />
-            </div>
-          ) : (
-            <ConnectWalletButton />
-          )}
+          <ConnectWalletButton />
         </div>
       </div>
 
@@ -141,6 +136,14 @@ export function Topbar() {
 
             {/* Secondary items */}
             <div className="flex flex-col px-3 py-3 gap-0.5">
+              <Link
+                href="/sponsor"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-800 hover:bg-gray-100 active:bg-gray-100 transition-colors text-sm font-semibold"
+              >
+                <HiMegaphone size={18} className="text-indigo-500 flex-shrink-0" />
+                Sponsor
+              </Link>
               <Link
                 href="/faq"
                 onClick={() => setMenuOpen(false)}

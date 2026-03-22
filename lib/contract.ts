@@ -128,38 +128,121 @@ export const BOOZTORY_ABI = [
   { inputs: [{ internalType: "address", name: "token", type: "address" }], name: "withdrawToken", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [], name: "withdrawETH", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "uint256", name: "_size", type: "uint256" }], name: "setMaxQueueSize", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "_token", type: "address" }], name: "setRewardToken", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "_raffle", type: "address" }], name: "setRaffle", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }], name: "setSlotMintReward", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_cost", type: "uint256" }], name: "setFreeSlotCost", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_cost", type: "uint256" }], name: "setDiscountBurnCost", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }], name: "setDiscountAmount", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256[7]", name: "_rewards", type: "uint256[7]" }], name: "setGMDayRewards", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }], name: "setMintPointReward", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }], name: "setDonatePointReward", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }], name: "setPointsPerTicket", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }], name: "setDonateBoozReward", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "string", name: "_contentType", type: "string" }, { internalType: "string", name: "_imageUrl", type: "string" }], name: "setContentTypeImage", outputs: [], stateMutability: "nonpayable", type: "function" },
+
+  // Additional state vars
+  { inputs: [], name: "slotMintReward", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "mintPointReward", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "donatePointReward", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "donateBoozReward", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "pointsPerTicket", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "raffle", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }], name: "points", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }], name: "highestStreak", outputs: [{ internalType: "uint16", name: "", type: "uint16" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }], name: "donateCooldown", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "string", name: "", type: "string" }], name: "contentTypeImage", outputs: [{ internalType: "string", name: "", type: "string" }], stateMutability: "view", type: "function" },
+
+  // Points → tickets
+  { inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }], name: "convertToTickets", outputs: [], stateMutability: "nonpayable", type: "function" },
+
+  // Additional events
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }, { indexed: false, internalType: "string", name: "reason", type: "string" }], name: "PointsEarned", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "pointsBurned", type: "uint256" }, { indexed: false, internalType: "uint256", name: "ticketsMinted", type: "uint256" }], name: "TicketsConverted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint16", name: "day", type: "uint16" }, { indexed: false, internalType: "uint256", name: "bonus", type: "uint256" }], name: "GMMilestoneReached", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "newRaffle", type: "address" }], name: "RaffleChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newSize", type: "uint256" }], name: "MaxQueueSizeChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "string", name: "contentType", type: "string" }, { indexed: false, internalType: "string", name: "imageUrl", type: "string" }], name: "ContentTypeImageChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "newToken", type: "address" }], name: "RewardTokenChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newAmount", type: "uint256" }], name: "SlotMintRewardChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newCost", type: "uint256" }], name: "FreeSlotCostChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "tokenId", type: "uint256" }, { indexed: true, internalType: "address", name: "creator", type: "address" }, { indexed: false, internalType: "uint256", name: "tokensBurned", type: "uint256" }], name: "FreeSlotMinted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "tokenId", type: "uint256" }, { indexed: true, internalType: "address", name: "creator", type: "address" }, { indexed: false, internalType: "uint256", name: "tokensBurned", type: "uint256" }, { indexed: false, internalType: "uint256", name: "discountApplied", type: "uint256" }], name: "DiscountSlotMinted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newCost", type: "uint256" }], name: "DiscountBurnCostChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newAmount", type: "uint256" }], name: "DiscountAmountChanged", type: "event" },
+  { anonymous: false, inputs: [{ internalType: "uint256[7]", name: "newRewards", type: "uint256[7]" }], name: "GMDayRewardsChanged", type: "event" },
+  { anonymous: false, inputs: [{ internalType: "uint256[5]", name: "newRewards", type: "uint256[5]" }], name: "GMMilestoneRewardsChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newAmount", type: "uint256" }], name: "GMFlatDailyRewardChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newAmount", type: "uint256" }], name: "DonateBoozRewardChanged", type: "event" },
 ] as const
 
 // ─── Raffle ABI ───────────────────────────────────────────────────────────────
 export const RAFFLE_ABI = [
   // Events
-  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffle", type: "uint256" }, { indexed: false, internalType: "address[]", name: "winners", type: "address[]" }], name: "DrawCompleted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "TicketsCredited", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffleId", type: "uint256" }, { indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "ticketAmount", type: "uint256" }, { indexed: false, internalType: "uint256", name: "totalUserTickets", type: "uint256" }], name: "RaffleEntered", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffleId", type: "uint256" }, { indexed: false, internalType: "uint256", name: "startTime", type: "uint256" }, { indexed: false, internalType: "uint256", name: "endTime", type: "uint256" }, { indexed: false, internalType: "uint256", name: "winnerCount", type: "uint256" }], name: "RaffleCreated", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffleId", type: "uint256" }, { indexed: false, internalType: "uint256", name: "requestId", type: "uint256" }], name: "DrawRequested", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffleId", type: "uint256" }, { indexed: false, internalType: "address[]", name: "winners", type: "address[]" }], name: "DrawCompleted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffleId", type: "uint256" }], name: "RaffleCancelled", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffleId", type: "uint256" }], name: "DrawReset", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "id", type: "uint256" }, { indexed: true, internalType: "address", name: "sponsor", type: "address" }, { indexed: false, internalType: "string", name: "adType", type: "string" }, { indexed: false, internalType: "string", name: "adContent", type: "string" }, { indexed: false, internalType: "string", name: "adLink", type: "string" }, { indexed: false, internalType: "uint256", name: "duration", type: "uint256" }, { indexed: false, internalType: "uint256", name: "timestamp", type: "uint256" }], name: "SponsorApplicationSubmitted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "id", type: "uint256" }, { indexed: true, internalType: "address", name: "sponsor", type: "address" }], name: "ApplicationAccepted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "id", type: "uint256" }, { indexed: true, internalType: "address", name: "sponsor", type: "address" }], name: "ApplicationRejected", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "id", type: "uint256" }, { indexed: true, internalType: "address", name: "sponsor", type: "address" }], name: "ApplicationRefunded", type: "event" },
+  { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "duration", type: "uint256" }, { indexed: false, internalType: "uint256", name: "minPrize", type: "uint256" }, { indexed: false, internalType: "uint256", name: "fee", type: "uint256" }], name: "PriceTierSet", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "newBooztory", type: "address" }], name: "BooztoryChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "token", type: "address" }, { indexed: true, internalType: "address", name: "to", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "Withdrawn", type: "event" },
+
+  // State vars (public getters)
+  { inputs: [], name: "booztory", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "boozToken", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "usdc", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "nextRaffleId", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "nextApplicationId", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "nextAdStartTime", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "defaultDrawThreshold", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "defaultMinUniqueEntrants", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "refundTimeout", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "owner", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }], name: "tickets", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }, { internalType: "address", name: "", type: "address" }], name: "raffleTickets", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }, { internalType: "address", name: "", type: "address" }], name: "hasEntered", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleTotalTickets", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleDrawBlock", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "applications", outputs: [{ internalType: "address", name: "sponsor", type: "address" }, { internalType: "string", name: "adType", type: "string" }, { internalType: "string", name: "adContent", type: "string" }, { internalType: "string", name: "adLink", type: "string" }, { internalType: "uint256", name: "duration", type: "uint256" }, { internalType: "uint256", name: "prizePaid", type: "uint256" }, { internalType: "uint256", name: "feePaid", type: "uint256" }, { internalType: "uint256", name: "submittedAt", type: "uint256" }, { internalType: "uint256", name: "acceptedAt", type: "uint256" }, { internalType: "uint8", name: "status", type: "uint8" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "priceTiers", outputs: [{ internalType: "uint256", name: "minPrize", type: "uint256" }, { internalType: "uint256", name: "fee", type: "uint256" }], stateMutability: "view", type: "function" },
 
   // Views
-  { inputs: [], name: "currentRaffle", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [], name: "epochStart", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRaffleEntryCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleUniqueCount", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [], name: "drawThreshold", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [], name: "minUniqueMinters", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }, { internalType: "address", name: "", type: "address" }], name: "hasMinted", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
-  { inputs: [], name: "getPrizes", outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRafflePrizes", outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRaffleWinners", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "getRaffleEntries", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleDrawn", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
-  { inputs: [], name: "raffleDuration", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "raffleDrawBlock", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [], name: "owner", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }], name: "getRaffle", outputs: [{ internalType: "address[]", name: "prizeTokens", type: "address[]" }, { internalType: "uint256", name: "winnerCount", type: "uint256" }, { internalType: "uint256", name: "startTime", type: "uint256" }, { internalType: "uint256", name: "endTime", type: "uint256" }, { internalType: "uint8", name: "status", type: "uint8" }, { internalType: "uint256", name: "drawThreshold", type: "uint256" }, { internalType: "uint256", name: "minUniqueEntrants", type: "uint256" }, { internalType: "bool", name: "drawRequested", type: "bool" }, { internalType: "uint256", name: "totalTickets", type: "uint256" }, { internalType: "uint256", name: "uniqueEntrants", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }], name: "getRafflePrizeAmounts", outputs: [{ internalType: "uint256[][]", name: "", type: "uint256[][]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }], name: "getRaffleWinners", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }], name: "getRaffleEntrants", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "getActiveRaffles", outputs: [{ internalType: "uint256[]", name: "ids", type: "uint256[]" }], stateMutability: "view", type: "function" },
 
-  // Writes
-  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "requestRaffleDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "raffle", type: "uint256" }], name: "resetDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "_threshold", type: "uint256" }], name: "setDrawThreshold", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "_min", type: "uint256" }], name: "setMinUniqueMinters", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ internalType: "uint256[]", name: "_prizes", type: "uint256[]" }], name: "setPrizes", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ internalType: "uint256", name: "_duration", type: "uint256" }], name: "setRaffleDuration", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [], name: "withdraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  // Writes — user
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }, { internalType: "uint256", name: "ticketAmount", type: "uint256" }], name: "enterRaffle", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "token", type: "address" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "depositPrize", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "string", name: "adType", type: "string" }, { internalType: "string", name: "adContent", type: "string" }, { internalType: "string", name: "adLink", type: "string" }, { internalType: "uint256", name: "duration", type: "uint256" }], name: "submitApplication", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "appId", type: "uint256" }], name: "claimRefund", outputs: [], stateMutability: "nonpayable", type: "function" },
+
+  // Writes — admin
+  { inputs: [{ internalType: "address[]", name: "prizeTokens", type: "address[]" }, { internalType: "uint256[][]", name: "prizeAmounts", type: "uint256[][]" }, { internalType: "uint256", name: "winnerCount", type: "uint256" }, { internalType: "uint256", name: "duration", type: "uint256" }], name: "createRaffle", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }], name: "triggerDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }], name: "cancelRaffle", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "appId", type: "uint256" }], name: "acceptApplication", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "appId", type: "uint256" }], name: "rejectApplication", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }], name: "resetDraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "token", type: "address" }], name: "withdraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "_booztory", type: "address" }], name: "setBooztory", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "duration", type: "uint256" }, { internalType: "uint256", name: "minPrize", type: "uint256" }, { internalType: "uint256", name: "fee", type: "uint256" }], name: "setPriceTier", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_threshold", type: "uint256" }], name: "setDefaultDrawThreshold", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_min", type: "uint256" }], name: "setDefaultMinUniqueEntrants", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "raffleId", type: "uint256" }, { internalType: "uint256", name: "_threshold", type: "uint256" }, { internalType: "uint256", name: "_minUnique", type: "uint256" }], name: "setRaffleThresholds", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_timeout", type: "uint256" }], name: "setRefundTimeout", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "_subscriptionId", type: "uint256" }, { internalType: "bytes32", name: "_keyHash", type: "bytes32" }, { internalType: "uint32", name: "_callbackGasLimit", type: "uint32" }, { internalType: "uint16", name: "_requestConfirmations", type: "uint16" }], name: "setVrfConfig", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "renounceOwnership", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "newOwner", type: "address" }], name: "transferOwnership", outputs: [], stateMutability: "nonpayable", type: "function" },
 ] as const
 
 // ERC-20 minimal ABI (approve + transfer)
@@ -168,6 +251,58 @@ export const ERC20_ABI = [
   { name: "transfer", type: "function", inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ name: "", type: "bool" }], stateMutability: "nonpayable" },
   { name: "allowance", type: "function", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" },
   { name: "balanceOf", type: "function", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" },
+] as const
+
+// ─── BooztoryToken ABI ────────────────────────────────────────────────────────
+export const TOKEN_ABI = [
+  // Errors
+  { inputs: [], name: "TransferWhileSoulbound", type: "error" },
+  { inputs: [], name: "NotAuthorized", type: "error" },
+  { inputs: [], name: "OnlySuperchainBridge", type: "error" },
+  { inputs: [], name: "ZeroAddress", type: "error" },
+  { inputs: [], name: "TreasuryAlreadyMinted", type: "error" },
+  { inputs: [], name: "ExceedsTreasuryCap", type: "error" },
+  { inputs: [{ internalType: "address", name: "owner", type: "address" }], name: "OwnableInvalidOwner", type: "error" },
+  { inputs: [{ internalType: "address", name: "account", type: "address" }], name: "OwnableUnauthorizedAccount", type: "error" },
+
+  // Events
+  { anonymous: false, inputs: [{ indexed: false, internalType: "bool", name: "newValue", type: "bool" }], name: "SoulboundChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "minter", type: "address" }, { indexed: false, internalType: "bool", name: "authorized", type: "bool" }], name: "AuthorizedMinterChanged", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "to", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "TreasuryMinted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "from", type: "address" }, { indexed: true, internalType: "address", name: "to", type: "address" }, { indexed: false, internalType: "uint256", name: "value", type: "uint256" }], name: "Transfer", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "owner", type: "address" }, { indexed: true, internalType: "address", name: "spender", type: "address" }, { indexed: false, internalType: "uint256", name: "value", type: "uint256" }], name: "Approval", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "previousOwner", type: "address" }, { indexed: true, internalType: "address", name: "newOwner", type: "address" }], name: "OwnershipTransferred", type: "event" },
+
+  // State vars
+  { inputs: [], name: "soulbound", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }], name: "authorizedMinters", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "treasuryMinted", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "TREASURY_CAP", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "SUPERCHAIN_BRIDGE", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+
+  // ERC-20 standard
+  { inputs: [], name: "name", outputs: [{ internalType: "string", name: "", type: "string" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "symbol", outputs: [{ internalType: "string", name: "", type: "string" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "decimals", outputs: [{ internalType: "uint8", name: "", type: "uint8" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "totalSupply", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "account", type: "address" }], name: "balanceOf", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "owner", type: "address" }, { internalType: "address", name: "spender", type: "address" }], name: "allowance", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "spender", type: "address" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "approve", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "to", type: "address" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "transfer", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "from", type: "address" }, { internalType: "address", name: "to", type: "address" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "transferFrom", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "nonpayable", type: "function" },
+
+  // Ownable
+  { inputs: [], name: "owner", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "renounceOwnership", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "newOwner", type: "address" }], name: "transferOwnership", outputs: [], stateMutability: "nonpayable", type: "function" },
+
+  // Token-specific
+  { inputs: [{ internalType: "bool", name: "_soulbound", type: "bool" }], name: "setSoulbound", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "_minter", type: "address" }, { internalType: "bool", name: "_authorized", type: "bool" }], name: "setAuthorizedMinter", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "to", type: "address" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "mintTreasury", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "to", type: "address" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "mintReward", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "address", name: "from", type: "address" }, { internalType: "uint256", name: "amount", type: "uint256" }], name: "burnFrom", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }], name: "burn", outputs: [], stateMutability: "nonpayable", type: "function" },
 ] as const
 
 // ─── Types ────────────────────────────────────────────────────────────────────

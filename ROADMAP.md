@@ -223,17 +223,17 @@ Always verify these addresses at https://docs.chain.link/vrf/v2-5/supported-netw
 
 ## 4. Deployed Addresses (Base Sepolia — Testnet)
 
-> ⚠️ BooztoryRaffle needs redeployment (weeklyPrizes snapshot + getWeeklyPrizes + setWeekDuration).
-> Booztory.sol and BooztoryToken.sol are current — do NOT redeploy them.
-
 | Contract | Address | Status |
 |---|---|---|
-| Booztory | `0x9D644381cd8bFA5fdba46C94BdB2A131aaeEF892` | ✅ Current |
-| BooztoryToken (BOOZ) | `0x3b3C0EF1f9072A435BE1B5860d674e9E0e47FAfE` | ✅ Current |
-| BooztoryRaffle | `0xee7a205dA0D3E16ca9384Feb1852A78aBf34285e` | ⚠️ Needs redeploy |
+| Booztory | `0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68` | ✅ Current |
+| BooztoryToken (BOOZ) | `0x02A2830552Da5caA0173a0fcbbc005FC70339855` | ✅ Current |
+| BooztoryRaffle | `0xd7f8AC77392f6C1D21eA6B5fb57861e759e250B5` | ✅ Current |
 
 Confirmed on current deploy:
+- `setAuthorizedMinter(booztory, true)` + `setAuthorizedMinter(raffle, true)` on BooztoryToken ✅
 - `setRewardToken()` and `setRaffle()` called on Booztory ✅
+- `acceptedAt` field in `SponsorApplication` struct (countdown starts on acceptance) ✅
+- ETH prize support — `receive()`, `address(0)` sentinel, ETH branch in `withdraw()` ✅
 - Mint → 1,000 BOOZ confirmed working ✅
 - Donation flow (approve + donate, 95/5 split) confirmed working ✅
 - GM streak claim → BOOZ in wallet confirmed working ✅
@@ -259,13 +259,12 @@ Confirmed on current deploy:
 - [x] Base Sepolia deployment: Booztory + BooztoryToken
 
 ### Testnet — Immediate Next Steps
-- [ ] Redeploy BooztoryRaffle to Base Sepolia
-  - `npx hardhat compile`
-  - `npx hardhat run scripts/redeploy-raffle.ts --network base-sepolia` (or full deploy script)
-  - Call `setRaffle(newRaffleAddress)` on Booztory
-  - Update `NEXT_PUBLIC_RAFFLE_ADDRESS` in `.env.local`
-  - Add new BooztoryRaffle as consumer at vrf.chain.link
-  - Call `setWeekDuration(3600)` on raffle for 1-hour test weeks
+- [x] Redeploy all 3 contracts to Base Sepolia ✅
+  - New Booztory: `0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68`
+  - New BooztoryToken: `0x02A2830552Da5caA0173a0fcbbc005FC70339855`
+  - New BooztoryRaffle: `0xd7f8AC77392f6C1D21eA6B5fb57861e759e250B5`
+- [x] Add BooztoryRaffle as consumer at vrf.chain.link ✅
+- [ ] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet
 - [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform (youtube, tiktok, twitter, vimeo, spotify, twitch)
 - [ ] Verify all 3 contracts on Basescan (`npx hardhat verify ...`)
 - [ ] End-to-end testnet QA: mint → earn BOOZ → streak → raffle draw

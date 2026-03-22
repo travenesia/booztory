@@ -1,0 +1,1150 @@
+"use client"
+
+import { useState, useRef, useEffect, useMemo, useCallback } from "react"
+import type React from "react"
+import { useAccount, useReadContract, useWriteContract } from "wagmi"
+import { waitForTransactionReceipt } from "wagmi/actions"
+import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { Loader2, CheckCircle2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { useWalletName } from "@/hooks/useWalletName"
+import { PageTopbar } from "@/components/layout/pageTopbar"
+import { Navbar } from "@/components/layout/navbar"
+import { cn } from "@/lib/utils"
+import { RAFFLE_ADDRESS, RAFFLE_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
+import { ContentEmbed } from "@/components/content/contentEmbed"
+import { usePriceTiers } from "@/hooks/usePriceTiers"
+
+const AD_TYPES = [
+  { id: "image", label: "Image",   description: "Banner or logo (jpeg, png, webp)" },
+  { id: "embed", label: "Embed",   description: "YouTube, TikTok, Twitter, etc." },
+  { id: "text",  label: "Text",    description: "Up to 200 characters" },
+] as const
+
+type AdTypeId = "image" | "embed" | "text"
+
+const RATIO_OPTIONS = ["1:1", "16:9", "9:16"] as const
+type Ratio = typeof RATIO_OPTIONS[number]
+
+const APP_STATUS_MAP = {
+  0: { label: "Pending",  color: "text-amber-700 bg-amber-50 border-amber-200"  },
+  1: { label: "Accepted", color: "text-green-700 bg-green-50 border-green-200"  },
+  2: { label: "Rejected", color: "text-red-700 bg-red-50 border-red-200"        },
+  3: { label: "Refunded", color: "text-gray-600 bg-gray-50 border-gray-200"     },
+} as const
+
+type AppStatus = 0 | 1 | 2 | 3
+
+// URL shorteners to block (obscure destination)
+const URL_SHORTENERS = ["bit.ly", "tinyurl.com", "t.co", "ow.ly", "buff.ly", "rebrand.ly", "short.io", "cutt.ly", "is.gd", "v.gd"]
+
+// ── Link helpers ───────────────────────────────────────────────────────────────
+
+type SponsorLinks = { website: string; x: string; discord: string; telegram: string }
+
+function parseAdLink(raw: string): SponsorLinks {
+  try {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed === "object" && parsed !== null) {
+      return {
+        website:  parsed.website  ?? "",
+        x:        parsed.x        ?? "",
+        discord:  parsed.discord  ?? "",
+        telegram: parsed.telegram ?? "",
+      }
+    }
+  } catch { /* fallback */ }
+  // Legacy single-link format
+  return { website: raw, x: "", discord: "", telegram: "" }
+}
+
+function serializeLinks(links: SponsorLinks): string {
+  const filtered = Object.fromEntries(Object.entries(links).filter(([, v]) => v.trim()))
+  return Object.keys(filtered).length ? JSON.stringify(filtered) : ""
+}
+
+type LinkValidation = { valid: boolean; error?: string }
+
+function validateWebsiteUrl(url: string): LinkValidation {
+  if (!url) return { valid: true }
+  try {
+    const u = new URL(url)
+    if (u.protocol !== "https:") return { valid: false, error: "Must use https://" }
+    const host = u.hostname.toLowerCase()
+    // Block IP addresses
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) return { valid: false, error: "IP addresses not allowed" }
+    // Block localhost / internal
+    if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) {
+      return { valid: false, error: "Internal addresses not allowed" }
+    }
+    // Block dangerous schemes (redundant but explicit)
+    if (url.toLowerCase().startsWith("javascript:") || url.toLowerCase().startsWith("data:")) {
+      return { valid: false, error: "Invalid URL scheme" }
+    }
+    // Block URL shorteners (destination obscured)
+    if (URL_SHORTENERS.some(s => host === s || host.endsWith("." + s))) {
+      return { valid: false, error: "URL shorteners not allowed — use a direct link" }
+    }
+    // Block non-ASCII domain (basic homograph check)
+    if (/[^\x00-\x7F]/.test(host)) return { valid: false, error: "Non-ASCII domains not allowed" }
+    return { valid: true }
+  } catch {
+    return { valid: false, error: "Invalid URL" }
+  }
+}
+
+function validatePlatformUrl(url: string, allowed: string[]): LinkValidation {
+  if (!url) return { valid: true }
+  try {
+    const u = new URL(url)
+    if (u.protocol !== "https:") return { valid: false, error: "Must use https://" }
+    const host = u.hostname.toLowerCase().replace(/^www\./, "")
+    if (!allowed.some(a => host === a || host.endsWith("." + a))) {
+      return { valid: false, error: `Must be a ${allowed[0]} URL` }
+    }
+    return { valid: true }
+  } catch {
+    return { valid: false, error: "Invalid URL" }
+  }
+}
+
+const LINK_CONFIG = [
+  {
+    key: "website" as const,
+    label: "Website",
+    icon: "/social/web.svg",
+    placeholder: "https://yourproject.xyz",
+    validate: (v: string) => validateWebsiteUrl(v),
+    hint: "Any https:// URL — no shorteners or IP addresses",
+  },
+  {
+    key: "x" as const,
+    label: "X / Twitter",
+    icon: "/social/x.svg",
+    placeholder: "https://x.com/yourhandle",
+    validate: (v: string) => validatePlatformUrl(v, ["x.com", "twitter.com"]),
+    hint: "x.com or twitter.com URLs only",
+  },
+  {
+    key: "discord" as const,
+    label: "Discord",
+    icon: "/social/discord.svg",
+    placeholder: "https://discord.gg/invite",
+    validate: (v: string) => validatePlatformUrl(v, ["discord.gg", "discord.com"]),
+    hint: "discord.gg or discord.com URLs only",
+  },
+  {
+    key: "telegram" as const,
+    label: "Telegram",
+    icon: "/social/telegram.svg",
+    placeholder: "https://t.me/yourchannel",
+    validate: (v: string) => validatePlatformUrl(v, ["t.me", "telegram.me", "telegram.org"]),
+    hint: "t.me or telegram.me URLs only",
+  },
+] as const
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function parseAdContent(raw: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed === "object" && parsed !== null) return parsed
+  } catch { /* fallback */ }
+  return { imageUrl: raw }
+}
+
+type EmbedContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
+
+function urlToContentType(url: string): EmbedContentType | null {
+  if (url.includes("youtube.com/shorts/")) return "youtubeshorts"
+  if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube"
+  if (url.includes("tiktok.com")) return "tiktok"
+  if (url.includes("twitter.com") || url.includes("x.com")) return "twitter"
+  if (url.includes("vimeo.com"))   return "vimeo"
+  if (url.includes("spotify.com")) return "spotify"
+  if (url.includes("twitch.tv"))   return "twitch"
+  return null
+}
+
+function detectPlatformName(url: string): string | null {
+  if (url.includes("youtube.com") || url.includes("youtu.be")) return "YouTube"
+  if (url.includes("tiktok.com"))  return "TikTok"
+  if (url.includes("twitter.com") || url.includes("x.com")) return "X / Twitter"
+  if (url.includes("vimeo.com"))   return "Vimeo"
+  if (url.includes("spotify.com")) return "Spotify"
+  if (url.includes("twitch.tv"))   return "Twitch"
+  return null
+}
+
+// ── Text formatting helpers ────────────────────────────────────────────────────
+
+/**
+ * Render inline markdown bold (**text**) and italic (_text_) as React elements.
+ * Stored as-is on-chain; only the display layer parses it.
+ */
+function renderFormattedText(text: string): React.ReactNode {
+  // Split on **...** and _..._ markers
+  const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>
+    }
+    if (part.startsWith("_") && part.endsWith("_") && part.length > 2) {
+      return <em key={i}>{part.slice(1, -1)}</em>
+    }
+    return part
+  })
+}
+
+// ── AdPreview ─────────────────────────────────────────────────────────────────
+// Mirrors ContentCard's containerRef + ResizeObserver sizing logic.
+// Height is fixed; width adjusts to maintain aspect ratio.
+
+const PREVIEW_HEIGHT = 300
+
+function AdPreview({
+  adType,
+  imageUrl,
+  ratio,
+  embedUrl,
+  adText,
+  sponsorName,
+}: {
+  adType: AdTypeId
+  imageUrl: string
+  ratio: Ratio
+  embedUrl: string
+  adText: string
+  sponsorName: string
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = () => setContainerWidth(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const ct = adType === "embed" ? urlToContentType(embedUrl) : null
+
+  // Aspect-ratio-aware sizing:
+  // • Landscape (16:9, 1:1): width fills container, height derived
+  // • Portrait  (9:16):      height fixed, width derived
+  const embedAreaStyle = useMemo((): React.CSSProperties => {
+    if (adType === "text") return { width: "100%", height: "auto", minHeight: "120px" }
+
+    if (ct === "twitter") {
+      return { width: "100%", height: "auto", minHeight: "150px", maxHeight: `${PREVIEW_HEIGHT}px`, overflowY: "auto" }
+    }
+
+    if (ct === "spotify") {
+      return { width: "100%", height: "152px" }
+    }
+
+    const isVertical = ratio === "9:16" || ct === "youtubeshorts" || ct === "tiktok"
+    const cw = containerWidth ?? 400
+
+    if (isVertical) {
+      // Portrait: fix height, compute width from 9:16
+      const h = PREVIEW_HEIGHT
+      const w = Math.min(h * (9 / 16), cw)
+      return { width: `${w}px`, height: `${h}px`, margin: "0 auto" }
+    } else {
+      // Landscape: fill container width, compute height from 16:9 or 1:1
+      const aspectW = ratio === "1:1" ? 1 : 16
+      const aspectH = ratio === "1:1" ? 1 : 9
+      const w = cw
+      const h = w * (aspectH / aspectW)
+      return { width: `${w}px`, height: `${h}px` }
+    }
+  }, [containerWidth, adType, ratio, ct])
+
+  return (
+    <div className="border border-gray-300 rounded-[5px] bg-white overflow-hidden">
+      <div ref={containerRef} className="w-full flex justify-center">
+        <div className="overflow-hidden" style={embedAreaStyle}>
+
+          {/* Image */}
+          {adType === "image" && imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt="Ad preview"
+              className="w-full h-full object-cover"
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+            />
+          )}
+
+          {/* Embed */}
+          {adType === "embed" && ct && (
+            <ContentEmbed
+              contentType={ct}
+              contentUrl={embedUrl}
+              aspectRatio={ct === "youtubeshorts" || ct === "tiktok" ? "9:16" : "16:9"}
+              responsive={true}
+            />
+          )}
+
+          {/* Unsupported embed */}
+          {adType === "embed" && !ct && (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-[5px]">
+              <span className="text-xs text-gray-500">Unsupported platform</span>
+            </div>
+          )}
+
+          {/* Text */}
+          {adType === "text" && (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-50 rounded-[5px] p-6 text-center">
+              {sponsorName && <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{sponsorName}</p>}
+              <p className="text-sm font-semibold text-gray-800 leading-snug">
+                {adText ? renderFormattedText(adText) : "Your ad text will appear here."}
+              </p>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── ApplicationRow ─────────────────────────────────────────────────────────────
+
+function ApplicationRow({
+  appId,
+  address,
+  isOwner,
+  onAction,
+}: {
+  appId: number
+  address?: `0x${string}`
+  isOwner: boolean
+  onAction: () => void
+}) {
+  const [isActing, setIsActing] = useState(false)
+  const [isRefunding, setIsRefunding] = useState(false)
+  const { toast } = useToast()
+  const { writeContractAsync } = useWriteContract()
+
+  const { data: appRaw, refetch: refetchAppData } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "applications",
+    args: [BigInt(appId)],
+    chainId: APP_CHAIN.id,
+    query: { refetchInterval: 30_000, refetchOnWindowFocus: true },
+  })
+
+  const app = appRaw as readonly [string, string, string, string, bigint, bigint, bigint, bigint, bigint, number] | undefined
+
+  const sponsor     = app?.[0] ?? ""
+  const adType      = (app?.[1] ?? "") as AdTypeId
+  const adContent   = app?.[2] ?? ""
+  const adLinkRaw   = app?.[3] ?? ""
+  const duration    = app?.[4] ?? 0n
+  const prizePaid   = app?.[5] ?? 0n
+  const feePaid     = app?.[6] ?? 0n
+  const submittedAt = app?.[7] ?? 0n
+  const acceptedAt  = app?.[8] ?? 0n
+  const status      = (app?.[9] ?? 0) as AppStatus
+
+  const sponsorName = useWalletName(sponsor || undefined)
+  const isOwnApp    = !!address && !!sponsor && address.toLowerCase() === sponsor.toLowerCase()
+
+  if (!app) return null
+  if (!isOwner && !isOwnApp) return null
+
+  const parsed      = parseAdContent(adContent)
+  const links       = parseAdLink(adLinkRaw)
+  const totalPaid   = Number(prizePaid + feePaid) / 1_000_000
+  const days        = Math.round(Number(duration) / 86400)
+  const statusInfo  = APP_STATUS_MAP[status] ?? APP_STATUS_MAP[0]
+  const submittedDate = new Date(Number(submittedAt) * 1000).toLocaleDateString()
+
+  async function handleAccept() {
+    setIsActing(true)
+    try {
+      const tx = await writeContractAsync({
+        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+        functionName: "acceptApplication", args: [BigInt(appId)],
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      refetchAppData()
+      onAction()
+      toast({ title: "Accepted", description: `Application #${appId} is now live.` })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("user rejected") || msg.includes("User rejected")) return
+      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
+    } finally { setIsActing(false) }
+  }
+
+  async function handleReject() {
+    setIsActing(true)
+    try {
+      const tx = await writeContractAsync({
+        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+        functionName: "rejectApplication", args: [BigInt(appId)],
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      refetchAppData()
+      onAction()
+      toast({ title: "Rejected", description: "Sponsor can now claim a refund." })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("user rejected") || msg.includes("User rejected")) return
+      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
+    } finally { setIsActing(false) }
+  }
+
+  async function handleClaimRefund() {
+    setIsRefunding(true)
+    try {
+      const tx = await writeContractAsync({
+        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+        functionName: "claimRefund", args: [BigInt(appId)],
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      refetchAppData()
+      onAction()
+      toast({ title: "Refunded", description: "Payment returned to your wallet." })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("user rejected") || msg.includes("User rejected")) return
+      const clean = msg.includes("RefundTimeout") ? "Refund period has not elapsed yet." : "Transaction failed."
+      toast({ title: "Failed", description: clean, variant: "destructive" })
+    } finally { setIsRefunding(false) }
+  }
+
+  const linkEntries = LINK_CONFIG.filter(c => links[c.key])
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-1.5 mb-1">
+            <span className="text-xs font-bold text-gray-400">#{appId}</span>
+            <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", statusInfo.color)}>
+              {statusInfo.label}
+            </span>
+            <span className="text-xs text-gray-400 capitalize">{adType || "—"}</span>
+          </div>
+          {isOwner && (
+            <p className="text-xs text-gray-500 truncate">
+              {sponsorName ?? (sponsor ? `${sponsor.slice(0, 6)}…${sponsor.slice(-4)}` : "—")}
+            </p>
+          )}
+        </div>
+        <div className="text-right flex-shrink-0">
+          <div className="text-sm font-bold text-gray-900">${totalPaid.toFixed(2)}</div>
+          <div className="text-xs text-gray-400">{days}d · {submittedDate}</div>
+        </div>
+      </div>
+
+      {parsed.sponsorName && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Sponsor</p>
+          <p className="text-xs text-gray-700">{parsed.sponsorName}</p>
+        </div>
+      )}
+
+      {adType === "image" && parsed.imageUrl && (
+        <div className="space-y-1.5">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Image URL</p>
+            <p className="text-xs text-gray-700 truncate font-mono">{parsed.imageUrl}</p>
+          </div>
+          {parsed.ratio && <p className="text-xs text-gray-400">Ratio: {parsed.ratio}</p>}
+          {parsed.tagline && (
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Tagline</p>
+              <p className="text-xs text-gray-700">{parsed.tagline}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {adType === "embed" && parsed.embedUrl && (
+        <div className="space-y-1.5">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Embed URL</p>
+            <p className="text-xs text-gray-700 truncate font-mono">{parsed.embedUrl}</p>
+          </div>
+          {parsed.tagline && (
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Tagline</p>
+              <p className="text-xs text-gray-700">{parsed.tagline}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {adType === "text" && parsed.text && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Ad Text</p>
+          <p className="text-xs text-gray-700">{renderFormattedText(parsed.text)}</p>
+        </div>
+      )}
+
+      {/* Sponsor links */}
+      {linkEntries.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Links</p>
+          <div className="flex flex-wrap gap-2">
+            {linkEntries.map(c => (
+              <a
+                key={c.key}
+                href={links[c.key]}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.icon} alt={c.label} width={12} height={12} className="flex-shrink-0" />
+                <span className="text-xs text-gray-600 font-medium">{c.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isOwner && status === 0 && (
+        <div className="flex gap-2 pt-1">
+          <button onClick={handleAccept} disabled={isActing}
+            className="flex-1 bg-green-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+            {isActing ? "…" : "Accept"}
+          </button>
+          <button onClick={handleReject} disabled={isActing}
+            className="flex-1 bg-red-50 border border-red-200 text-red-700 text-xs font-bold py-2 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors">
+            {isActing ? "…" : "Reject"}
+          </button>
+        </div>
+      )}
+
+      {isOwnApp && status === 2 && (
+        <p className="text-xs text-gray-500 text-center pt-1">
+          Refund was returned to your wallet when the application was rejected.
+        </p>
+      )}
+
+      {isOwnApp && status === 0 && Date.now() / 1000 >= Number(submittedAt) + 3 * 86400 && (
+        <button onClick={handleClaimRefund} disabled={isRefunding}
+          className="w-full border border-gray-200 text-gray-700 text-xs font-bold py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+          {isRefunding ? "Claiming…" : "Claim Refund"}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── SponsorLinkInput ───────────────────────────────────────────────────────────
+
+function SponsorLinkInput({
+  config,
+  value,
+  onChange,
+}: {
+  config: typeof LINK_CONFIG[number]
+  value: string
+  onChange: (v: string) => void
+}) {
+  const validation = config.validate(value)
+  const showError  = value.trim().length > 0 && !validation.valid
+
+  return (
+    <div>
+      <div className={cn(
+        "flex items-center gap-2.5 border rounded-lg px-3 py-2.5 transition-all",
+        showError
+          ? "border-red-400 bg-red-50 focus-within:ring-2 focus-within:ring-red-400"
+          : "border-gray-200 focus-within:ring-2 focus-within:ring-indigo-500"
+      )}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={config.icon} alt={config.label} width={15} height={15} className="flex-shrink-0 opacity-60" />
+        <input
+          type="url"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={config.placeholder}
+          className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
+        />
+      </div>
+      {showError && (
+        <p className="text-[10px] text-red-500 mt-0.5 pl-1">{validation.error}</p>
+      )}
+      {!showError && (
+        <p className="text-[10px] text-gray-400 mt-0.5 pl-1">{config.hint}</p>
+      )}
+    </div>
+  )
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
+
+export default function SponsorPage() {
+  const { address } = useAccount()
+  const { toast } = useToast()
+  const { writeContractAsync } = useWriteContract()
+
+  const [adType,       setAdType]       = useState<AdTypeId>("image")
+  const [sponsorName,  setSponsorName]  = useState("")
+  const [imageUrl,     setImageUrl]     = useState("")
+  const [ratio,        setRatio]        = useState<Ratio>("16:9")
+  const [embedUrl,     setEmbedUrl]     = useState("")
+  const [adText,       setAdText]       = useState("")
+  const [tagline,      setTagline]      = useState("")
+  const [links,        setLinks]        = useState<SponsorLinks>({ website: "", x: "", discord: "", telegram: "" })
+  const [durationIdx,  setDurationIdx]  = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitDone,   setSubmitDone]   = useState(false)
+  const adTextRef = useRef<HTMLTextAreaElement>(null)
+
+  const applyFormat = useCallback((marker: string) => {
+    const el = adTextRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end   = el.selectionEnd
+    const selected = adText.slice(start, end)
+    const wrapped = marker + (selected || "text") + marker
+    const next = adText.slice(0, start) + wrapped + adText.slice(end)
+    if (next.length > 200) return
+    setAdText(next)
+    // Restore selection inside the markers
+    requestAnimationFrame(() => {
+      el.focus()
+      const newStart = start + marker.length
+      const newEnd   = newStart + (selected || "text").length
+      el.setSelectionRange(newStart, newEnd)
+    })
+  }, [adText])
+
+  const { tiers: priceTiers } = usePriceTiers()
+
+  const { data: appCountRaw, refetch: refetchAppCount } = useReadContract({
+    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+    functionName: "nextApplicationId",
+    chainId: APP_CHAIN.id,
+    query: { refetchInterval: 30_000 },
+  })
+
+  const { data: ownerRaw } = useReadContract({
+    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+    functionName: "owner",
+    chainId: APP_CHAIN.id,
+  })
+
+  const appCount = Number(appCountRaw ?? 0n)
+  const isOwner  = !!(address && ownerRaw && address.toLowerCase() === (ownerRaw as string).toLowerCase())
+
+  // Refetch on tab focus
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") refetchAppCount()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => document.removeEventListener("visibilitychange", onVisible)
+  }, [refetchAppCount])
+
+  const selectedTier  = priceTiers[durationIdx]
+  const minPrizeBn    = selectedTier?.minPrize ?? 0n
+  const feeBn         = selectedTier?.fee ?? 0n
+  const totalBn       = minPrizeBn + feeBn
+  const minPrize      = Number(minPrizeBn) / 1_000_000
+  const fee           = Number(feeBn) / 1_000_000
+  const totalCost     = minPrize + fee
+  const tierAvailable = totalCost > 0
+
+  const detectedPlatform = adType === "embed" ? detectPlatformName(embedUrl) : null
+
+  // All link validations pass
+  const linksValid = LINK_CONFIG.every(c => {
+    const v = links[c.key]
+    return !v.trim() || c.validate(v).valid
+  })
+  const hasAtLeastOneLink = LINK_CONFIG.some(c => links[c.key].trim())
+
+  const isFormValid = (
+    !!address &&
+    tierAvailable &&
+    sponsorName.trim().length > 0 &&
+    hasAtLeastOneLink &&
+    linksValid &&
+    (adType === "image" ? imageUrl.trim().length > 0
+      : adType === "embed" ? embedUrl.trim().length > 0
+      : adText.trim().length > 0)
+  )
+
+  function setLink(key: keyof SponsorLinks, value: string) {
+    setLinks(prev => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSubmit() {
+    if (!isFormValid) return
+    setIsSubmitting(true)
+    try {
+      const approveTx = await writeContractAsync({
+        address: USDC_ADDRESS, abi: ERC20_ABI,
+        functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+
+      const adContent =
+        adType === "image"
+          ? JSON.stringify({ sponsorName: sponsorName.trim(), imageUrl: imageUrl.trim(), ratio, tagline: tagline.trim() })
+          : adType === "embed"
+          ? JSON.stringify({ sponsorName: sponsorName.trim(), embedUrl: embedUrl.trim(), tagline: tagline.trim() })
+          : JSON.stringify({ sponsorName: sponsorName.trim(), text: adText.trim() })
+
+      const adLinkJson = serializeLinks(links)
+
+      const submitTx = await writeContractAsync({
+        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+        functionName: "submitApplication",
+        args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)],
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: submitTx })
+
+      setSponsorName(""); setImageUrl(""); setEmbedUrl(""); setAdText(""); setTagline("")
+      setLinks({ website: "", x: "", discord: "", telegram: "" })
+      setSubmitDone(true)
+      refetchAppCount()
+      toast({ title: "Application submitted!", description: "We'll review it within 24–48 hours." })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("user rejected") || msg.includes("User rejected")) return
+      const clean = msg.includes("InvalidDuration")
+        ? "Duration not available. Contact us to arrange pricing."
+        : msg.includes("InsufficientAllowance")
+        ? "USDC approval insufficient."
+        : "Submission failed. Please try again."
+      toast({ title: "Failed", description: clean, variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const appIds = Array.from({ length: appCount }, (_, i) => i)
+
+  return (
+    <main className="min-h-screen pt-12 pb-12">
+      <PageTopbar title="Advertise" />
+
+      <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
+
+        {/* Hero */}
+        <div
+          className="relative rounded-2xl overflow-hidden text-white"
+          style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)" }}
+        >
+          {/* Radial glow top-right */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at 80% 0%, rgba(255,255,255,0.12) 0%, transparent 60%)" }}
+          />
+
+          <div className="relative px-6 pt-7 pb-5">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-pulse" />
+              <span className="text-[10px] font-bold tracking-widest text-blue-100 uppercase">Sponsor a Raffle</span>
+            </div>
+
+            <h1 className="text-2xl font-black leading-tight mb-4">
+              <span className="text-yellow-300">Own the Spotlight</span>
+            </h1>
+
+            {/* Description card */}
+            <div className="bg-white/10 border border-white/15 rounded-xl px-4 py-3 mb-5">
+              <p className="text-sm text-white/80 leading-relaxed">
+                Your payment funds a live prize raffle for Booztory users — and your brand runs alongside it for the full duration.
+                Half goes to raffle winners. Half is the platform fee. 100% on-chain, held in escrow until approved.
+              </p>
+            </div>
+
+            {/* Split bar */}
+            <div className="flex rounded-lg overflow-hidden h-2 w-full">
+              <div className="flex-1 bg-yellow-300" title="Prize pool" />
+              <div className="w-px bg-white/20" />
+              <div className="flex-1 bg-white/25" title="Platform fee" />
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <span className="text-[10px] text-yellow-200 font-semibold">Prize pool → winners</span>
+              <span className="text-[10px] text-white/50 font-semibold">Platform fee</span>
+            </div>
+          </div>
+
+          {/* Pricing cards — only show tiers that are configured */}
+          {priceTiers.length === 0 ? (
+            <div className="border-t border-white/10 px-4 py-4 text-center text-white/40 text-xs">
+              No pricing tiers configured yet
+            </div>
+          ) : (
+            <div className={`relative grid grid-cols-${priceTiers.length} gap-px bg-white/10 border-t border-white/10`}>
+              {priceTiers.map(tier => {
+                const prize = Number(tier.minPrize) / 1_000_000
+                const total = (Number(tier.minPrize) + Number(tier.fee)) / 1_000_000
+                return (
+                  <div key={tier.seconds} className="bg-white/5 px-4 py-4 flex flex-col items-center text-center gap-0.5">
+                    <p className="text-[10px] font-bold tracking-widest text-white/40 uppercase">{tier.label}</p>
+                    <p className="text-lg font-black text-white">${total.toFixed(0)}</p>
+                    <p className="text-[10px] text-yellow-200 font-semibold">${prize.toFixed(0)} to winners</p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Application form */}
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <p className="font-semibold text-gray-900">Apply to Advertise</p>
+            <p className="text-xs text-gray-400 mt-0.5">Payment held in escrow until approved</p>
+          </div>
+
+          {!address ? (
+            <div className="px-5 py-8 text-center text-gray-400 text-sm">
+              Connect your wallet to apply
+            </div>
+          ) : submitDone ? (
+            <div className="px-5 py-8 text-center">
+              <CheckCircle2 className="mx-auto text-green-500 mb-3" size={32} />
+              <p className="font-semibold text-gray-900 mb-1">Application submitted!</p>
+              <p className="text-sm text-gray-400">We review within 24–48 hours. Track it below.</p>
+              <button
+                onClick={() => setSubmitDone(false)}
+                className="mt-4 text-sm text-indigo-600 hover:text-indigo-700 font-semibold"
+              >
+                Submit another
+              </button>
+            </div>
+          ) : (
+            <div className="p-5 space-y-5">
+
+              {/* Sponsor name */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Sponsor Name <span className="text-red-400 font-normal">*</span>
+                  </label>
+                  <span className="text-[10px] text-gray-400">{sponsorName.length}/70</span>
+                </div>
+                <input
+                  type="text"
+                  value={sponsorName}
+                  onChange={e => setSponsorName(e.target.value)}
+                  placeholder="Your project or brand name"
+                  maxLength={70}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Ad type */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Ad Type
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {AD_TYPES.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setAdType(t.id)}
+                      className={cn(
+                        "text-left p-3 rounded-xl border transition-all",
+                        adType === t.id ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
+                      )}
+                    >
+                      <p className={cn("text-sm font-semibold", adType === t.id ? "text-indigo-700" : "text-gray-700")}>
+                        {t.label}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">{t.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Image fields */}
+              {adType === "image" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                      Image URL <span className="text-red-400 font-normal">*</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={e => setImageUrl(e.target.value)}
+                      placeholder="https://your-cdn.com/banner.png"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Accepted: jpeg, jpg, png, webp, gif</p>
+                  </div>
+
+                  {imageUrl.trim() && (
+                    <AdPreview adType="image" imageUrl={imageUrl.trim()} ratio={ratio} embedUrl="" adText="" sponsorName={sponsorName} />
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Aspect Ratio
+                    </label>
+                    <div className="flex gap-2">
+                      {RATIO_OPTIONS.map(r => (
+                        <button
+                          key={r}
+                          onClick={() => setRatio(r)}
+                          className={cn(
+                            "px-4 py-2 rounded-lg border text-sm font-semibold transition-all",
+                            ratio === r
+                              ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                              : "border-gray-200 text-gray-700 hover:border-gray-300"
+                          )}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Tagline <span className="text-gray-300 font-normal">(optional)</span>
+                      </label>
+                      <span className="text-[10px] text-gray-400">{tagline.length}/70</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={tagline}
+                      onChange={e => setTagline(e.target.value)}
+                      placeholder="Short brand message"
+                      maxLength={70}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Embed fields */}
+              {adType === "embed" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                      Embed URL <span className="text-red-400 font-normal">*</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={embedUrl}
+                      onChange={e => setEmbedUrl(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=…"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    {embedUrl.trim() && (
+                      <p className={cn("text-[10px] mt-1 font-semibold", detectedPlatform ? "text-indigo-600" : "text-red-500")}>
+                        {detectedPlatform ? `Detected: ${detectedPlatform}` : "Unsupported platform"}
+                      </p>
+                    )}
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Supported: YouTube, TikTok, X/Twitter, Vimeo, Spotify, Twitch
+                    </p>
+                  </div>
+
+                  {embedUrl.trim() && (
+                    <AdPreview adType="embed" imageUrl="" ratio="16:9" embedUrl={embedUrl.trim()} adText="" sponsorName={sponsorName} />
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Tagline <span className="text-gray-300 font-normal">(optional)</span>
+                      </label>
+                      <span className="text-[10px] text-gray-400">{tagline.length}/70</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={tagline}
+                      onChange={e => setTagline(e.target.value)}
+                      placeholder="Short brand message"
+                      maxLength={70}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Text fields */}
+              {adType === "text" && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Ad Text <span className="text-red-400 font-normal">*</span>
+                    </label>
+                    <span className="text-[10px] text-gray-400">{adText.length}/200</span>
+                  </div>
+                  {/* Formatting toolbar */}
+                  <div className="flex items-center gap-1 mb-1.5">
+                    <button
+                      type="button"
+                      onMouseDown={e => { e.preventDefault(); applyFormat("**") }}
+                      className="w-7 h-7 flex items-center justify-center rounded border border-gray-200 text-gray-600 hover:bg-gray-100 text-xs font-black leading-none transition-colors"
+                      title="Bold (**text**)"
+                    >B</button>
+                    <button
+                      type="button"
+                      onMouseDown={e => { e.preventDefault(); applyFormat("_") }}
+                      className="w-7 h-7 flex items-center justify-center rounded border border-gray-200 text-gray-600 hover:bg-gray-100 text-xs italic font-semibold leading-none transition-colors"
+                      title="Italic (_text_)"
+                    >I</button>
+                    <span className="text-[10px] text-gray-300 ml-1">Select text then click B or I</span>
+                  </div>
+                  <textarea
+                    ref={adTextRef}
+                    value={adText}
+                    onChange={e => setAdText(e.target.value)}
+                    placeholder="Your ad message — up to 200 characters"
+                    maxLength={200}
+                    rows={4}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-0.5">Use **bold** and _italic_ for formatting</p>
+                  <div className="mt-3">
+                    <AdPreview adType="text" imageUrl="" ratio="16:9" embedUrl="" adText={adText} sponsorName={sponsorName} />
+                  </div>
+                </div>
+              )}
+
+              {/* Sponsor links */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Sponsor Links <span className="text-red-400 font-normal">* at least one</span>
+                </label>
+                <div className="space-y-2">
+                  {LINK_CONFIG.map(c => (
+                    <SponsorLinkInput
+                      key={c.key}
+                      config={c}
+                      value={links[c.key]}
+                      onChange={v => setLink(c.key, v)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration — only show configured tiers */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Duration
+                </label>
+                {priceTiers.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-2">No pricing tiers available — owner needs to configure them.</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {priceTiers.map((tier, i) => {
+                      const total = (Number(tier.minPrize) + Number(tier.fee)) / 1_000_000
+                      return (
+                        <button
+                          key={tier.seconds}
+                          onClick={() => setDurationIdx(i)}
+                          className={cn(
+                            "p-3 rounded-xl border text-center transition-all",
+                            durationIdx === i ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
+                          )}
+                        >
+                          <p className={cn("text-sm font-bold", durationIdx === i ? "text-indigo-700" : "text-gray-700")}>
+                            {tier.label}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">${total.toFixed(2)}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Cost breakdown */}
+              {tierAvailable && (
+                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between text-gray-500">
+                    <span>Prize pool deposit</span>
+                    <span>${minPrize.toFixed(2)} USDC</span>
+                  </div>
+                  <div className="flex justify-between text-gray-500">
+                    <span>Platform fee</span>
+                    <span>${fee.toFixed(2)} USDC</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-1.5">
+                    <span>Total</span>
+                    <span>${totalCost.toFixed(2)} USDC</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 pt-0.5">
+                    Prize pool is paid to raffle winners. Platform fee covers placement &amp; operations. Full refund if rejected.
+                  </p>
+                </div>
+              )}
+
+              {!tierAvailable && (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                  Pricing not set for this duration. Contact us on X to arrange a custom package.
+                </div>
+              )}
+
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !isFormValid}
+                className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {isSubmitting && <Loader2 className="animate-spin" size={16} />}
+                {isSubmitting ? "Submitting…" : tierAvailable ? `Apply — $${totalCost.toFixed(2)} USDC` : "Apply"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Application list */}
+        {address && appCount > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">
+              {isOwner ? "All Applications" : "My Applications"}
+            </p>
+            {appIds.map(id => (
+              <ApplicationRow
+                key={id}
+                appId={id}
+                address={address}
+                isOwner={isOwner}
+                onAction={refetchAppCount}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* How it works */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+          <p className="font-semibold text-gray-700 text-sm">What you are paying for</p>
+          <ul className="space-y-2.5 text-xs text-gray-500 leading-relaxed list-none">
+            <li>
+              <span className="font-semibold text-gray-700">Prize pool deposit</span> — locked on-chain and paid out to raffle winners during your sponsorship period. This is the incentive that drives user engagement with your brand.
+            </li>
+            <li>
+              <span className="font-semibold text-gray-700">Platform fee</span> — covers ad placement and raffle operations for the duration you select.
+            </li>
+            <li>
+              <span className="font-semibold text-gray-700">Ad placement</span> — your ad appears as a floating widget on the main feed (all devices) and as sidebar panels on desktop for 7, 14, or 30 days.
+            </li>
+            <li>
+              <span className="font-semibold text-gray-700">Escrow protection</span> — funds are held on-chain. If we reject your application, your full payment is refundable. No response within 3 days? You can claim a refund yourself — no need to contact us.
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+      <Navbar />
+    </main>
+  )
+}

@@ -5,6 +5,7 @@ import Image from "next/image"
 import { DollarCircle } from "iconoir-react"
 import { HiMiniCheckBadge } from "react-icons/hi2"
 import { YouTubeIcon, TikTokIcon, TwitterIcon, YouTubeShortsIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "./icon"
+import { HiDocumentText } from "react-icons/hi2"
 import type { ContentItem } from "@/lib/contract"
 import { isYouTubeShort } from "@/lib/youtubeMetadata"
 import { TweetInfoPreview } from "@/components/tweet/tweet-info-preview"
@@ -60,6 +61,8 @@ export function HistoryCard({ content, isOwn = false }: HistoryCardProps) {
         return <SpotifyIcon />
       case "twitch":
         return <TwitchIcon />
+      case "text":
+        return <HiDocumentText className="text-gray-500" size={16} />
       default:
         return null
     }
@@ -84,14 +87,17 @@ export function HistoryCard({ content, isOwn = false }: HistoryCardProps) {
   const authorName = content.authorName || tiktokAuthor || displayUsername || "Creator"
   const thumbnailUrl = tiktokThumbnail || content.imageUrl
 
+  const isTextSlot = content.contentType === "text"
+
   const handleCardClick = () => {
+    if (isTextSlot) return
     window.open(content.contentUrl, "_blank", "noopener,noreferrer")
   }
 
   return (
     <div
       onClick={handleCardClick}
-      className="relative bg-gray-0 rounded-lg overflow-hidden cursor-pointer"
+      className={`relative bg-gray-0 rounded-lg overflow-hidden ${isTextSlot ? "cursor-default" : "cursor-pointer"}`}
     >
       <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
       <div
@@ -102,7 +108,16 @@ export function HistoryCard({ content, isOwn = false }: HistoryCardProps) {
         <div className="flex-shrink-0">{getPlatformIcon()}</div>
       </div>
       <div className="p-3">
-        {content.contentType === "twitter" ? (
+        {content.contentType === "text" ? (
+          <p
+            className="text-sm text-gray-900 leading-relaxed break-words whitespace-pre-wrap line-clamp-4"
+            dangerouslySetInnerHTML={{
+              __html: content.contentUrl
+                .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                .replace(/\*(.+?)\*/g, "<em>$1</em>"),
+            }}
+          />
+        ) : content.contentType === "twitter" ? (
           <TweetInfoPreview tweetId={extractTwitterId(content.contentUrl)} wordLimit={15} />
         ) : (
           <div className="flex">
