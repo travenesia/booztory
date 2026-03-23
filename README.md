@@ -280,9 +280,9 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 
 | Contract | Address |
 |---|---|
-| Booztory | `0x9D644381cd8bFA5fdba46C94BdB2A131aaeEF892` |
-| BooztoryToken (BOOZ) | `0x3b3C0EF1f9072A435BE1B5860d674e9E0e47FAfE` |
-| BooztoryRaffle | `0xee7a205dA0D3E16ca9384Feb1852A78aBf34285e` |
+| Booztory | `0x28C5A076d234975FC72a8Ca79b4E1a510b904418` |
+| BooztoryToken (BOOZ) | `0x02A2830552Da5caA0173a0fcbbc005FC70339855` |
+| BooztoryRaffle | `0xc94ee6bA5a38961C7B1456C015cE1D24a4A099aF` |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
 ### Base Mainnet

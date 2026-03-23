@@ -65,7 +65,7 @@ export default function FAQPage() {
               <AccordionContent className="pb-4 pt-2 px-4">
                 <div className="text-xs text-gray-700 space-y-3">
                   <p>
-                    Each 15-minute slot costs <strong>1 USDC</strong>. Submitting is a two-step on-chain flow:
+                    Each 15-minute slot costs <strong>1 $USDC</strong>. Submitting is a two-step on-chain flow:
                   </p>
                   <ul className="space-y-2 ml-4">
                     <li className="flex items-center space-x-2">
