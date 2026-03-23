@@ -332,6 +332,7 @@ function ActiveRaffleCard({
         abi: RAFFLE_ABI,
         functionName: "enterRaffle",
         args: [selectedId, BigInt(amount)],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setTicketInput("")
@@ -360,6 +361,7 @@ function ActiveRaffleCard({
         abi: RAFFLE_ABI,
         functionName: "triggerDraw",
         args: [selectedId],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -387,6 +389,7 @@ function ActiveRaffleCard({
         abi: RAFFLE_ABI,
         functionName: "resetDraw",
         args: [selectedId],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -408,6 +411,7 @@ function ActiveRaffleCard({
         abi: RAFFLE_ABI,
         functionName: "cancelRaffle",
         args: [selectedId],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -1089,6 +1093,7 @@ export default function RewardPage() {
         abi: BOOZTORY_ABI,
         functionName: "convertToTickets",
         args: [BigInt(amount)],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setConvertAmount("")
@@ -1114,6 +1119,7 @@ export default function RewardPage() {
         abi: RAFFLE_ABI,
         functionName: "setDefaultDrawThreshold",
         args: [BigInt(val)],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setThresholdInput("")
@@ -1138,6 +1144,7 @@ export default function RewardPage() {
         abi: RAFFLE_ABI,
         functionName: "setDefaultMinUniqueEntrants",
         args: [BigInt(val)],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setMinUniqueInput("")
@@ -1169,6 +1176,7 @@ export default function RewardPage() {
         abi: RAFFLE_ABI,
         functionName: "setRaffleThresholds",
         args: [BigInt(raffleId), t, u],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setRtRaffleIdInput("")
@@ -1193,6 +1201,7 @@ export default function RewardPage() {
         abi: RAFFLE_ABI,
         functionName: "withdraw",
         args: [USDC_ADDRESS],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffleUsdc()
@@ -1221,6 +1230,7 @@ export default function RewardPage() {
         abi: RAFFLE_ABI,
         functionName: "setPriceTier",
         args: [durationSeconds, minPrizeBn, feeBn],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setPtHours("")
@@ -1249,6 +1259,7 @@ export default function RewardPage() {
         abi: RAFFLE_ABI,
         functionName: "setPriceTier",
         args: [BigInt(seconds), 0n, 0n],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchTiers()
@@ -1298,6 +1309,7 @@ export default function RewardPage() {
           abi: RAFFLE_ABI,
           functionName: "createRaffle",
           args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)],
+          chainId: APP_CHAIN.id,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
       } else if (isUsdc) {
@@ -1307,6 +1319,7 @@ export default function RewardPage() {
           abi: ERC20_ABI,
           functionName: "approve",
           args: [RAFFLE_ADDRESS, totalPrize],
+          chainId: APP_CHAIN.id,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
 
@@ -1315,6 +1328,7 @@ export default function RewardPage() {
           abi: RAFFLE_ABI,
           functionName: "createRaffle",
           args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)],
+          chainId: APP_CHAIN.id,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
 
@@ -1323,6 +1337,7 @@ export default function RewardPage() {
           abi: RAFFLE_ABI,
           functionName: "depositPrize",
           args: [USDC_ADDRESS, totalPrize],
+          chainId: APP_CHAIN.id,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: depositTx })
       } else {
@@ -1332,6 +1347,7 @@ export default function RewardPage() {
           abi: RAFFLE_ABI,
           functionName: "createRaffle",
           args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)],
+          chainId: APP_CHAIN.id,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
       }

@@ -431,7 +431,7 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
       } else if (ad.adType === "embed" && ad.embedUrl) {
         const ct = urlToContentType(ad.embedUrl)
         if (!ct || ct === "twitter") {
-          vw = Math.min(availW, 550); vh = availH
+          vw = Math.min(availW, 360); vh = availH
         } else if (ct === "spotify") {
           vw = Math.min(availW, 400); vh = Math.min(availH, 352)
         } else {
@@ -627,7 +627,7 @@ export function SponsorAdFloatingBar() {
       } else if (ad.adType === "embed" && ad.embedUrl) {
         const ct = urlToContentType(ad.embedUrl)
         if (!ct || ct === "twitter") {
-          vw = Math.min(availW, 550); vh = availH
+          vw = Math.min(availW, 360); vh = availH
         } else if (ct === "spotify") {
           vw = Math.min(availW, 400); vh = Math.min(availH, 352)
         } else {
@@ -655,6 +655,8 @@ export function SponsorAdFloatingBar() {
   if (!ad) return null
 
   const linkEntries = Object.entries(ad.links).filter(([, v]) => v)
+  const isTwitterEmbed = ad.adType === "embed" && !!ad.embedUrl && urlToContentType(ad.embedUrl) === "twitter"
+  const panelBg = isTwitterEmbed ? "bg-white" : "bg-black"
 
   return (
     <>
@@ -662,18 +664,20 @@ export function SponsorAdFloatingBar() {
       <div className="fixed top-12 left-0 right-0 z-40 bg-gradient-to-r from-sky-200 via-blue-100 to-sky-200 px-4 py-1.5">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex items-center justify-between w-full max-w-lg mx-auto text-[11px] group"
+          className="flex items-center justify-center w-full text-[11px] group"
         >
-          <LiveBadge />
-          <span className="flex items-center gap-1 flex-shrink-0">
-            <span className="text-sky-600">Ads by</span>
-            <span className="text-sky-800 group-hover:text-sky-900 transition-colors font-semibold">{ad.sponsorName}</span>
+          <span className="flex items-center gap-1.5">
+            <LiveBadge />
+            <span className="flex items-center gap-1 flex-shrink-0">
+              <span className="text-sky-600">Ads by</span>
+              <span className="text-sky-800 group-hover:text-sky-900 transition-colors font-semibold">{ad.sponsorName}</span>
+            </span>
+            {ad.tagline && (
+              <span className="text-sky-500 italic truncate hidden sm:inline">· {ad.tagline}</span>
+            )}
+            <span className="text-sky-600 font-mono tabular-nums flex-shrink-0">{countdown}</span>
+            <HiMiniArrowRight className="text-sky-400 group-hover:text-sky-600 transition-colors flex-shrink-0 w-3.5 h-3.5" />
           </span>
-          {ad.tagline && (
-            <span className="text-sky-500 italic truncate hidden sm:inline">· {ad.tagline}</span>
-          )}
-          <span className="text-sky-600 font-mono tabular-nums flex-shrink-0">{countdown}</span>
-          <HiMiniArrowRight className="text-sky-400 group-hover:text-sky-600 transition-colors flex-shrink-0 w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -691,22 +695,22 @@ export function SponsorAdFloatingBar() {
             {/* Mobile popup: top bar + content + bottom social icons */}
             <div className="xl:hidden flex flex-col pointer-events-auto">
               <div
-                className="flex flex-col bg-black rounded-xl shadow-xl overflow-hidden"
+                className={cn("flex flex-col rounded-xl shadow-xl overflow-hidden", panelBg)}
                 style={{ width: videoW }}
               >
                 {/* Top bar: Live + name + countdown */}
-                <div className="flex items-center justify-between px-3 py-2 bg-white/5 flex-shrink-0">
+                <div className={cn("flex items-center justify-between px-3 py-2 flex-shrink-0", isTwitterEmbed ? "bg-black/5 border-b border-gray-100" : "bg-white/5")}>
                   <div className="flex items-center gap-2 min-w-0">
                     <LiveBadge />
                     {ad.sponsorName && (
                       <span className="flex items-center gap-1 min-w-0">
-                        <span className="text-[9px] text-white/60">Ads by</span>
-                        <span className="text-[10px] text-white font-semibold truncate">{ad.sponsorName}</span>
+                        <span className={cn("text-[9px]", isTwitterEmbed ? "text-gray-400" : "text-white/60")}>Ads by</span>
+                        <span className={cn("text-[10px] font-semibold truncate", isTwitterEmbed ? "text-gray-700" : "text-white")}>{ad.sponsorName}</span>
                       </span>
                     )}
                   </div>
                   {countdown && (
-                    <span className="text-[10px] font-mono text-white/70 tabular-nums whitespace-nowrap flex-shrink-0">{countdown}</span>
+                    <span className={cn("text-[10px] font-mono tabular-nums whitespace-nowrap flex-shrink-0", isTwitterEmbed ? "text-gray-500" : "text-white/70")}>{countdown}</span>
                   )}
                 </div>
 
@@ -715,9 +719,9 @@ export function SponsorAdFloatingBar() {
                   <AdContent ad={ad} maxBodyH={videoH} />
                 </div>
 
-                {/* Bottom: social icons, no background, white */}
+                {/* Bottom: social icons, no background */}
                 {linkEntries.length > 0 && (
-                  <div className="flex items-center justify-center gap-5 py-2.5 bg-white/5 flex-shrink-0">
+                  <div className={cn("flex items-center justify-center gap-5 py-2.5 flex-shrink-0", isTwitterEmbed ? "bg-black/5 border-t border-gray-100" : "bg-white/5")}>
                     {linkEntries.map(([key, href]) => (
                       <a
                         key={key}
@@ -733,7 +737,7 @@ export function SponsorAdFloatingBar() {
                           alt={key}
                           width={14}
                           height={14}
-                          style={{ filter: "brightness(0) invert(1)" }}
+                          style={isTwitterEmbed ? undefined : { filter: "brightness(0) invert(1)" }}
                         />
                       </a>
                     ))}
@@ -745,7 +749,7 @@ export function SponsorAdFloatingBar() {
             {/* Desktop popup: panel + right column */}
             <div className="hidden xl:flex items-start gap-3 pointer-events-auto">
               <div
-                className="flex flex-col bg-black rounded-xl shadow-xl overflow-hidden"
+                className={cn("flex flex-col rounded-xl shadow-xl overflow-hidden", panelBg)}
                 style={{ width: videoW }}
               >
                 <div className="overflow-hidden">
