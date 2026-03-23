@@ -20,7 +20,7 @@ export default function Loading() {
 
           {/* FAQ Accordion Skeletons */}
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-gray-0 rounded-lg border border-gray-300 shadow-custom-sm">
+            <div key={i} className="bg-gray-0 rounded-lg border border-gray-300 ">
               <div className="py-4 px-4">
                 <div className="flex items-center space-x-3">
                   <Skeleton className="h-6 w-6 bg-gray-100" />

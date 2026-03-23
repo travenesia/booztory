@@ -16,7 +16,7 @@ const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "Home", href: "/" },
   { name: "Upcoming", href: "/upcoming" },
   { name: "History", href: "/history" },
-  { name: "Reward", href: "/reward", badge: true },
+  { name: "Reward", href: "/reward" },
   { name: "Sponsor", href: "/sponsor" },
   { name: "FAQ", href: "/faq" },
 ]
