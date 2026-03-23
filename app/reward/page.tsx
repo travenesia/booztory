@@ -226,34 +226,6 @@ function ActiveRaffleCard({
     return () => { cancelled = true }
   }, [drawBlock, publicClient, selectedId])
 
-  // FIX (Issue 4): Fetch DrawRequested event to get the Chainlink VRF requestId.
-  // DrawRequested is emitted when owner calls requestDraw(); Chainlink VRF fulfills in 1-3 blocks.
-  // So DrawRequested is always within a small window before drawBlock.
-  // Scan drawBlock-2000 to drawBlock — a single getLogs call instead of a 500-chunk loop.
-  const [vrfRequestId, setVrfRequestId] = useState<bigint | undefined>()
-  useEffect(() => {
-    setVrfRequestId(undefined)
-    if (!publicClient || !drawBlock) return
-    let cancelled = false
-    async function fetchRequestId() {
-      const to   = BigInt(drawBlock)
-      const from = to - 2000n > RAFFLE_DEPLOY_BLOCK ? to - 2000n : RAFFLE_DEPLOY_BLOCK
-      try {
-        const logs = await publicClient!.getLogs({
-          address: RAFFLE_ADDRESS as `0x${string}`,
-          event: parseAbiItem("event DrawRequested(uint256 indexed raffleId, uint256 requestId)"),
-          args: { raffleId: selectedId },
-          fromBlock: from,
-          toBlock: to,
-        })
-        if (logs.length > 0 && !cancelled) {
-          setVrfRequestId((logs[0].args as { requestId: bigint }).requestId)
-        }
-      } catch { /* ignore RPC errors — VRF link just won't show */ }
-    }
-    fetchRequestId()
-    return () => { cancelled = true }
-  }, [drawBlock, publicClient, selectedId])
 
   // Live countdown — re-renders every second
   const [nowTs, setNowTs] = useState(Date.now() / 1000)
@@ -292,11 +264,7 @@ function ActiveRaffleCard({
     (prizeTokens as string[])[0]?.toLowerCase() === boozTokenAddr.toLowerCase()
   const prizeDecimals = isBoozPrize ? 18 : 6
 
-  // FIX (Issue 4): VRF proof URL — constructed from requestId fetched via DrawRequested event.
-  // TODO: CHAIN_ID is derived from APP_CHAIN.id at runtime; no hardcoding needed.
-  const vrfUrl = vrfRequestId !== undefined
-    ? `https://vrf.chain.link/${APP_CHAIN.id}/${vrfRequestId}`
-    : undefined
+
 
   // prizeAmounts is [tokenIndex][winnerIndex] — take token 0's per-winner amounts
   const prizeList = Array.from(
@@ -766,17 +734,6 @@ function ActiveRaffleCard({
                     )}>
                       {isBoozPrize ? `${amtFormatted} $BOOZ` : `$${amtFormatted} USDC`}
                     </span>
-                  )}
-                  {/* VRF proof link — only shown once vrfRequestId is resolved from DrawRequested event */}
-                  {vrfUrl && (
-                    <a
-                      href={vrfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-indigo-400 hover:text-indigo-600 whitespace-nowrap"
-                    >
-                      VRF proof ↗
-                    </a>
                   )}
                 </div>
               </div>
