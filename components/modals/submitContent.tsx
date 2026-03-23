@@ -726,30 +726,13 @@ export function ContentSubmissionDrawer() {
         {/* Content area */}
         <div className="px-4 space-y-4 overflow-y-auto flex-1 min-h-0">
 
-          {/* Mode toggle */}
-          <div className="flex rounded-[5px] border border-gray-200 overflow-hidden text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => setInputMode("url")}
-              disabled={isAnyOperationInProgress}
-              className={cn("flex-1 py-1.5 transition-colors", inputMode === "url" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50")}
-            >
-              URL
-            </button>
-            <button
-              type="button"
-              onClick={() => setInputMode("text")}
-              disabled={isAnyOperationInProgress}
-              className={cn("flex-1 py-1.5 transition-colors", inputMode === "text" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50")}
-            >
-              Text
-            </button>
-          </div>
-
           {inputMode === "text" ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-gray-900 font-medium text-xs">Your Message</label>
+                <div className="flex items-center text-xs font-medium bg-gray-100 rounded-md p-0.5">
+                  <button type="button" onClick={() => setInputMode("url")} disabled={isAnyOperationInProgress} className="px-2.5 py-1 rounded-[5px] text-gray-400 hover:text-gray-600 transition-colors">Content URL</button>
+                  <span className="px-2.5 py-1 rounded-[5px] bg-white text-gray-900 shadow-sm">Text</span>
+                </div>
                 <span className={cn("text-xs", textContent.length > 200 ? "text-red-500" : "text-gray-400")}>
                   {textContent.length}/200
                 </span>
@@ -796,9 +779,10 @@ export function ContentSubmissionDrawer() {
           <>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label htmlFor="content-url" className="text-gray-900 font-medium text-xs">
-                Content URL
-              </label>
+              <div className="flex items-center text-xs font-medium bg-gray-100 rounded-md p-0.5">
+                <span className="px-2.5 py-1 rounded-[5px] bg-white text-gray-900 shadow-sm">Content URL</span>
+                <button type="button" onClick={() => setInputMode("text")} disabled={isAnyOperationInProgress} className="px-2.5 py-1 rounded-[5px] text-gray-400 hover:text-gray-600 transition-colors">Text</button>
+              </div>
               {contentType ? (
                 <div className="flex-shrink-0">{renderPlatformIcon()}</div>
               ) : (
@@ -885,7 +869,16 @@ export function ContentSubmissionDrawer() {
         {/* Payment method selector — pinned above button, only when authenticated + token enabled */}
         {session?.user?.id && tokenEnabled && (
           <div className="flex-shrink-0 px-4 pt-3 pb-0 bg-white space-y-2">
-            <label className="text-gray-900 font-medium text-xs">Payment Method</label>
+            <div className="flex items-center justify-between">
+              <label className="text-gray-900 font-medium text-xs">Payment Method</label>
+              {(paymentMethod === "discount" || paymentMethod === "free") && (
+                <span className="flex items-center gap-1 text-xs text-gray-500">
+                  Balance: <span className="font-semibold text-gray-800">{boozFormatted}</span>
+                  <HiBolt className="text-yellow-500" size={11} />
+                  <span>$BOOZ</span>
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {/* Standard */}
               <button
@@ -944,13 +937,6 @@ export function ContentSubmissionDrawer() {
               </button>
             </div>
 
-            {/* BOOZ balance hint when a burn option is selected */}
-            {paymentMethod !== "standard" && (
-              <div className="flex items-center gap-1.5 pb-1">
-                <HiBolt className="text-yellow-500" size={11} />
-                <span className="text-xs text-gray-500">Balance: {boozFormatted} $BOOZ</span>
-              </div>
-            )}
           </div>
         )}
 

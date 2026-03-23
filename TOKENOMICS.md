@@ -1,6 +1,6 @@
 # Booztory — Tokenomics & Roadmap
 
-Last updated: 2026-03-25
+Last updated: 2026-03-26
 
 ---
 
@@ -322,6 +322,9 @@ Confirmed on current Base Sepolia deploy:
 | ActiveRaffleCard auto-syncs to newest raffle on creation | ✅ Done |
 | USDC available balance check (total minus committed active raffles) | ✅ Done |
 | Sponsor dropdown excludes queued/matched sponsors | ✅ Done |
+| Prize amount `my-6` margin; BOOZ shown without ticker symbol | ✅ Done |
+| Convert section always visible; disabled state when 0 points | ✅ Done |
+| Winner table: "Winner" header; Requirements "wallets ✓" | ✅ Done |
 
 ### UI / Frontend — `/sponsor` page
 | Feature | Status |
@@ -336,6 +339,15 @@ Confirmed on current Base Sepolia deploy:
 | Ad content fitting — ResizeObserver, pixel-exact sizing for all ratios/types | ✅ Done |
 | Mobile sidebar removed from non-homepage pages | ✅ Done |
 | Sidebar z-index — `z-30` (below wallet dropdown) | ✅ Done |
+| `chainId: APP_CHAIN.id` on all writeContractAsync calls (Farcaster chain fix) | ✅ Done |
+| Text ad body padding `px-6`, sponsor name not shown inside text panel | ✅ Done |
+| Sponsor ad backdrop opacity `bg-black/90` | ✅ Done |
+
+### UI / Frontend — Submit Content Modal
+| Feature | Status |
+|---|---|
+| BOOZ balance inline with Payment Method label (discount/free paths) | ✅ Done |
+| URL/Text inline pill switcher in label row (no separate tab bar) | ✅ Done |
 
 ### Smart Contracts
 | Contract | Status |

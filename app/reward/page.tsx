@@ -668,16 +668,13 @@ function ActiveRaffleCard({
               Drawn ✓
             </span>
           </div>
-          <p className="text-xs text-blue-500 mt-0.5">
-            {Number(totalTickets).toLocaleString()} entries · {Number(uniqueEntrants).toLocaleString()} unique minters
-          </p>
         </div>
 
         {/* Requirements met row */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-100 text-xs text-gray-500">
           <span>Requirements at draw time</span>
           <span className="text-green-600 font-semibold">
-            {Number(totalTickets).toLocaleString()} entries · {Number(uniqueEntrants).toLocaleString()} unique ✓
+            {Number(totalTickets).toLocaleString()} entries · {Number(uniqueEntrants).toLocaleString()} wallets ✓
           </span>
         </div>
 
@@ -685,7 +682,7 @@ function ActiveRaffleCard({
         <div className="bg-white">
           <div className="grid grid-cols-[2rem_1fr_auto] gap-x-3 px-4 py-2 text-xs text-gray-400 font-semibold uppercase tracking-wide border-b border-gray-100">
             <span>#</span>
-            <span>Minter</span>
+            <span>Winner</span>
             <span>Prize</span>
           </div>
           {winners.map((addr, i) => {
@@ -1127,8 +1124,8 @@ export default function RewardPage() {
                   <span className="text-xs font-bold text-indigo-600">+5 pts</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Daily GM streak <span className="text-xs text-gray-400">(day 1–7+)</span></span>
-                  <span className="text-xs font-bold text-indigo-600">+5–50 pts</span>
+                  <span className="text-sm text-gray-600">Daily GM streak <span className="text-xs text-gray-400">(+bonus on milestones)</span></span>
+                  <span className="text-xs font-bold text-indigo-600">+1–4 pts</span>
                 </div>
               </div>
               <p className="text-xs text-gray-400 border-t border-gray-200 pt-3">
