@@ -238,6 +238,12 @@ function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; f
       return { width: `${Math.max(100, cw)}px`, height: `${Math.max(60, ch)}px`, margin: "0 auto" }
     }
 
+    if (ad.adType === "text") {
+      let cw = w, ch = Math.round(cw * 9 / 16)
+      if (ch > h) { ch = h; cw = Math.round(ch * 16 / 9) }
+      return { width: `${Math.max(200, cw)}px`, height: `${Math.max(100, ch)}px`, margin: "0 auto" }
+    }
+
     if (ad.adType === "image") {
       if (ad.ratio === "1:1") {
         const size = Math.max(60, Math.min(w, h))
@@ -286,14 +292,9 @@ function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; f
           )
         })()}
 
-        {ad.adType === "text" && ad.text && (
-          <div className="text-center px-6 py-4">
-            {ad.sponsorName && (
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-                {ad.sponsorName}
-              </p>
-            )}
-            <p className="text-sm font-semibold text-gray-800 leading-snug">
+        {ad.adType === "text" && ad.text && fittedStyle && (
+          <div style={fittedStyle} className="flex items-center justify-center text-center px-6">
+            <p className="text-base font-semibold text-white leading-snug">
               {renderFormattedText(ad.text)}
             </p>
           </div>
@@ -341,13 +342,8 @@ function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; f
       })()}
 
       {ad.adType === "text" && ad.text && (
-        <div className="text-center py-3 px-2">
-          {ad.sponsorName && (
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-              {ad.sponsorName}
-            </p>
-          )}
-          <p className="text-sm font-semibold text-gray-800 leading-snug">
+        <div className="w-full flex items-center justify-center text-center px-6 py-6" style={{ aspectRatio: "16/9" }}>
+          <p className="text-sm font-semibold text-white leading-snug">
             {renderFormattedText(ad.text)}
           </p>
         </div>
@@ -448,8 +444,8 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
           }
         }
       } else {
-        // text ad
-        vw = Math.min(availW, 480); vh = Math.min(availH, 240)
+        // text ad — fixed 560×315
+        vw = Math.min(availW, 560); vh = 315
       }
 
       setVideoW(Math.max(200, vw))
@@ -489,7 +485,7 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-50 bg-black/80"
+            className="fixed inset-0 z-50 bg-black/90"
             onClick={() => setOpen(false)}
             aria-hidden
           />
@@ -644,7 +640,9 @@ export function SponsorAdFloatingBar() {
           }
         }
       } else {
-        vw = Math.min(availW, 480); vh = Math.min(availH, 240)
+        // text ad — 16:9
+        vw = Math.min(availW, 480); vh = Math.round(vw * 9 / 16)
+        if (vh > availH) { vh = availH; vw = Math.round(vh * 16 / 9) }
       }
 
       setVideoW(Math.max(200, vw))
@@ -688,7 +686,7 @@ export function SponsorAdFloatingBar() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-50 bg-black/80"
+            className="fixed inset-0 z-50 bg-black/90"
             onClick={() => setOpen(false)}
             aria-hidden
           />
@@ -826,7 +824,7 @@ export function SponsorAdSidebar() {
     return () => window.removeEventListener("resize", compute)
   }, [])
 
-  if (!ad || pathname === "/") return null
+  if (!ad || pathname === "/" || pathname.startsWith("/admin")) return null
 
 
   const linkEntries = Object.entries(ad.links).filter(([, v]) => v)

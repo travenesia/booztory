@@ -1,10 +1,84 @@
-# Booztory Raffle & Tokenomics Design
+# Booztory — Tokenomics & Roadmap
 
-Last updated: 2026-03-21
+Last updated: 2026-03-25
 
 ---
 
-## Points System
+## 1. BOOZ Token (BooztoryToken.sol)
+
+### Token Model
+- **Inflationary + Burns** — supply grows with real engagement, burns with utility spend
+- Tokens mint from paid platform actions only — no free claim, no sybil farming
+- No hard cap in Phase 1 — a 250M total-minted cap will be added before DEX listing (see §12)
+- **Phase 1: Soulbound** — no trading, no farming incentive; mint and burn always allowed
+- **Phase 2:** `setSoulbound(false)` → transfers enabled; seed Uniswap v3 BOOZ/USDC pool from one-time `mintTreasury()`
+
+### Reward Structure
+| Action | Reward |
+|---|---|
+| Mint a slot (1 USDC) | 1,000 BOOZ |
+| GM streak Day 1 | 5 BOOZ |
+| GM streak Day 2 | 10 BOOZ |
+| GM streak Day 3 | 15 BOOZ |
+| GM streak Day 4 | 20 BOOZ |
+| GM streak Day 5 | 25 BOOZ |
+| GM streak Day 6 | 30 BOOZ |
+| GM streak Day 7 | 35 BOOZ |
+| GM streak Days 8–90 (flat) | 50 BOOZ/day |
+| Milestone Day 7 — Warrior | +50 BOOZ |
+| Milestone Day 14 — Elite | +250 BOOZ |
+| Milestone Day 30 — Epic | +350 BOOZ |
+| Milestone Day 60 — Legend | +500 BOOZ |
+| Milestone Day 90 — Mythic | +4,560 BOOZ |
+
+Full 90-day GM journey = ~10,000 BOOZ = exactly 1 free slot.
+
+### Burn Sinks
+| Spend | Cost | Status |
+|---|---|---|
+| Free slot (no USDC) | Burn 10,000 BOOZ | ✅ Implemented |
+| Discounted slot (0.9 USDC) | Burn 1,000 BOOZ | ✅ Implemented |
+| Boost slot visibility/position | TBD | Planned |
+| Leaderboard badge (monthly) | TBD | Planned |
+| Governance vote | Burn or stake | Planned |
+
+Net BOOZ per discount mint: 1,000 earned − 1,000 burned = 0 (neutral, no farming loop).
+Free slot does NOT earn BOOZ — burn path is a dead end.
+
+### GM Streak (on-chain)
+- `claimDailyGM()` — one claim per UTC day via `block.timestamp / 1 days`
+- Missing a day resets streak to day 1
+- Highest streak tracked separately — never resets
+- Milestone bonuses at days 7, 14, 30, 60, 90 — bitmask-tracked, one-time per cycle
+- Journey completes at day 90 — no further claims possible
+
+### Treasury Mint
+- `mintTreasury(address, uint256)` — owner-only, **one-time** call
+- Use case: mint BOOZ to seed Uniswap v3 BOOZ/USDC pool before Phase 2
+- After first call, `treasuryMinted = true` — second call reverts with `TreasuryAlreadyMinted`
+
+### Contract Architecture
+- `mintReward(address, uint256)` — called by Booztory after paid mint / GM claim
+- `burnFrom(address, uint256)` — called by Booztory for free slot / discount redemption
+- `burn(uint256)` — any holder can voluntarily burn own tokens
+- `setSoulbound(bool)` — owner toggles Phase 1 → Phase 2
+- `crosschainMint` / `crosschainBurn` — authorized to Superchain bridge (`0x4200...0028`)
+
+### Mint Paths Summary
+| Function | Payment | BOOZ Earned | BOOZ Burned | Raffle Entry |
+|---|---|---|---|---|
+| `mintSlot()` | 1 USDC | 1,000 | 0 | ✅ |
+| `mintSlotWithDiscount()` | 0.9 USDC | 1,000 | 1,000 | ✅ |
+| `mintSlotWithTokens()` | None | 0 | 10,000 | ✗ |
+
+### Admin Setters
+- `setSlotMintReward`, `setFreeSlotCost`, `setDiscountBurnCost`, `setDiscountAmount`
+- `setGMDayRewards(uint256[7])`, `setGMFlatDailyReward`, `setGMMilestoneRewards(uint256[5])`
+- `setRewardToken(address)` — enable/disable rewards (address(0) = disabled)
+
+---
+
+## 2. Points System
 
 Users earn points through platform activity. Points are tracked on-chain per wallet.
 
@@ -20,17 +94,15 @@ Users earn points through platform activity. Points are tracked on-chain per wal
 | GM Day 60 bonus | +2 pts | One-time per cycle |
 | GM Day 90 bonus | +3 pts | One-time per cycle, then veteran mode |
 | GM veteran (day 91+) | 1 pt/day + 3 pts every 30 days | Continues indefinitely |
-| Donate (any amount) | 5 pts + 1,000 BOOZ | Once per 24h, donor != creator. Extra donations beyond first earn no additional BOOZ or points. |
+| Donate (any amount) | 5 pts + 1,000 BOOZ | Once per 24h, donor ≠ creator |
 
 **Streak rules:**
 - Miss one GM day → streak counter resets to day 1
-- Highest streak day is tracked separately and displayed in UI — never resets
-- Highest streak updates whenever current streak surpasses previous best (e.g. reach day 180, miss → highest = 180; reach day 185 next time → highest updates to 185)
-- Bonus milestones are based on current streak day, not highest streak
-- Donate points only apply when donating to another wallet's slot (tokenId owner ≠ donor)
+- Highest streak day tracked separately — never resets
+- Bonus milestones based on current streak day, not highest streak
+- Donate points only when donating to another wallet's slot (tokenId owner ≠ donor)
 
 ### 30-Day Earning Simulation
-
 | User type | Points | Tickets | Cost |
 |---|---|---|---|
 | GM only (perfect streak) | ~34 pts | 6 tickets | Free |
@@ -40,116 +112,117 @@ Users earn points through platform activity. Points are tracked on-chain per wal
 
 ---
 
-## Raffle Ticket System
+## 3. Raffle System
 
+### Ticket Rules
 - **5 points = 1 raffle ticket** (burn on conversion)
-- Tickets are burned on raffle entry, win or lose
-- More tickets entered in a raffle = higher weight (proportional chance)
+- Tickets burned on raffle entry, win or lose
+- More tickets entered = higher weight (proportional chance)
 - Users decide how many tickets to commit per raffle
 - Unused tickets carry over to any future raffle
 
----
-
-## Raffle Configuration (Admin)
-
+### Raffle Configuration (Admin)
 Owner creates and configures each raffle independently. Multiple raffles can run concurrently.
 
-### Prize Setup
-- One or more ERC-20 token types per raffle (paste contract address)
-- Default: BOOZ → fallback: USDC
-- Sponsor ERC-20 supported — sponsor deposits tokens to raffle contract before draw
+**Prize Setup:**
+- One or more ERC-20 token types per raffle (USDC, BOOZ, or sponsor ERC-20)
 - If draw threshold not met → draw cancelled, sponsor tokens refunded
 
-### Winner Distribution
+**Winner Distribution:**
 - Owner sets winner count and individual prize amounts per token
-- Example (100 USDC, 5 winners): `20, 20, 20, 20, 20`
+- Example (100 USDC, 5 equal winners): `20, 20, 20, 20, 20`
 - Example (100 USDC + 100,000 BOOZ, 5 winners):
   - USDC: `50, 30, 20, 0, 0`
   - BOOZ: `40000, 30000, 15000, 10000, 5000`
-- Sum of prize arrays must equal total deposited amount
 
-### Duration
-- Owner sets duration: 1 day minimum, 90 days maximum
-- Timer starts when owner hits create/start
-- Raffles are numbered sequentially: Raffle #1, #2, #3...
-- New raffle can start before previous one ends (concurrent)
+**Duration:** 1 day minimum, 90 days maximum. Raffles numbered sequentially.
 
----
+### Default Prize Structure (USDC, no sponsor)
+| Place | Prize |
+|---|---|
+| 1st | $25 USDC |
+| 2nd | $20 USDC |
+| 3rd | $15 USDC |
+| 4th | $10 USDC |
+| 5th–10th | $5 USDC each |
+| **Total** | **$100 USDC** |
 
-## Prize Structure
+Break-even at 100 mints/week. At 672 mints/week: ~85% margin after payout.
 
+### Default BOOZ Raffle (No Sponsor)
+- Total prize pool: **100,000 BOOZ**
+- Winner count: configurable (1, 5, or 10 winners)
+- Raffle contract mints BOOZ directly to winners (authorized minter)
+
+### Prize Conditions
 | Condition | Prize Token |
 |---|---|
 | Sponsor confirmed | Sponsor's ERC-20 |
 | No sponsor | BOOZ (default) |
 | No BOOZ funded | USDC fallback |
 
+### Weekly Draw Mechanics
+- Owner-triggered manually; USDC funded to contract before draw
+- Threshold: draw only runs if ≥ 100 entries (configurable via `setDefaultDrawThreshold`)
+- Minimum unique entrants: ≥ winner count (prevents VRF callback infinite loop)
+- If threshold not met → draw skipped, no rollover
+- **Randomness:** Chainlink VRF v2.5 — one request per draw; derive winner indices via `keccak256(seed, i)`
+- One prize per wallet — duplicate winners re-rolled via linear probe
+- `weeklyPrizes` mapping snapshots prizes at draw time — historical display stays accurate after `setPrizes()` updates
+- Emergency: `resetDraw(week)` resets a stuck VRF draw
+
+### BooztoryRaffle.sol Configurable Setters
+- `setDefaultDrawThreshold(uint256)` — minimum entries for draw
+- `setDefaultMinUniqueEntrants(uint256)` — minimum unique wallets (keep ≥ winner count)
+- `setVrfConfig(...)` — update subscription ID, key hash, gas limit, confirmations
+- `setWeekDuration(uint256)` — **testnet only**: shorten week for faster testing (default: `604800`)
+
 ---
 
-## Sponsorship Model
+## 4. NFT (ERC-721 — Booztory Spotlight)
+
+- **Name:** Booztory Spotlight · **Symbol:** BOOST
+- **Metadata:** On-chain base64 JSON — Content Type attribute only
+- **Image:** Per content type, set via `setContentTypeImage(contentType, imageUrl)`
+- `external_url` points to booztory.com
+- `tokenURI()` returns on-chain base64-encoded JSON metadata
+
+---
+
+## 5. Sponsorship Model
 
 ### Pricing Tiers (default, owner-configurable)
-
 | Duration | Prize Pool | Platform Fee | Sponsor Pays Total |
 |---|---|---|---|
 | 7 days | 100 USDC | 100 USDC | 200 USDC |
 | 14 days | 200 USDC | 200 USDC | 400 USDC |
 | 30 days | 400 USDC | 300 USDC | 700 USDC |
 
-- Prize token: **USDC only** (default) — owner can whitelist other ERC-20s later
-- Minimum amounts and fee rates are owner-configurable
-
 ### Application Flow
+1. Sponsor submits form on `/sponsor` → USDC `approve` + `submitApplication()` sends (prize + fee) to contract
+2. Status: **Pending** → owner reviews
+3. Owner accepts → fee to owner, prize locked for raffle — owner creates raffle manually
+4. Owner rejects → full refund (prize + fee) to sponsor
+5. No response in 30 days → sponsor calls `claimRefund(applicationId)` — trustless auto-refund
 
-1. Sponsor submits form on `/sponsor` page → USDC `approve` + `submitApplication()` sends (prize + fee) to raffle contract
-2. Application status: **Pending** (visible to submitter + admin only, filtered by wallet address)
-3. Owner reviews and either:
-   - **Accepts** → fee transferred to owner, prize locked for raffle — owner then creates raffle manually
-   - **Rejects** → full refund (prize + fee) to sponsor
-   - **No response in 3 days** → sponsor can call `claimRefund(applicationId)` — trustless auto-refund, no cron needed
-
-### Ad Content (submitted with application)
-
-- **Sponsor Name** — text field
-- **Ad Type** — radio: Image / Embed Content / Text
-  - Image: paste URL (jpeg, jpg, png, webp) + select ratio (1:1, 16:9, 9:16) + preview
-  - Embed: auto-detect platform (YouTube, TikTok, etc.) — reuses existing `contentEmbed.tsx`
-  - Text: max **200 characters** (including spaces)
-- **Sponsor Link** — one URL (Discord, X, Telegram, or Website)
-
-### Ad Data Storage
-
-All ad content emitted as contract events on submission:
-`SponsorApplicationSubmitted(id, sponsor, adType, adContent, adLink, duration, timestamp)`
-
-No database needed — frontend reads events to show application status. Admin reads events to review.
-
-### Ad Activation (on acceptance)
-
-Owner signs a message off-chain:
-```json
-{
-  "applicationId": 1,
-  "sponsorAddress": "0x...",
-  "adType": "image",
-  "adContent": "https://...",
-  "adLink": "https://...",
-  "displayDays": 7,
-  "startTimestamp": 1234567890
-}
-```
-Frontend verifies signature = owner address → displays ad. No on-chain transaction needed.
+### Ad Content
+- **Ad Type:** Image (URL + ratio) / Embed (YouTube, TikTok, etc.) / Text (max 200 chars)
+- **Sponsor Links:** website, X, Discord, Telegram
+- All ad content emitted as events on submission — no database needed
+- `acceptedAt` field set on acceptance — used by frontend for ad countdown
+- `nextAdStartTime` on contract — new acceptances chain automatically, no overlap
+- First-submitted-first-served enforced on-chain (`EarlierApplicationPending` revert)
 
 ### Ad Display
-
-- **All devices (homepage):** floating toggle above featured content — visitor switches to show/hide sponsor ad
-- **Desktop (other pages):** sidebar panels left/right alongside content
-- Toggle is non-intrusive — users can dismiss
-- Display duration: 7, 14, or 30 days (matches raffle duration)
+- **Homepage (all devices):** floating toggle bar above featured content
+- **Desktop (other pages):** sidebar panel (`w-[315px]`, `z-30`, auto-shown)
+- Mobile: sidebar hidden on non-homepage pages
+- Display duration matches raffle duration (7, 14, or 30 days)
+- Only active (started) sponsors show — queued sponsors invisible until their slot begins
 
 ---
 
-## Anti-Gambling / Legal Design
+## 6. Anti-Gambling / Legal Design
 
 | Requirement | How it's met |
 |---|---|
@@ -157,229 +230,233 @@ Frontend verifies signature = owner address → displays ad. No on-chain transac
 | Free path is meaningful | ~6 tickets per 30-day raffle |
 | Paid paths give better odds, not exclusive access | ✓ |
 | No direct money → prize conversion | Points intermediary breaks the chain |
-| Whale resistance | Donate capped at 5 pts + 1,000 BOOZ per 24h regardless of amount donated |
+| Whale resistance | Donate capped at 5 pts + 1,000 BOOZ per 24h regardless of amount |
 | Self-donate farming blocked | Points only awarded when donating to another wallet's tokenId |
 | Framing | Loyalty rewards program, not a lottery |
 
-> Legal review recommended before mainnet launch — jurisdiction laws vary (Germany, Belgium, some US states have stricter rules).
+> Legal review recommended before mainnet launch — jurisdiction laws vary.
 
 ---
 
-## Contract Changes Required
+## 7. Chainlink VRF Setup
 
-### BooztoryToken.sol
-- Add raffle contract as authorized minter alongside Booztory.sol
-- Allows raffle to mint fresh BOOZ directly to winners (no pre-funding needed)
+### Step 1 — Create a subscription
+1. Go to https://vrf.chain.link
+2. Select network (Base Sepolia for testing, Base for mainnet)
+3. Click "Create Subscription" → note your **Subscription ID**
 
-### Booztory.sol
-- Add `points` mapping: `mapping(address => uint256) public points`
-- Add `streakDay` tracking per wallet (already partially exists via GM streak)
-- `mintSlot` / `mintSlotWithDiscount` / `mintSlotWithTokens` → award 15 pts to caller
-- `claimDailyGM` → award 1 pt + milestone bonus based on current streak day
-- Milestone bonus logic inside `claimDailyGM`:
-  - Day 7, 14 → +1 pt
-  - Day 30, 60 → +2 pts
-  - Day 91+ every 30 days → +3 pts
-- `donate()` → award 5 pts + 1,000 BOOZ to donor if `donor != slot.creator` and 24h cooldown met (any amount qualifies; extra donations same day earn nothing more)
-- Add `convertToTickets(uint256 points)` — burns points, mints raffle tickets
+### Step 2 — Fund with LINK
+- Base Sepolia: free testnet LINK from https://faucets.chain.link
+- Base Mainnet: buy LINK, bridge to Base
 
-### BooztoryRaffle.sol (full redesign)
-- Per-raffle struct: id, prizeTokens[], prizeAmounts[][], winners[], duration, startTime, status
-- Sequential raffle IDs (auto-increment)
-- Concurrent raffles supported (no dependency between raffles)
-- `enterRaffle(uint256 raffleId, uint256 ticketAmount)` — burns tickets, records weighted entry
-- Admin: `createRaffle(tokens[], amounts[][], winnerCount, duration)`
-- Admin: `depositPrize(raffleId, token, amount)` — sponsor deposits
-- Admin: `triggerDraw(raffleId)` — calls Chainlink VRF
-- Chainlink VRF callback → selects winners by weight, one prize per wallet (re-roll duplicates)
-- If threshold not met → `cancelRaffle(raffleId)` refunds sponsor tokens
-- Tickets burned on entry (win or lose)
+### Step 3 — Deploy contracts
+```bash
+VRF_SUBSCRIPTION_ID=<your_id> npx hardhat run scripts/deploy.ts --network base-sepolia
+VRF_SUBSCRIPTION_ID=<your_id> npx hardhat run scripts/deploy.ts --network base
+```
 
----
+### Step 4 — Add BooztoryRaffle as consumer
+1. vrf.chain.link → your subscription → Add Consumer
+2. Paste deployed BooztoryRaffle address → confirm
 
-## What Stays the Same
+Without this step, `requestWeeklyDraw()` reverts.
 
-- Chainlink VRF v2.5 for verifiable randomness
-- One prize per wallet — duplicates re-rolled via linear probe
-- Owner triggers draw manually
-- `raffleDrawBlock` for UI to find draw transaction hash
+### VRF Contract Addresses
+| Network | VRF Coordinator | Key Hash (30 gwei) |
+|---|---|---|
+| Base Mainnet | `0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634` | `0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71` |
+| Base Sepolia | `0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE` | `0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71` |
+
+Always verify at https://docs.chain.link/vrf/v2-5/supported-networks before deploying.
 
 ---
 
-## Default BOOZ Raffle (No Sponsor)
+## 8. Deployed Addresses
 
-- Total prize pool: **100,000 BOOZ**
-- Winner count: configurable by owner at raffle creation (1, 5, or 10 winners)
-- Prize distribution: owner sets individual amounts that sum to 100,000 BOOZ
-- Example (10 winners equal split): `10000, 10000, 10000, ..., 10000`
-- Example (5 winners weighted): `40000, 25000, 15000, 12000, 8000`
-- Raffle contract mints BOOZ directly to winners (authorized minter in BooztoryToken.sol)
+### Base Sepolia (Testnet — current)
+| Contract | Address | Status |
+|---|---|---|
+| Booztory | `0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68` | ✅ Current |
+| BooztoryToken (BOOZ) | `0x02A2830552Da5caA0173a0fcbbc005FC70339855` | ✅ Current |
+| BooztoryRaffle | `0xd7f8AC77392f6C1D21eA6B5fb57861e759e250B5` | ✅ Current |
+| USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | — |
+
+### Base Mainnet
+| Contract | Address |
+|---|---|
+| Booztory | Pending deployment |
+| BooztoryToken (BOOZ) | Pending deployment |
+| BooztoryRaffle | Pending deployment |
+| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+
+Confirmed on current Base Sepolia deploy:
+- `setAuthorizedMinter(booztory, true)` + `setAuthorizedMinter(raffle, true)` on BooztoryToken ✅
+- `setRewardToken()` and `setRaffle()` called on Booztory ✅
+- BooztoryRaffle added as Chainlink VRF consumer ✅
+- `acceptedAt` field in `SponsorApplication` struct ✅
+- ETH prize support (`receive()`, `address(0)` sentinel, ETH branch in `withdraw()`) ✅
 
 ---
 
-## Implementation Status (as of 2026-03-24)
+## 9. Implementation Status
 
 ### UI / Frontend — `/reward` page
 | Feature | Status |
 |---|---|
 | Create Raffle (owner panel) — per-winner prizes, 1d/7d/14d/30d/custom duration | ✅ Done |
-| Cancel Raffle (owner) — hidden after raffle ends or is drawn | ✅ Done |
+| Cancel Raffle (owner) | ✅ Done |
 | Trigger Draw + Reset stuck VRF | ✅ Done |
 | Draw Thresholds config (default threshold + min unique entrants) | ✅ Done |
 | Withdraw USDC from raffle contract | ✅ Done |
 | Raffle history dropdown — switch between any raffle by ID | ✅ Done |
 | Prize display — per-winner breakdown, correct decimals (USDC 6 / BOOZ 18) | ✅ Done |
-| `$BOOZ` token label on all prize displays | ✅ Done |
 | Live countdown with seconds | ✅ Done |
 | Status badges — Cancelled / Drawn ✓ / VRF pending / Awaiting draw / Ends in Xs | ✅ Done |
 | Entry blocked when raffle is cancelled, drawn, or ended | ✅ Done |
-| Max button on ticket entry input | ✅ Done |
-| Winners in separate results section below card — with Basescan VRF tx link | ✅ Done |
-| Prize table always visible — consecutive equal prizes grouped (e.g. 5–10) | ✅ Done |
-| BOOZ raffle correctly shows no sponsor label (owner-funded) | ✅ Done |
-| Sponsor dropdown excludes sponsors already matched to a live raffle | ✅ Done |
-| Sponsor dropdown excludes queued (not-yet-started) sponsors — shown only once their ad slot begins | ✅ Done |
+| Winners section with Basescan VRF tx link | ✅ Done |
+| Prize table always visible — consecutive equal prizes grouped | ✅ Done |
 | Points balance, raffle ticket conversion, raffle entry | ✅ Done |
-| RPC optimised — batch reads capped to last 5 raffles, 60s poll interval | ✅ Done |
-| USDC raffle creation balance check uses available balance (total minus committed active raffles) | ✅ Done |
-| `ActiveRaffleCard` auto-syncs to newest raffle when new one is created by owner | ✅ Done |
+| Convert Points section — inline stats (Points/Tickets/Burned) with separators | ✅ Done |
+| Sponsor info in prize pool card — stacked (label → name → social icons) | ✅ Done |
+| Prize amount enlarged (`text-4xl`) | ✅ Done |
+| ActiveRaffleCard auto-syncs to newest raffle on creation | ✅ Done |
+| USDC available balance check (total minus committed active raffles) | ✅ Done |
+| Sponsor dropdown excludes queued/matched sponsors | ✅ Done |
 
 ### UI / Frontend — `/sponsor` page
 | Feature | Status |
 |---|---|
 | Sponsor application form (name, ad type, content, link, duration) | ✅ Done |
 | USDC approve + submitApplication flow | ✅ Done |
-| Application status visible to submitter (Pending / Accepted / Rejected) | ✅ Done |
-| Owner Accept / Reject buttons (visible to owner wallet only) | ✅ Done |
+| Application status — Pending / Accepted / Rejected | ✅ Done |
+| Owner Accept / Reject buttons | ✅ Done |
+| Refund UX — Rejected: auto-refund message; Pending+30d: Claim Refund button | ✅ Done |
 | Sponsor ad display — toggle (homepage) + sidebar (desktop, other pages) | ✅ Done |
-| Active ad correctly shows current (not queued) sponsor — `useSponsorAd` guards `acceptedAt <= now` | ✅ Done |
-| Refund UX — Rejected shows info message (auto-refunded); Pending+3d shows Claim Refund | ✅ Done |
-| Sponsor ad popup modal — panel header / body / footer layout | ✅ Done |
-| Ad countdown timer — live D:HH:MM:SS format (1-second interval) | ✅ Done |
-| Ad panel footer — tagline left, social links right (all 3 display variants) | ✅ Done |
-| Ad body padding — 4px (p-1) | ✅ Done |
-| Ad content fitting — ResizeObserver width measurement, pixel-exact sizing for all ratios/types | ✅ Done |
-| Full-viewport-width desktop popup modal (48px top/bottom) | ⏳ In progress — layout refinement pending |
+| Ad countdown timer — live D:HH:MM:SS (1-second interval) | ✅ Done |
+| Ad content fitting — ResizeObserver, pixel-exact sizing for all ratios/types | ✅ Done |
+| Mobile sidebar removed from non-homepage pages | ✅ Done |
+| Sidebar z-index — `z-30` (below wallet dropdown) | ✅ Done |
 
 ### Smart Contracts
 | Contract | Status |
 |---|---|
 | `Booztory.sol` — 3 mint paths, GM streak, points, donations | Deployed on Base Sepolia ✅ |
 | `BooztoryToken.sol` (BOOZ) | Deployed on Base Sepolia ✅ |
-| `BooztoryRaffle.sol` — VRF v2.5, concurrent raffles, sponsor applications, `acceptedAt`, ETH prize support, ad queue (`nextAdStartTime`), first-submitted-first-served enforcement, 30d refund timeout | Redeployed on Base Sepolia ✅ |
-| Base Sepolia wiring (setAuthorizedMinter × 2, setRewardToken, setRaffle) | Done ✅ |
-| Add BooztoryRaffle as Chainlink VRF consumer | Done ✅ |
+| `BooztoryRaffle.sol` — VRF v2.5, concurrent raffles, sponsor applications, ETH prize support, 30d refund timeout | Deployed on Base Sepolia ✅ |
+| Base Sepolia wiring | Done ✅ |
 | Base Mainnet deployment | Pending |
 
 ---
 
-## Open Questions (finalize before mainnet)
+## 10. Build Checklist
 
-- [x] When a sponsor raffle runs alongside a default BOOZ raffle, do both show ads or only the sponsor ad? → **Only sponsor ads show. BOOZ (owner-funded) raffles have no ad placement — ad slots are paid-only.** ✅
-- [x] Can a sponsor submit multiple applications for consecutive periods? → **Yes. Accepted ads chain automatically via `nextAdStartTime`. Acceptance enforces first-submitted-first-served order on-chain — reject earlier submissions to skip the queue.** ✅
-- [x] Should cancelled raffles still appear in the raffle history dropdown, or be hidden? → **Show all raffles including cancelled ones.** ✅
+### Testnet — Immediate
+- [x] Redeploy all 3 contracts to Base Sepolia ✅
+- [x] Add BooztoryRaffle as Chainlink VRF consumer ✅
+- [ ] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet
+- [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform (youtube, tiktok, twitter, vimeo, spotify, twitch)
+- [ ] Verify all 3 contracts on Basescan
+- [ ] End-to-end QA: mint → earn BOOZ → streak → raffle draw
+
+### Mainnet Launch
+- [ ] `lib/wagmi.ts` — change `APP_CHAIN = baseSepolia` → `APP_CHAIN = base`
+- [ ] Deploy all 3 contracts to Base Mainnet
+- [ ] Add BooztoryRaffle (mainnet) as VRF consumer
+- [ ] Update `.env.local` with mainnet addresses
+- [ ] Set production `defaultDrawThreshold` + `defaultMinUniqueEntrants`
+- [ ] Fund raffle contract with USDC for first draw
+- [ ] Set up Dune analytics dashboard
+
+### Post-Launch
+- [ ] Rate limiting on API endpoints
+- [ ] Creator analytics dashboard
+- [ ] Instagram embed + custom video upload
+- [ ] BOOZ Phase 2: `setSoulbound(false)` → `mintTreasury()` → seed Uniswap v3 BOOZ/USDC pool
+- [ ] Additional BOOZ burn sinks: slot boost, leaderboard badge, governance
 
 ---
 
-## To Do — `/reward` Page
+## 11. Open Questions & Todos
 
-### Owner panel
-- [ ] Add `setRaffleThresholds(raffleId, threshold, minUnique)` UI — override thresholds on a specific raffle after creation
-- [ ] Show contract BOOZ balance (for BOOZ-prize raffles funded by sponsor deposit, if needed)
-- [ ] Consider: progress indicator during multi-step USDC raffle creation (approve → create → deposit)
+### Resolved ✅
+- Concurrent sponsor + BOOZ raffle → **only sponsor ads show; BOOZ raffles have no ad placement**
+- Consecutive sponsor applications → **chain via `nextAdStartTime`; first-submitted-first-served enforced on-chain**
+- Cancelled raffles in history → **show all raffles including cancelled**
 
-### Raffle card (`ActiveRaffleCard`)
-- [ ] **Fix prize display — wrong amount & ticker on BOOZ raffles**: `isBoozPrize` was comparing `prizeTokens[0]` against env-derived `TOKEN_ADDRESS`. If they diverge (env var missing/stale at raffle creation), BOOZ amounts show with 6-decimal USDC formatting (e.g. 10,000 BOOZ → `$10,000,000,000,000,000.00 USDC`). Fix: read `boozToken` directly from the raffle contract state for the comparison. Changes staged in `app/reward/page.tsx` (not yet tested).
+### `/reward` page — Pending
+- [ ] `setRaffleThresholds(raffleId, threshold, minUnique)` UI — override on a specific raffle post-creation
 - [ ] Show raffle start date alongside end date
-- [ ] On drawn raffle: show winner ENS/Basename instead of raw address (currently truncated hex)
-- [ ] Ticket entry: validate input doesn't exceed user's available ticket balance before submitting
+- [ ] Winner ENS/Basename display (currently truncated hex)
+- [ ] Ticket entry: validate input doesn't exceed user's available balance
 - [ ] Decide: should cancelled raffles show the prize table or hide it?
+- [ ] Test full lifecycle: create → enter → draw → winners displayed
+- [ ] Test USDC raffle (3-tx: approve → createRaffle → depositPrize)
+- [ ] Test BOOZ raffle (1-tx: createRaffle only, minted at draw)
 
-### General
-- [ ] Test full raffle lifecycle on Base Sepolia: create → enter → draw → winners displayed
-- [ ] Test USDC raffle (3-tx flow: approve → createRaffle → depositPrize)
-- [ ] Test BOOZ raffle (1-tx flow: createRaffle only, minted at draw)
-- [ ] Set `defaultDrawThreshold` and `defaultMinUniqueEntrants` to low values for testnet (e.g. 1 / 1)
-- [ ] Decide final production threshold values before mainnet
+### `/sponsor` page — Pending
+- [ ] Show countdown to auto-refund deadline on Pending applications
+- [ ] Validate ad image URL is reachable before submit
+- [ ] After Accept: consider linking owner directly to raffle creation panel
 
----
-
-## To Do — `/sponsor` Page
-
-### Application flow
-- [x] Refund claim UI — Rejected: auto-refund message; Pending+3d: Claim Refund button ✅
-- [ ] Show countdown to auto-refund deadline on Pending applications (submitter view)
-- [ ] Validate ad image URL is reachable before submit (optional but helpful)
-- [ ] After Accept: owner still needs to manually create raffle via owner panel — consider linking directly
-
-### Ad display
-- [x] Resolve open question: concurrent sponsor + BOOZ raffle — which ad shows? → **Only active (started) sponsor ads show. Queued sponsors are invisible until their slot begins.** ✅
-- [x] Ad queuing — `acceptedAt = max(now, nextAdStartTime)` implemented in contract. Ads chain automatically, no overlap. First-submitted-first-served enforced on-chain. ✅
-- [~] Full-viewport-width desktop popup modal — in progress, layout refinement pending (2026-03-24)
-- [ ] Test ad display on all pages (homepage toggle + desktop sidebar)
-- [ ] Verify ad content renders correctly for all 3 ad types (image, embed, text)
+### Known Frontend Issues
+- [ ] Wallet disconnect dropdown hidden behind sidebar ads on desktop — fix by portaling to `document.body`
 
 ---
 
-## Future Token Plan
+## 12. Future Token Plan
 
 ### Projected Emission (current activity baseline)
-
 | Source | BOOZ/year |
 |---|---|
 | Slot mints (96/day × 1,000 BOOZ) | ~35,040,000 |
 | GM streaks (10k users, avg 1–3/day) | ~3,650,000–10,950,000 |
 | Raffle rewards (100k BOOZ/week) | ~5,200,000 |
-| Donations (est. 100 donors/day × 1,000 BOOZ, once per 24h) | ~36,500,000 |
+| Donations (est. 100 donors/day × 1,000 BOOZ) | ~36,500,000 |
 | **Total (approx)** | **~80–87M BOOZ/year** |
 
-### Mint Cap Design — Option B (Total Minted Cap)
-
-- **Hard cap: 250,000,000 BOOZ** total ever minted across all time
-- Cap tracks **gross mints only** — burns do not refill the budget
-- Treasury allocation (10M, one-time) already capped in contract
-- Reward minting (slots, GM, raffles) currently unlimited — cap to be added before DEX listing
-
-**Why Option B over total supply cap:**
-- Burns reduce circulating supply freely without affecting the minting ceiling
-- Investors see two numbers: total ever minted vs current circulating supply
-- Predictable, transparent ceiling — max 250M BOOZ will ever exist
+### Total Minted Cap — Option B
+- **Hard cap: 250,000,000 BOOZ** total ever minted
+- Cap tracks gross mints only — burns do not refill the budget
+- After cap: `mintReward()` reverts — platform shifts to burn-only economy
+- Cap can be raised via `setMaxSupply(newCap)` — no migration, no redeployment
 
 **Projected timeline:**
 - Year 1: ~60M minted (50M rewards + 10M treasury)
 - Year 5: ~250M cap reached at current growth rate
-- After cap: burn-only economy — users must buy BOOZ on DEX to access utility
-
-**After cap is reached:**
-- `mintReward()` reverts — no new BOOZ created
-- Platform shifts to circulation economy (buy on DEX → burn for slots/tickets)
-- Cap can be raised by owner via `setMaxSupply(newCap)` — same contract, no migration, no token redeployment
-- Recommended: raise cap only with community consent
-
-### Burning Mechanism
-- `mintSlotWithTokens()` — burns 10,000 BOOZ for a free slot
-- `convertToTickets()` — burns points (indirectly reduces earning incentive)
-- `burn()` — any holder can voluntarily burn
-- As platform scales, burn rate grows with usage — natural deflationary pressure
 
 ### Implementation Status
-- [x] Treasury cap (10M, one-time) — implemented in `BooztoryToken.sol` ✅
-- [ ] Total minted cap (250M) — to be added to `BooztoryToken.sol` before DEX listing
-- [ ] `setMaxSupply()` owner function — allows raising cap without redeployment
+- [x] Treasury cap (10M, one-time) — in `BooztoryToken.sol` ✅
+- [ ] Total minted cap (250M) — to be added before DEX listing
+- [ ] `setMaxSupply()` owner function
 
 ---
 
-## To Do — Deployment
+## 13. Superchain Expansion
 
-### Base Sepolia (testing)
-- [ ] Set `defaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet (currently 100 / 20)
-- [ ] Call `setContentTypeImage()` for each platform (youtube, tiktok, twitter, vimeo, spotify, twitch)
-- [ ] Add `BooztoryRaffle` as consumer on Chainlink VRF subscription (if not already)
+### Architecture
+- **One codebase** — single Next.js project, runtime detection determines behavior
+- **Chain-specific content** — each chain has its own slot queue, raffle, and GM streaks
+- **Shared token** — BOOZ is SuperchainERC20 (IERC7802); same CREATE2 address on every OP Stack chain; native bridging, no wrapped tokens
+- **Liquidity** — one Uniswap pool on Base; users from other chains bridge BOOZ to trade there
 
-### Base Mainnet
-- [ ] Answer open questions (see above) before launch
-- [ ] Remove vestigial `IRaffle.addEntry()` from `Booztory.sol` (silently fails, harmless but dead code)
-- [ ] Set production values: `defaultDrawThreshold`, `defaultMinUniqueEntrants`
-- [ ] Full deploy: `npx hardhat run scripts/deploy.ts --network base`
-- [ ] Verify all 3 contracts on Basescan
-- [ ] Add `BooztoryRaffle` as consumer on Chainlink VRF subscription (mainnet)
+### Runtime Detection
+| Context | Wallet | Content |
+|---|---|---|
+| World Mini App | MiniKit | World Chain always |
+| Farcaster Mini App | Farcaster SDK + QuickAuth | Base by default |
+| Regular browser | RainbowKit / wagmi | Base by default |
+
+### Contract Changes (before Base mainnet deploy)
+- `BooztoryToken.sol` — `crosschainMint` + `crosschainBurn` authorized to Superchain bridge predeploy `0x4200...0028`; deploy via CREATE2 factory (`0x4e59b44847b379578588920cA78FbF26c0B4956C`) with deterministic salt
+- `Booztory.sol`, `BooztoryRaffle.sol` — no changes needed; chain-specific, normal deploy
+
+### World Chain
+- **Chain ID:** 480
+- **World ID:** available natively — enables sybil-resistant GM streaks
+- Deploy order: run `deploy.ts` on World Chain → `BooztoryToken` lands at same CREATE2 address automatically → call `setBooztory()`, `setRewardToken()`, `setRaffle()` → add VRF consumer
+
+### Roadmap
+- [ ] Deploy BooztoryToken via CREATE2 factory (deterministic address)
+- [ ] World Chain deployment + World Mini App
+- [ ] OP Mainnet and other OP Stack chains
+- [ ] Frontend chain toggle in browser (Base ↔ World Chain)

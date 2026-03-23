@@ -23,7 +23,6 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { GMContent } from "@/components/modals/gmModal"
-import { usePriceTiers } from "@/hooks/usePriceTiers"
 import { useWalletName } from "@/hooks/useWalletName"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -37,13 +36,6 @@ const MILESTONES = [
 ]
 const GM_DAY_REWARDS = [5, 10, 15, 20, 25, 30, 35]
 const GM_FLAT_REWARD = 50
-
-const RAFFLE_DURATION_OPTIONS = [
-  { label: "7 days",       seconds: 7  * 86400 },
-  { label: "14 days",      seconds: 14 * 86400 },
-  { label: "30 days",      seconds: 30 * 86400 },
-  { label: "Custom",       seconds: 0 },
-]
 
 function getUtcDay() {
   return Math.floor(Date.now() / 1000 / 86400)
@@ -460,9 +452,9 @@ function ActiveRaffleCard({
             <span className="text-sm font-bold text-white/80">Raffle #{Number(selectedId) + 1}</span>
           )}
         </div>
-        <div className="text-4xl font-bold text-center mt-3">
+        <div className="text-4xl font-bold text-center my-6">
           {totalPrize > 0n
-            ? (isBoozPrize ? `${totalPrizeFormatted} $BOOZ` : `$${totalPrizeFormatted}`)
+            ? (isBoozPrize ? totalPrizeFormatted : `$${totalPrizeFormatted}`)
             : "—"}
         </div>
 
@@ -762,27 +754,6 @@ export default function RewardPage() {
   const [gmOpen, setGmOpen] = useState(false)
   const [convertAmount, setConvertAmount] = useState("")
   const [isConverting, setIsConverting] = useState(false)
-  const [thresholdInput, setThresholdInput] = useState("")
-  const [minUniqueInput, setMinUniqueInput] = useState("")
-  const [isSettingThreshold, setIsSettingThreshold] = useState(false)
-  const [isSettingMinUnique, setIsSettingMinUnique] = useState(false)
-  const [rtRaffleIdInput, setRtRaffleIdInput] = useState("")
-  const [rtThresholdInput, setRtThresholdInput] = useState("")
-  const [rtMinUniqueInput, setRtMinUniqueInput] = useState("")
-  const [isSettingRaffleThresholds, setIsSettingRaffleThresholds] = useState(false)
-  const [isWithdrawing, setIsWithdrawing] = useState(false)
-  const [crToken, setCrToken] = useState<"usdc" | "booz">("usdc")
-  const [crPrizes, setCrPrizes] = useState<string[]>(["", "", ""])
-  const [crWinnerCount, setCrWinnerCount] = useState("3")
-  const [crDurationIdx, setCrDurationIdx] = useState(1)
-  const [crCustomHours, setCrCustomHours] = useState("1")
-  const [isCreatingRaffle, setIsCreatingRaffle] = useState(false)
-  const [crSponsorAppId, setCrSponsorAppId] = useState<number | null>(null)
-  const [ptHours, setPtHours] = useState("")
-  const [ptMinPrize, setPtMinPrize] = useState("")
-  const [ptFee, setPtFee] = useState("")
-  const [isSettingTier, setIsSettingTier] = useState(false)
-  const [removingTierSeconds, setRemovingTierSeconds] = useState<number | null>(null)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
 
@@ -904,56 +875,6 @@ export default function RewardPage() {
     chainId: APP_CHAIN.id,
   })
 
-  const { data: defaultThresholdRaw, refetch: refetchThreshold } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
-    functionName: "defaultDrawThreshold",
-    chainId: APP_CHAIN.id,
-    query: { refetchInterval: 60_000, refetchOnWindowFocus: true },
-  })
-
-  const { data: defaultMinUniqueRaw, refetch: refetchMinUnique } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
-    functionName: "defaultMinUniqueEntrants",
-    chainId: APP_CHAIN.id,
-    query: { refetchInterval: 60_000, refetchOnWindowFocus: true },
-  })
-
-  const { data: raffleUsdcRaw, refetch: refetchRaffleUsdc } = useReadContract({
-    address: USDC_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [RAFFLE_ADDRESS],
-    chainId: APP_CHAIN.id,
-    query: { refetchInterval: 60_000 },
-  })
-
-  const { tiers: priceTiers, loading: tiersLoading, refetch: refetchTiers } = usePriceTiers()
-
-  // ── Sponsor application reads ────────────────────────────────────────────────
-  const { data: nextAppIdRaw } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
-    functionName: "nextApplicationId",
-    chainId: APP_CHAIN.id,
-    query: { refetchInterval: 60_000 },
-  })
-  const _appCount = Number(nextAppIdRaw ?? 0n)
-  // FIX: was polling every 60s — accepted sponsor applications are immutable and new
-  // submissions are infrequent. Reduced to 5-min interval to limit fan-out (N calls
-  // per poll where N = total application count).
-  const { data: allAppsRaw } = useReadContracts({
-    contracts: Array.from({ length: _appCount }, (_, i) => ({
-      address: RAFFLE_ADDRESS,
-      abi: RAFFLE_ABI,
-      functionName: "applications" as const,
-      args: [BigInt(i)] as const,
-      chainId: APP_CHAIN.id,
-    })),
-    query: { enabled: _appCount > 0, refetchInterval: 5 * 60_000 },
-  })
-
   // ── Streak reads ────────────────────────────────────────────────────────────
   const { data: streakRaw } = useReadContract({
     address: BOOZTORY_ADDRESS,
@@ -981,14 +902,29 @@ export default function RewardPage() {
   const raffleOwner = raffleOwnerRaw as string | undefined
   const isOwner = !!(address && raffleOwner && address.toLowerCase() === raffleOwner.toLowerCase())
 
-  const defaultThreshold = Number(defaultThresholdRaw ?? 100n)
-  const defaultMinUnique = Number(defaultMinUniqueRaw ?? 5n)
-
-  const raffleUsdc = raffleUsdcRaw as bigint | undefined
-  const raffleUsdcNum = raffleUsdc !== undefined ? Number(raffleUsdc) / 1_000_000 : undefined
   const activeRaffleIds = (activeRaffleIdsRaw as bigint[] | undefined) ?? []
 
   // ── Sponsor apps parsed ──────────────────────────────────────────────────────
+  // acceptedSponsorApps: derived from accepted sponsor applications for ActiveRaffleCard sponsor matching
+  const { data: nextAppIdRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "nextApplicationId",
+    chainId: APP_CHAIN.id,
+    query: { refetchInterval: 60_000 },
+  })
+  const _appCount = Number(nextAppIdRaw ?? 0n)
+  const { data: allAppsRaw } = useReadContracts({
+    contracts: Array.from({ length: _appCount }, (_, i) => ({
+      address: RAFFLE_ADDRESS,
+      abi: RAFFLE_ABI,
+      functionName: "applications" as const,
+      args: [BigInt(i)] as const,
+      chainId: APP_CHAIN.id,
+    })),
+    query: { enabled: _appCount > 0, refetchInterval: 5 * 60_000 },
+  })
+
   const acceptedSponsorApps = useMemo((): AcceptedSponsor[] => {
     if (!allAppsRaw) return []
     return allAppsRaw.flatMap((r, i) => {
@@ -1002,51 +938,6 @@ export default function RewardPage() {
       return [{ appId: i, sponsorName, duration: Number(duration), prizePaid, adLink, acceptedAt: Number(acceptedAt) }]
     })
   }, [allAppsRaw])
-
-  // Active sponsors available for a new raffle — started, non-expired, and not already matched to a live/drawn raffle
-  const activeSponsors = useMemo(() => {
-    const now = Math.floor(Date.now() / 1000)
-    return acceptedSponsorApps.filter(s => {
-      if (s.acceptedAt > now) return false              // not started yet (queued)
-      if (s.acceptedAt + s.duration <= now) return false // expired
-      // Check if any non-cancelled raffle already matches this sponsor
-      const alreadyUsed = (allRafflesRaw ?? []).some((r, i) => {
-        const rData = r.result as readonly [readonly string[], bigint, bigint, bigint, number, ...unknown[]] | undefined
-        if (!rData) return false
-        const [prizeTokens, , startTime, , raffleStatus] = rData
-        if (raffleStatus === 2) return false // cancelled — doesn't count
-        if (Number(startTime) < s.acceptedAt || Number(startTime) >= s.acceptedAt + s.duration) return false
-        // Must be USDC prize (skip BOOZ raffles — check against contract's boozToken)
-        const boozAddr = ((pageBoozToken as string | undefined) ?? TOKEN_ADDRESS).toLowerCase()
-        if ((prizeTokens as string[])[0]?.toLowerCase() === boozAddr) return false
-        // Prize amount must match
-        const prizeData = (allRafflePrizesRaw ?? [])[i]?.result as readonly (readonly bigint[])[] | undefined
-        const totalPrize = (prizeData?.[0] ?? []).reduce((a: bigint, b: bigint) => a + b, 0n)
-        const diff = totalPrize > s.prizePaid ? totalPrize - s.prizePaid : s.prizePaid - totalPrize
-        return diff <= 1_000_000n
-      })
-      return !alreadyUsed
-    })
-  }, [acceptedSponsorApps, allRafflesRaw, allRafflePrizesRaw])
-
-  // USDC balance actually available for a new owner-funded raffle:
-  // total contract balance minus prizes already committed to active raffles.
-  const availableUsdcBn = useMemo(() => {
-    let committed = 0n
-    ;(allRafflesRaw ?? []).forEach((r, i) => {
-      const rData = r.result as readonly [readonly string[], bigint, bigint, bigint, number, ...unknown[]] | undefined
-      if (!rData) return
-      const [prizeTokens, , , , raffleStatus] = rData
-      if (raffleStatus !== 0) return // only Active (0)
-      const usdcIdx = (prizeTokens as string[]).findIndex(t => t.toLowerCase() === USDC_ADDRESS.toLowerCase())
-      if (usdcIdx === -1) return
-      const prizeData = (allRafflePrizesRaw ?? [])[i]?.result as readonly (readonly bigint[])[] | undefined
-      const total = (prizeData?.[usdcIdx] ?? []).reduce((a: bigint, b: bigint) => a + b, 0n)
-      committed += total
-    })
-    const balance = (raffleUsdcRaw as bigint | undefined) ?? 0n
-    return balance > committed ? balance - committed : 0n
-  }, [allRafflesRaw, allRafflePrizesRaw, raffleUsdcRaw])
 
   const streakData = streakRaw as [bigint, number, number] | undefined
   const lastClaimDay = streakData?.[0] ?? 0n
@@ -1067,14 +958,11 @@ export default function RewardPage() {
       refetchPoints()
       refetchTickets()
       refetchActiveRaffles()
-      refetchRaffleUsdc()
       refetchNextRaffleId()
-      refetchThreshold()
-      refetchMinUnique()
     }
     document.addEventListener("visibilitychange", onVisible)
     return () => document.removeEventListener("visibilitychange", onVisible)
-  }, [refetchPoints, refetchTickets, refetchActiveRaffles, refetchRaffleUsdc, refetchNextRaffleId, refetchThreshold, refetchMinUnique])
+  }, [refetchPoints, refetchTickets, refetchActiveRaffles, refetchNextRaffleId])
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   async function handleConvert() {
@@ -1100,268 +988,6 @@ export default function RewardPage() {
       toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
     } finally {
       setIsConverting(false)
-    }
-  }
-
-  async function handleSetThreshold() {
-    const val = parseInt(thresholdInput)
-    if (!val || val < 1 || !isOwner) return
-    setIsSettingThreshold(true)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "setDefaultDrawThreshold",
-        args: [BigInt(val)],
-        chainId: APP_CHAIN.id,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      setThresholdInput("")
-      refetchThreshold()
-      toast({ title: "Updated", description: `Default threshold set to ${val}.` })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsSettingThreshold(false)
-    }
-  }
-
-  async function handleSetMinUnique() {
-    const val = parseInt(minUniqueInput)
-    if (!val || val < 1 || !isOwner) return
-    setIsSettingMinUnique(true)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "setDefaultMinUniqueEntrants",
-        args: [BigInt(val)],
-        chainId: APP_CHAIN.id,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      setMinUniqueInput("")
-      refetchMinUnique()
-      toast({ title: "Updated", description: `Min unique entrants set to ${val}.` })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsSettingMinUnique(false)
-    }
-  }
-
-  async function handleSetRaffleThresholds() {
-    const raffleId = parseInt(rtRaffleIdInput)
-    const threshold = parseInt(rtThresholdInput)
-    const minUnique = parseInt(rtMinUniqueInput)
-    if (!isOwner || isNaN(raffleId) || raffleId < 0) return
-    if (rtThresholdInput && (isNaN(threshold) || threshold < 1)) return
-    if (rtMinUniqueInput && (isNaN(minUnique) || minUnique < 1)) return
-    if (!rtThresholdInput && !rtMinUniqueInput) return
-    const t = rtThresholdInput ? BigInt(threshold) : BigInt(defaultThreshold ?? 1)
-    const u = rtMinUniqueInput ? BigInt(minUnique) : BigInt(defaultMinUnique ?? 1)
-    setIsSettingRaffleThresholds(true)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "setRaffleThresholds",
-        args: [BigInt(raffleId), t, u],
-        chainId: APP_CHAIN.id,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      setRtRaffleIdInput("")
-      setRtThresholdInput("")
-      setRtMinUniqueInput("")
-      toast({ title: "Updated", description: `Raffle #${raffleId} thresholds updated.` })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsSettingRaffleThresholds(false)
-    }
-  }
-
-  async function handleWithdraw() {
-    if (!isOwner) return
-    setIsWithdrawing(true)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "withdraw",
-        args: [USDC_ADDRESS],
-        chainId: APP_CHAIN.id,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      refetchRaffleUsdc()
-      toast({ title: "Withdrawn", description: "USDC withdrawn to owner wallet." })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsWithdrawing(false)
-    }
-  }
-
-  async function handleSetPriceTier() {
-    const hours = parseFloat(ptHours)
-    const minPrize = parseFloat(ptMinPrize)
-    const fee = parseFloat(ptFee)
-    if (!hours || hours <= 0 || !minPrize || minPrize <= 0 || isNaN(fee) || fee < 0 || !isOwner) return
-    const durationSeconds = BigInt(Math.round(hours * 3600))
-    const minPrizeBn = BigInt(Math.round(minPrize * 1_000_000))
-    const feeBn = BigInt(Math.round(fee * 1_000_000))
-    setIsSettingTier(true)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "setPriceTier",
-        args: [durationSeconds, minPrizeBn, feeBn],
-        chainId: APP_CHAIN.id,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      setPtHours("")
-      setPtMinPrize("")
-      setPtFee("")
-      refetchTiers()
-      toast({
-        title: "Price Tier Set",
-        description: `${hours}h — $${minPrize} prize + $${fee} fee = $${(minPrize + fee).toFixed(2)} total`,
-      })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsSettingTier(false)
-    }
-  }
-
-  async function handleRemovePriceTier(seconds: number) {
-    if (!isOwner) return
-    setRemovingTierSeconds(seconds)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "setPriceTier",
-        args: [BigInt(seconds), 0n, 0n],
-        chainId: APP_CHAIN.id,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      refetchTiers()
-      toast({ title: "Tier Removed", description: "Sponsors can no longer submit for that duration." })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setRemovingTierSeconds(null)
-    }
-  }
-
-  async function handleCreateRaffle() {
-    if (!isOwner) return
-    const winnerCount = Math.max(1, Math.min(20, parseInt(crWinnerCount) || 1))
-    const prizes = crPrizes.slice(0, winnerCount)
-    if (prizes.some(p => !p || parseFloat(p) <= 0)) return
-
-    const sponsorApp = crSponsorAppId !== null ? activeSponsors.find(s => s.appId === crSponsorAppId) : undefined
-
-    const selectedOption = RAFFLE_DURATION_OPTIONS[crDurationIdx]
-    const isCustomDuration = selectedOption?.seconds === 0
-    const durationHours = isCustomDuration ? Math.max(1, parseInt(crCustomHours) || 1) : 0
-    const duration = sponsorApp
-      ? sponsorApp.duration
-      : isCustomDuration ? durationHours * 3600 : (selectedOption?.seconds ?? RAFFLE_DURATION_OPTIONS[0].seconds)
-
-    const isUsdc = sponsorApp ? true : crToken === "usdc"
-    const prizeBns = prizes.map(p =>
-      isUsdc
-        ? BigInt(Math.round(parseFloat(p) * 1_000_000))
-        : BigInt(Math.round(parseFloat(p))) * BigInt("1000000000000000000")
-    )
-    const totalPrize = prizeBns.reduce((a, b) => a + b, 0n)
-    const prizeAmounts: bigint[][] = [prizeBns]
-    const prizeToken = isUsdc ? USDC_ADDRESS : TOKEN_ADDRESS
-
-    const isSponsorFunded = crSponsorAppId !== null
-
-    setIsCreatingRaffle(true)
-    try {
-      if (isSponsorFunded) {
-        // Sponsor-funded: prize already in contract from submitApplication — just create
-        const createTx = await writeContractAsync({
-          address: RAFFLE_ADDRESS,
-          abi: RAFFLE_ABI,
-          functionName: "createRaffle",
-          args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)],
-          chainId: APP_CHAIN.id,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
-      } else if (isUsdc) {
-        // Owner-funded USDC: approve → create → deposit
-        const approveTx = await writeContractAsync({
-          address: USDC_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [RAFFLE_ADDRESS, totalPrize],
-          chainId: APP_CHAIN.id,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
-
-        const createTx = await writeContractAsync({
-          address: RAFFLE_ADDRESS,
-          abi: RAFFLE_ABI,
-          functionName: "createRaffle",
-          args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)],
-          chainId: APP_CHAIN.id,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
-
-        const depositTx = await writeContractAsync({
-          address: RAFFLE_ADDRESS,
-          abi: RAFFLE_ABI,
-          functionName: "depositPrize",
-          args: [USDC_ADDRESS, totalPrize],
-          chainId: APP_CHAIN.id,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: depositTx })
-      } else {
-        // BOOZ: 1 tx, minted at draw
-        const createTx = await writeContractAsync({
-          address: RAFFLE_ADDRESS,
-          abi: RAFFLE_ABI,
-          functionName: "createRaffle",
-          args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)],
-          chainId: APP_CHAIN.id,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
-      }
-
-      setCrPrizes(["", "", ""])
-      setCrWinnerCount("3")
-      setCrSponsorAppId(null)
-      refetchActiveRaffles()
-      refetchNextRaffleId()
-      refetchRaffleUsdc()
-      toast({
-        title: "Raffle Created!",
-        description: `${winnerCount} winner${winnerCount !== 1 ? "s" : ""} · ${totalPrize > 0n ? (isUsdc ? (Number(totalPrize) / 1e6).toFixed(2) : (Number(totalPrize) / 1e18).toFixed(0)) : "0"} ${isUsdc ? "USDC" : "BOOZ"} total`,
-      })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsCreatingRaffle(false)
     }
   }
 
@@ -1420,543 +1046,96 @@ export default function RewardPage() {
             )}
 
             {/* Convert points → tickets */}
-            {address && maxConvertible > 0 && (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Ticket size={15} className="text-indigo-600" />
-                  <span className="text-sm font-bold text-indigo-900">Convert Points → Tickets</span>
-                </div>
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Ticket size={15} className="text-indigo-600" />
+                <span className="text-sm font-bold text-indigo-900">Convert Points → Tickets</span>
+              </div>
 
-                {/* Inline stats */}
-                <div className="flex items-center mb-3 bg-indigo-100/60 rounded-lg overflow-hidden">
-                  <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
-                    <HiBolt className="text-amber-500" size={14} />
-                    <span className="text-xs text-indigo-700">Points</span>
-                    <span className="text-xs font-bold text-gray-900">{pointsBalance.toLocaleString()}</span>
-                  </div>
-                  <div className="w-px self-stretch bg-indigo-200" />
-                  <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
-                    <Ticket size={13} className="text-indigo-500" />
-                    <span className="text-xs text-indigo-700">Tickets</span>
-                    <span className="text-xs font-bold text-indigo-600">{ticketBalance.toLocaleString()}</span>
-                  </div>
-                  <div className="w-px self-stretch bg-indigo-200" />
-                  <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
-                    <Flame size={13} className="text-rose-500" />
-                    <span className="text-xs text-indigo-700">Burned</span>
-                    <span className="text-xs font-bold text-rose-500">{burnedTickets.toLocaleString()}</span>
-                  </div>
+              {/* Inline stats */}
+              <div className="flex items-center mb-3 bg-indigo-100/60 rounded-lg overflow-hidden">
+                <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
+                  <HiBolt className="text-amber-500" size={14} />
+                  <span className="text-xs text-indigo-700">Points</span>
+                  <span className="text-xs font-bold text-gray-900">{pointsBalance.toLocaleString()}</span>
                 </div>
-
-                <p className="text-xs text-indigo-700 mb-3">
-                  {pointsPerTicket} points = 1 ticket · up to {maxConvertible} ticket{maxConvertible !== 1 ? "s" : ""} available
-                </p>
-                <div className="flex gap-2">
-                  <div className="flex flex-1 border border-indigo-200 bg-white rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500">
-                    <input
-                      type="number"
-                      min="1"
-                      max={maxConvertible}
-                      value={convertAmount}
-                      onChange={e => setConvertAmount(e.target.value)}
-                      placeholder={`1–${maxConvertible}`}
-                      className="flex-1 px-3 py-2 text-sm focus:outline-none min-w-0"
-                    />
-                    {maxConvertible > 0 && (
-                      <button
-                        onClick={() => setConvertAmount(String(maxConvertible))}
-                        className="px-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 border-l border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors whitespace-nowrap"
-                      >
-                        Max
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    onClick={handleConvert}
-                    disabled={
-                      isConverting ||
-                      !convertAmount ||
-                      parseInt(convertAmount) < 1 ||
-                      parseInt(convertAmount) > maxConvertible
-                    }
-                    className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-                  >
-                    {isConverting ? "Converting..." : "Convert"}
-                  </button>
+                <div className="w-px self-stretch bg-indigo-200" />
+                <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
+                  <Ticket size={13} className="text-indigo-500" />
+                  <span className="text-xs text-indigo-700">Tickets</span>
+                  <span className="text-xs font-bold text-indigo-600">{ticketBalance.toLocaleString()}</span>
+                </div>
+                <div className="w-px self-stretch bg-indigo-200" />
+                <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
+                  <Flame size={13} className="text-rose-500" />
+                  <span className="text-xs text-indigo-700">Burned</span>
+                  <span className="text-xs font-bold text-rose-500">{burnedTickets.toLocaleString()}</span>
                 </div>
               </div>
-            )}
+
+              <p className="text-xs text-indigo-700 mb-3">
+                {pointsPerTicket} points = 1 ticket{maxConvertible > 0 ? ` · up to ${maxConvertible} ticket${maxConvertible !== 1 ? "s" : ""} available` : ""}
+              </p>
+              <div className="flex gap-2">
+                <div className={cn("flex flex-1 border rounded-lg overflow-hidden", maxConvertible > 0 ? "border-indigo-200 bg-white focus-within:ring-2 focus-within:ring-indigo-500" : "border-indigo-100 bg-indigo-100/40")}>
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxConvertible}
+                    value={convertAmount}
+                    onChange={e => setConvertAmount(e.target.value)}
+                    placeholder={maxConvertible > 0 ? `1–${maxConvertible}` : "0"}
+                    disabled={maxConvertible === 0}
+                    className="flex-1 px-3 py-2 text-sm focus:outline-none min-w-0 disabled:cursor-not-allowed bg-transparent"
+                  />
+                  {maxConvertible > 0 && (
+                    <button
+                      onClick={() => setConvertAmount(String(maxConvertible))}
+                      className="px-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 border-l border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                    >
+                      Max
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={handleConvert}
+                  disabled={
+                    isConverting ||
+                    maxConvertible === 0 ||
+                    !convertAmount ||
+                    parseInt(convertAmount) < 1 ||
+                    parseInt(convertAmount) > maxConvertible
+                  }
+                  className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                >
+                  {isConverting ? "Converting..." : "Convert"}
+                </button>
+              </div>
+
+            </div>
 
             {/* How it works */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-gray-500 text-sm leading-relaxed">
-                Earn points by minting slots and donating. Convert points to raffle tickets
-                ({pointsPerTicket} points = 1 ticket), then use tickets to enter a raffle.
-                More tickets = better odds. You choose how many to use.
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">How to earn points</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Mint a content slot</span>
+                  <span className="text-xs font-bold text-indigo-600">+15 pts</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Donate to a creator <span className="text-xs text-gray-400">(once per 24h)</span></span>
+                  <span className="text-xs font-bold text-indigo-600">+5 pts</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Daily GM streak <span className="text-xs text-gray-400">(day 1–7+)</span></span>
+                  <span className="text-xs font-bold text-indigo-600">+5–50 pts</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 border-t border-gray-200 pt-3">
+                {pointsPerTicket} points = 1 ticket · more tickets = better odds · you choose how many to use per raffle
               </p>
             </div>
 
-            {/* Owner panel */}
-            {isOwner && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-5">
-
-                <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Owner Panel</p>
-
-                {/* ── Contract balance ── */}
-                <div className="bg-white rounded-xl border border-amber-100 p-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">Contract USDC balance</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Sponsor prizes accumulate here until withdrawn</p>
-                  </div>
-                  <span className="text-lg font-black text-amber-700 ml-4 flex-shrink-0">
-                    ${raffleUsdcNum?.toFixed(2) ?? "—"}
-                  </span>
-                </div>
-
-                {/* ── Draw thresholds ── */}
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">Draw Thresholds</p>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Both must be met before you can trigger a draw on any raffle.
-                      <br />
-                      <span className="font-medium text-gray-700">Ticket threshold</span> — minimum total tickets committed across all entrants (currently <span className="font-bold text-amber-700">{defaultThreshold}</span>).
-                      <br />
-                      <span className="font-medium text-gray-700">Min unique wallets</span> — minimum distinct addresses that entered (currently <span className="font-bold text-amber-700">{defaultMinUnique}</span>). Lower both for early mainnet.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      value={thresholdInput}
-                      onChange={e => setThresholdInput(e.target.value)}
-                      placeholder={`Ticket threshold (now ${defaultThreshold})`}
-                      className="flex-1 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                    <button
-                      onClick={handleSetThreshold}
-                      disabled={isSettingThreshold || !thresholdInput}
-                      className="bg-amber-500 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors whitespace-nowrap"
-                    >
-                      {isSettingThreshold ? "Saving..." : "Set"}
-                    </button>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      value={minUniqueInput}
-                      onChange={e => setMinUniqueInput(e.target.value)}
-                      placeholder={`Min unique wallets (now ${defaultMinUnique})`}
-                      className="flex-1 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                    <button
-                      onClick={handleSetMinUnique}
-                      disabled={isSettingMinUnique || !minUniqueInput}
-                      className="bg-amber-500 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors whitespace-nowrap"
-                    >
-                      {isSettingMinUnique ? "Saving..." : "Set"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* ── Per-Raffle Thresholds ── */}
-                <div className="space-y-3 pt-4 border-t border-amber-200">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">Override Raffle Thresholds</p>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Override draw thresholds for a specific raffle by ID. Leave a field blank to keep its current value.
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <select
-                      value={rtRaffleIdInput}
-                      onChange={e => setRtRaffleIdInput(e.target.value)}
-                      className="w-36 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    >
-                      <option value="">Select raffle</option>
-                      {[...activeRaffleIds].reverse().map(id => (
-                        <option key={id.toString()} value={id.toString()}>Raffle #{Number(id) + 1}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min={1}
-                      value={rtThresholdInput}
-                      onChange={e => setRtThresholdInput(e.target.value)}
-                      placeholder={`Tickets (now ${defaultThreshold ?? "…"})`}
-                      className="flex-1 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      value={rtMinUniqueInput}
-                      onChange={e => setRtMinUniqueInput(e.target.value)}
-                      placeholder={`Wallets (now ${defaultMinUnique ?? "…"})`}
-                      className="flex-1 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                    <button
-                      onClick={handleSetRaffleThresholds}
-                      disabled={isSettingRaffleThresholds || !rtRaffleIdInput || (!rtThresholdInput && !rtMinUniqueInput)}
-                      className="bg-amber-500 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors whitespace-nowrap"
-                    >
-                      {isSettingRaffleThresholds ? "Saving..." : "Set"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* ── Sponsor Price Tiers ── */}
-                <div className="space-y-3 pt-4 border-t border-amber-200">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">Sponsor Price Tiers</p>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Each duration maps to exactly one tier — setting the same duration <span className="font-medium text-gray-700">overwrites</span> it. Different duration = new independent tier.
-                    </p>
-                  </div>
-
-                  {/* Current tiers table */}
-                  <div className="bg-white rounded-xl border border-amber-100 overflow-hidden text-xs">
-                    <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_28px] px-3 py-2 text-gray-400 border-b border-amber-100 font-semibold">
-                      <span>Duration</span>
-                      <span className="text-right">Prize</span>
-                      <span className="text-right">Fee</span>
-                      <span className="text-right">Sponsor pays</span>
-                      <span />
-                    </div>
-                    {tiersLoading ? (
-                      <div className="px-3 py-4 text-center text-gray-300 text-xs">Loading...</div>
-                    ) : priceTiers.length === 0 ? (
-                      <div className="px-3 py-4 text-center text-gray-300 text-xs">No tiers set yet</div>
-                    ) : priceTiers.map(tier => {
-                      const prize = Number(tier.minPrize) / 1_000_000
-                      const fee   = Number(tier.fee) / 1_000_000
-                      const isRemoving = removingTierSeconds === tier.seconds
-                      return (
-                        <div key={tier.seconds} className="grid grid-cols-[1.4fr_1fr_1fr_1fr_28px] items-center px-3 py-2.5 border-b border-amber-50 last:border-0 text-gray-700">
-                          <span className="font-semibold">{tier.label}</span>
-                          <span className="text-right tabular-nums">${prize.toFixed(2)}</span>
-                          <span className="text-right tabular-nums">${fee.toFixed(2)}</span>
-                          <span className="text-right font-bold tabular-nums text-amber-600">${(prize + fee).toFixed(2)}</span>
-                          <span className="flex justify-end">
-                            <button
-                              onClick={() => handleRemovePriceTier(tier.seconds)}
-                              disabled={isRemoving}
-                              className="w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-40 transition-colors"
-                              title="Remove tier"
-                            >
-                              {isRemoving ? "…" : "✕"}
-                            </button>
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  <p className="text-xs text-gray-500">
-                    <span className="font-medium text-gray-700">Min Prize</span> — USDC locked for the raffle prize pool.{" "}
-                    <span className="font-medium text-gray-700">Fee</span> — USDC kept by the platform. Duration in hours (e.g. 1 = 1h, 168 = 7 days).
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-gray-500">Duration (hours)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={ptHours}
-                        onChange={e => setPtHours(e.target.value)}
-                        placeholder="e.g. 1"
-                        className="border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-gray-500">Min Prize (USDC)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={ptMinPrize}
-                        onChange={e => setPtMinPrize(e.target.value)}
-                        placeholder="e.g. 10"
-                        className="border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-gray-500">Fee (USDC)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={ptFee}
-                        onChange={e => setPtFee(e.target.value)}
-                        placeholder="e.g. 5"
-                        className="border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      />
-                    </div>
-                  </div>
-                  {ptMinPrize && ptFee && parseFloat(ptMinPrize) >= 0 && parseFloat(ptFee) >= 0 && (
-                    <p className="text-xs text-amber-700 font-medium">
-                      Sponsor pays total: ${(parseFloat(ptMinPrize || "0") + parseFloat(ptFee || "0")).toFixed(2)} USDC
-                    </p>
-                  )}
-                  <button
-                    onClick={handleSetPriceTier}
-                    disabled={isSettingTier || !ptHours || !ptMinPrize || parseFloat(ptMinPrize) <= 0}
-                    className="w-full bg-amber-500 text-white text-sm font-bold py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
-                  >
-                    {isSettingTier ? "Saving..." : "Set Price Tier"}
-                  </button>
-                </div>
-
-                {/* ── Create Raffle ── */}
-                <div className="space-y-3 pt-4 border-t border-amber-200">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">Create Raffle</p>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Owner-funded raffle, no sponsor required.
-                      <br />
-                      <span className="font-medium text-gray-700">USDC prize</span> — 3 transactions: approve · create · deposit. Prize comes from your wallet.
-                      <br />
-                      <span className="font-medium text-gray-700">BOOZ prize</span> — 1 transaction: create only. Tokens are minted to winners at draw time.
-                    </p>
-                  </div>
-
-                  {/* Sponsor select — only shown if there are accepted, non-expired applications */}
-                  {activeSponsors.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-gray-700">Sponsor Application</p>
-                      <Select
-                        value={crSponsorAppId !== null ? crSponsorAppId.toString() : "none"}
-                        onValueChange={v => {
-                          if (v === "none") {
-                            setCrSponsorAppId(null)
-                          } else {
-                            const appId = Number(v)
-                            setCrSponsorAppId(appId)
-                            const sponsor = activeSponsors.find(s => s.appId === appId)
-                            if (sponsor) {
-                              // Auto-fill duration
-                              const matchIdx = RAFFLE_DURATION_OPTIONS.findIndex(o => o.seconds === sponsor.duration && o.seconds !== 0)
-                              if (matchIdx !== -1) {
-                                setCrDurationIdx(matchIdx)
-                              } else {
-                                const customIdx = RAFFLE_DURATION_OPTIONS.findIndex(o => o.seconds === 0)
-                                if (customIdx !== -1) {
-                                  setCrDurationIdx(customIdx)
-                                  setCrCustomHours(String(Math.round(sponsor.duration / 3600)))
-                                }
-                              }
-                            }
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="h-9 text-sm border-amber-200 focus:ring-0 focus:ring-offset-0">
-                          <SelectValue placeholder="No sponsor (owner-funded)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No sponsor (owner-funded)</SelectItem>
-                          {activeSponsors.map(s => (
-                            <SelectItem key={s.appId} value={s.appId.toString()}>
-                              {s.sponsorName} — ${(Number(s.prizePaid) / 1e6).toFixed(2)} USDC · {Math.round(s.duration / 86400)}d
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {crSponsorAppId !== null && (() => {
-                        const sponsor = activeSponsors.find(s => s.appId === crSponsorAppId)
-                        if (!sponsor) return null
-                        return (
-                          <div className="bg-white border border-amber-100 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
-                            <span className="text-gray-500">Sponsor prize pool (already in contract)</span>
-                            <span className="font-bold text-amber-700">${(Number(sponsor.prizePaid) / 1e6).toFixed(2)} USDC</span>
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  )}
-
-                  {/* Token toggle — hidden when sponsor is selected (always USDC) */}
-                  {crSponsorAppId === null && (
-                  <div className="flex rounded-lg border border-amber-200 overflow-hidden text-sm font-semibold">
-                    {(["usdc", "booz"] as const).map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setCrToken(t)}
-                        className={cn(
-                          "flex-1 py-2 transition-colors",
-                          crToken === t ? "bg-amber-500 text-white" : "bg-white text-amber-700 hover:bg-amber-50"
-                        )}
-                      >
-                        {t === "usdc" ? "USDC" : "BOOZ"}
-                      </button>
-                    ))}
-                  </div>
-                  )}
-
-                  {/* Winner count + duration row */}
-                  <div className="flex gap-2">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-gray-500">Winners</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={crWinnerCount}
-                        onChange={e => {
-                          const n = Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
-                          setCrWinnerCount(String(n))
-                          setCrPrizes(prev => {
-                            const next = [...prev]
-                            while (next.length < n) next.push("")
-                            return next.slice(0, n)
-                          })
-                        }}
-                        className="w-20 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1 flex-1">
-                      <label className="text-xs text-gray-500">Duration</label>
-                      {crSponsorAppId !== null ? (
-                        // Locked to sponsor's duration
-                        <div className="w-full border border-amber-100 bg-amber-50 rounded-lg px-3 py-2 text-sm text-amber-700 font-medium">
-                          {(() => {
-                            const s = activeSponsors.find(sp => sp.appId === crSponsorAppId)
-                            if (!s) return "—"
-                            const days = Math.round(s.duration / 86400)
-                            return days >= 1 ? `${days} day${days !== 1 ? "s" : ""}` : `${Math.round(s.duration / 3600)}h`
-                          })()}
-                        </div>
-                      ) : (
-                      <select
-                        value={crDurationIdx}
-                        onChange={e => setCrDurationIdx(Number(e.target.value))}
-                        className="w-full border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      >
-                        {RAFFLE_DURATION_OPTIONS.map((o, i) => (
-                          <option key={i} value={i}>{o.label}</option>
-                        ))}
-                      </select>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Custom duration input — only when no sponsor and custom selected */}
-                  {crSponsorAppId === null && RAFFLE_DURATION_OPTIONS[crDurationIdx]?.seconds === 0 && (
-                    <input
-                      type="number"
-                      min="1"
-                      value={crCustomHours}
-                      onChange={e => setCrCustomHours(e.target.value)}
-                      placeholder="Number of hours"
-                      className="w-full border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  )}
-
-                  {/* Per-winner prize inputs */}
-                  <div className="space-y-2">
-                    <label className="text-xs text-gray-500">
-                      Prize per winner ({crSponsorAppId !== null ? "USDC" : crToken === "usdc" ? "USDC" : "BOOZ"})
-                      {crSponsorAppId !== null && (() => {
-                        const s = activeSponsors.find(sp => sp.appId === crSponsorAppId)
-                        return s ? <span className="text-amber-600 font-medium"> — must total ${(Number(s.prizePaid) / 1e6).toFixed(2)}</span> : null
-                      })()}
-                    </label>
-                    {Array.from({ length: Math.max(1, Math.min(20, parseInt(crWinnerCount) || 1)) }, (_, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400 w-16 flex-shrink-0">#{i + 1}</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step={crToken === "usdc" ? "0.01" : "1"}
-                          value={crPrizes[i] ?? ""}
-                          onChange={e => setCrPrizes(prev => {
-                            const next = [...prev]
-                            next[i] = e.target.value
-                            return next
-                          })}
-                          placeholder={crToken === "usdc" ? "0.00" : "0"}
-                          className="flex-1 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Total summary */}
-                  {crPrizes.slice(0, parseInt(crWinnerCount) || 1).some(p => p && parseFloat(p) > 0) && (() => {
-                    const sponsorApp = crSponsorAppId !== null ? activeSponsors.find(s => s.appId === crSponsorAppId) : undefined
-                    const isSponsor  = !!sponsorApp
-                    const effectiveUsdc = isSponsor ? true : crToken === "usdc"
-                    const total      = crPrizes.slice(0, parseInt(crWinnerCount) || 1).reduce((sum, p) => sum + (parseFloat(p) || 0), 0)
-                    const poolUsdc   = isSponsor
-                      ? Number(sponsorApp!.prizePaid) / 1e6
-                      : Number(availableUsdcBn) / 1e6
-                    const over       = effectiveUsdc && total > poolUsdc
-                    const under      = isSponsor && effectiveUsdc && total < poolUsdc
-                    return (
-                      <div className="space-y-0.5">
-                        <p className={cn("text-xs font-medium", over || under ? "text-red-600" : "text-amber-700")}>
-                          Total: {total.toFixed(effectiveUsdc ? 2 : 0)}{" "}
-                          {effectiveUsdc ? "USDC" : "BOOZ"} across {parseInt(crWinnerCount) || 1} winner{(parseInt(crWinnerCount) || 1) !== 1 ? "s" : ""}
-                        </p>
-                        {effectiveUsdc && (
-                          <p className={cn("text-xs", over || under ? "text-red-500" : "text-gray-400")}>
-                            {isSponsor
-                              ? over   ? `Exceeds sponsor prize by ${(total - poolUsdc).toFixed(2)} USDC`
-                                : under ? `${(poolUsdc - total).toFixed(2)} USDC unallocated — must equal sponsor prize exactly`
-                                : "✓ Matches sponsor prize pool"
-                              : over   ? `Exceeds available balance by ${(total - poolUsdc).toFixed(2)} USDC`
-                                : `${(poolUsdc - total).toFixed(2)} USDC available after committed raffles`}
-                          </p>
-                        )}
-                      </div>
-                    )
-                  })()}
-
-                  <button
-                    onClick={handleCreateRaffle}
-                    disabled={(() => {
-                      if (isCreatingRaffle) return true
-                      if (parseInt(crWinnerCount) < 1) return true
-                      const prizes = crPrizes.slice(0, parseInt(crWinnerCount) || 1)
-                      if (prizes.some(p => !p || parseFloat(p) <= 0)) return true
-                      const total = prizes.reduce((sum, p) => sum + (parseFloat(p) || 0), 0)
-                      const sponsorApp = crSponsorAppId !== null ? activeSponsors.find(s => s.appId === crSponsorAppId) : undefined
-                      if (sponsorApp) {
-                        // Sponsor raffle: total must equal prizePaid exactly
-                        return Math.abs(total - Number(sponsorApp.prizePaid) / 1e6) > 0.001
-                      }
-                      // Owner USDC raffle: total must not exceed available (uncommitted) balance
-                      if (crToken === "usdc") return total > Number(availableUsdcBn) / 1e6
-                      return false
-                    })()}
-                    className="w-full bg-amber-500 text-white text-sm font-bold py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
-                  >
-                    {isCreatingRaffle ? "Creating..." : "Create Raffle"}
-                  </button>
-                </div>
-
-                {/* ── Withdraw ── */}
-                <div className="space-y-2 pt-4 border-t border-amber-200">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">Withdraw</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Pulls all USDC from the contract to your wallet. Only do this after all active raffles have been drawn — withdrawing early drains unclaimed prize funds.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleWithdraw}
-                    disabled={isWithdrawing || !raffleUsdc || raffleUsdc === 0n}
-                    className="w-full py-2.5 rounded-lg text-sm font-bold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
-                  >
-                    {isWithdrawing ? "Withdrawing..." : "Withdraw USDC"}
-                  </button>
-                </div>
-
-              </div>
-            )}
           </div>
         )}
 

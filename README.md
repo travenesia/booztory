@@ -6,16 +6,41 @@
 
 ---
 
-## How It Works
+## Core Loop
 
-1. Connect your Web3 wallet
-2. Submit a content URL and approve 1 USDC
-3. Your slot is minted as an ERC-721 token and added to the on-chain queue
-4. You earn **1,000 BOOZ** reward tokens and one raffle entry per mint
-5. Content goes live for 15 minutes when it reaches the front of the queue
-6. Viewers can send USDC donations directly to the creator (95% to creator, 5% protocol fee)
-7. Weekly raffle winners are drawn via Chainlink VRF and paid out in USDC automatically
-8. Claim your daily GM streak for additional BOOZ — up to 10,000 BOOZ over a 90-day journey
+```
+Connect wallet
+    ↓
+Submit content URL + approve 1 USDC
+    ↓
+Slot minted as ERC-721 — enters the queue
+    ↓
+Earn 1,000 BOOZ + 1 raffle entry
+    ↓
+Content goes live for 15 min when it reaches the front
+    ↓
+Viewers donate USDC directly to creator (on-chain split)
+    ↓
+Claim daily GM streak → earn more BOOZ
+    ↓
+Weekly Chainlink VRF raffle → USDC prizes paid on-chain
+```
+
+---
+
+## What's On-Chain
+
+Everything core to the product:
+
+- **Slot metadata** — URL, type, title, author, thumbnail, times — stored in ERC-721 struct
+- **Queue management** — `queueEndTime` schedules slots without any off-chain coordination
+- **Payments** — USDC `approve` + `mintSlot` in two transactions
+- **Donations** — atomic 95/5 split in a single `donate()` call
+- **BOOZ minting and burning** — triggered by contract, no off-chain scheduler
+- **GM streak** — day counter via `block.timestamp / 1 days`, milestones via bitmask
+- **Raffle entries** — added per paid mint; winner selection via Chainlink VRF
+- **History and discovery** — `getCurrentSlot()`, `getUpcomingSlots()`, `getPastSlots()` are pure on-chain reads
+- **Token metadata** — `tokenURI()` returns on-chain base64-encoded JSON
 
 ---
 

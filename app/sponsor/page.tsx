@@ -7,7 +7,6 @@ import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
 import { Loader2, CheckCircle2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useWalletName } from "@/hooks/useWalletName"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { cn } from "@/lib/utils"
@@ -318,15 +317,12 @@ function AdPreview({
 function ApplicationRow({
   appId,
   address,
-  isOwner,
   onAction,
 }: {
   appId: number
   address?: `0x${string}`
-  isOwner: boolean
   onAction: () => void
 }) {
-  const [isActing, setIsActing] = useState(false)
   const [isRefunding, setIsRefunding] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
@@ -353,11 +349,10 @@ function ApplicationRow({
   const acceptedAt  = app?.[8] ?? 0n
   const status      = (app?.[9] ?? 0) as AppStatus
 
-  const sponsorName = useWalletName(sponsor || undefined)
   const isOwnApp    = !!address && !!sponsor && address.toLowerCase() === sponsor.toLowerCase()
 
   if (!app) return null
-  if (!isOwner && !isOwnApp) return null
+  if (!isOwnApp) return null
 
   const parsed      = parseAdContent(adContent)
   const links       = parseAdLink(adLinkRaw)
@@ -365,42 +360,6 @@ function ApplicationRow({
   const days        = Math.round(Number(duration) / 86400)
   const statusInfo  = APP_STATUS_MAP[status] ?? APP_STATUS_MAP[0]
   const submittedDate = new Date(Number(submittedAt) * 1000).toLocaleDateString()
-
-  async function handleAccept() {
-    setIsActing(true)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
-        functionName: "acceptApplication", args: [BigInt(appId)],
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      refetchAppData()
-      onAction()
-      toast({ title: "Accepted", description: `Application #${appId} is now live.` })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally { setIsActing(false) }
-  }
-
-  async function handleReject() {
-    setIsActing(true)
-    try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
-        functionName: "rejectApplication", args: [BigInt(appId)],
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      refetchAppData()
-      onAction()
-      toast({ title: "Rejected", description: "Sponsor can now claim a refund." })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("user rejected") || msg.includes("User rejected")) return
-      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally { setIsActing(false) }
-  }
 
   async function handleClaimRefund() {
     setIsRefunding(true)
@@ -434,11 +393,6 @@ function ApplicationRow({
             </span>
             <span className="text-xs text-gray-400 capitalize">{adType || "—"}</span>
           </div>
-          {isOwner && (
-            <p className="text-xs text-gray-500 truncate">
-              {sponsorName ?? (sponsor ? `${sponsor.slice(0, 6)}…${sponsor.slice(-4)}` : "—")}
-            </p>
-          )}
         </div>
         <div className="text-right flex-shrink-0">
           <div className="text-sm font-bold text-gray-900">${totalPaid.toFixed(2)}</div>
@@ -510,19 +464,6 @@ function ApplicationRow({
               </a>
             ))}
           </div>
-        </div>
-      )}
-
-      {isOwner && status === 0 && (
-        <div className="flex gap-2 pt-1">
-          <button onClick={handleAccept} disabled={isActing}
-            className="flex-1 bg-green-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
-            {isActing ? "…" : "Accept"}
-          </button>
-          <button onClick={handleReject} disabled={isActing}
-            className="flex-1 bg-red-50 border border-red-200 text-red-700 text-xs font-bold py-2 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors">
-            {isActing ? "…" : "Reject"}
-          </button>
         </div>
       )}
 
@@ -632,14 +573,7 @@ export default function SponsorPage() {
     query: { refetchInterval: 30_000 },
   })
 
-  const { data: ownerRaw } = useReadContract({
-    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
-    functionName: "owner",
-    chainId: APP_CHAIN.id,
-  })
-
   const appCount = Number(appCountRaw ?? 0n)
-  const isOwner  = !!(address && ownerRaw && address.toLowerCase() === (ownerRaw as string).toLowerCase())
 
   // Refetch on tab focus
   useEffect(() => {
@@ -1109,14 +1043,13 @@ export default function SponsorPage() {
         {address && appCount > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">
-              {isOwner ? "All Applications" : "My Applications"}
+              My Applications
             </p>
             {appIds.map(id => (
               <ApplicationRow
                 key={id}
                 appId={id}
                 address={address}
-                isOwner={isOwner}
                 onAction={refetchAppCount}
               />
             ))}
