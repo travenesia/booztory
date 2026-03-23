@@ -367,6 +367,7 @@ function ApplicationRow({
       const tx = await writeContractAsync({
         address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
         functionName: "claimRefund", args: [BigInt(appId)],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchAppData()
@@ -624,6 +625,7 @@ export default function SponsorPage() {
       const approveTx = await writeContractAsync({
         address: USDC_ADDRESS, abi: ERC20_ABI,
         functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
 
@@ -640,6 +642,7 @@ export default function SponsorPage() {
         address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
         functionName: "submitApplication",
         args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)],
+        chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: submitTx })
 
