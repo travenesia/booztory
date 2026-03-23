@@ -33,23 +33,23 @@ export function usePriceTiers() {
   // Best-effort: discover non-standard durations from PriceTierSet events.
   // Standard durations are always polled directly from the contract below,
   // so this only matters for custom durations the owner created via Basescan.
-  // Uses a 1M-block sliding window (~23 days on Base at 2s blocks) to avoid
-  // Alchemy range limits — well beyond any recent deployment.
+  // FIX: was using `latest - 1_000_000` as fromBlock — that 1M-block window was the
+  // source of the wide-range Alchemy getLogs call. Replaced with RAFFLE_DEPLOY_BLOCK
+  // so we only scan from contract creation onward, and no getBlockNumber() call needed.
+  // TODO: move RAFFLE_DEPLOY_BLOCK to NEXT_PUBLIC_RAFFLE_DEPLOY_BLOCK env var
+  const RAFFLE_DEPLOY_BLOCK = 38_200_000n
   useEffect(() => {
     if (!publicClient) return
-    const LOOKBACK = 1_000_000n
-    publicClient.getBlockNumber().then(latest => {
-      return publicClient.getLogs({
-        address: RAFFLE_ADDRESS,
-        event: parseAbiItem("event PriceTierSet(uint256 duration, uint256 minPrize, uint256 fee)"),
-        fromBlock: latest > LOOKBACK ? latest - LOOKBACK : 0n,
-        toBlock: latest,
-      })
+    publicClient.getLogs({
+      address: RAFFLE_ADDRESS,
+      event: parseAbiItem("event PriceTierSet(uint256 duration, uint256 minPrize, uint256 fee)"),
+      fromBlock: RAFFLE_DEPLOY_BLOCK,
+      toBlock: "latest",
     }).then(logs => {
       const discovered = [...new Set(logs.map(l => Number(l.args.duration!)))]
       const custom = discovered.filter(s => !STANDARD_SECONDS.includes(s))
       if (custom.length > 0) setExtraSeconds(custom)
-    }).catch(() => { /* ignore RPC range errors — standard tiers still work */ })
+    }).catch(() => { /* ignore RPC errors — standard tiers still work */ })
   }, [publicClient])
 
   const allSeconds = [...STANDARD_SECONDS, ...extraSeconds]

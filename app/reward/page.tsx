@@ -104,6 +104,7 @@ function ActiveRaffleCard({
   totalRaffles,
   userTicketBalance,
   acceptedSponsorApps,
+  boozTokenAddress,
 }: {
   raffleId: bigint
   userAddress?: `0x${string}`
@@ -111,6 +112,9 @@ function ActiveRaffleCard({
   totalRaffles: number
   userTicketBalance: number
   acceptedSponsorApps: AcceptedSponsor[]
+  // FIX: passed from parent (RewardPage already reads boozToken) — avoids a duplicate
+  // useReadContract that was previously run independently inside this component.
+  boozTokenAddress?: string
 }) {
   const [selectedId, setSelectedId] = useState<bigint>(initialRaffleId)
   const [ticketInput, setTicketInput] = useState("")
@@ -122,14 +126,6 @@ function ActiveRaffleCard({
   const [isCancelling, setIsCancelling] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
-
-  // Read boozToken address directly from contract — more reliable than env-derived TOKEN_ADDRESS
-  const { data: contractBoozToken } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
-    functionName: "boozToken",
-    chainId: APP_CHAIN.id,
-  })
 
   const { data: raffleRaw, refetch: refetchRaffle } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -289,7 +285,7 @@ function ActiveRaffleCard({
   // FIX (Issue 3): Wait for boozToken read to resolve before computing prize decimals.
   // Without this guard, the initial render uses prizeDecimals=6 (USDC fallback) for BOOZ
   // prizes, causing raw 18-decimal amounts to display as astronomically large USDC values.
-  if (contractBoozToken === undefined) return null
+  if (boozTokenAddress === undefined) return null
 
   // status: 0 = Active, 1 = Drawn, 2 = Cancelled
   const [prizeTokens, winnerCount, startTime, endTime, raffleStatus, drawThreshold, minUniqueEntrants, drawRequested, totalTickets, uniqueEntrants] = raffle
@@ -297,7 +293,7 @@ function ActiveRaffleCard({
   const isCancelled = raffleStatus === 2
 
   // Determine prize token type — compare against contract's boozToken state (not env var)
-  const boozTokenAddr = (contractBoozToken as string | undefined) ?? TOKEN_ADDRESS
+  const boozTokenAddr = (boozTokenAddress as string | undefined) ?? TOKEN_ADDRESS
   const isBoozPrize = (prizeTokens as string[]).length > 0 &&
     (prizeTokens as string[])[0]?.toLowerCase() === boozTokenAddr.toLowerCase()
   const prizeDecimals = isBoozPrize ? 18 : 6
@@ -889,6 +885,10 @@ export default function RewardPage() {
   })
 
   const _raffleCount = Number(nextRaffleIdRaw ?? 0n)
+  // FIX: was polling every 60s — tickets committed to past raffles are immutable so
+  // periodic refetch was wasting N calls/min (one per raffle). Fetch once and cache.
+  // Note: the active raffle's per-user ticket count is handled separately inside
+  // ActiveRaffleCard (refetchUserTickets), so this display stat stays accurate enough.
   const { data: burnedTicketsRaw } = useReadContracts({
     contracts: Array.from({ length: _raffleCount }, (_, i) => ({
       address: RAFFLE_ADDRESS,
@@ -897,7 +897,7 @@ export default function RewardPage() {
       args: [BigInt(i), address!] as const,
       chainId: APP_CHAIN.id,
     })),
-    query: { enabled: !!address && _raffleCount > 0, refetchInterval: 60_000 },
+    query: { enabled: !!address && _raffleCount > 0 },
   })
 
   const _recentCount = Math.min(_raffleCount, 5)
@@ -925,12 +925,13 @@ export default function RewardPage() {
     query: { enabled: _recentCount > 0, refetchInterval: 60_000 },
   })
 
+  // FIX: data result was never consumed — only refetch() is called after writes and on
+  // tab focus. Removed the 60s poll since there is nothing to display from this read.
   const { refetch: refetchActiveRaffles } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "getActiveRaffles",
     chainId: APP_CHAIN.id,
-    query: { refetchInterval: 60_000 },
   })
 
   // ── Owner reads ─────────────────────────────────────────────────────────────
@@ -977,6 +978,9 @@ export default function RewardPage() {
     query: { refetchInterval: 60_000 },
   })
   const _appCount = Number(nextAppIdRaw ?? 0n)
+  // FIX: was polling every 60s — accepted sponsor applications are immutable and new
+  // submissions are infrequent. Reduced to 5-min interval to limit fan-out (N calls
+  // per poll where N = total application count).
   const { data: allAppsRaw } = useReadContracts({
     contracts: Array.from({ length: _appCount }, (_, i) => ({
       address: RAFFLE_ADDRESS,
@@ -985,7 +989,7 @@ export default function RewardPage() {
       args: [BigInt(i)] as const,
       chainId: APP_CHAIN.id,
     })),
-    query: { enabled: _appCount > 0, refetchInterval: 60_000 },
+    query: { enabled: _appCount > 0, refetchInterval: 5 * 60_000 },
   })
 
   // ── Streak reads ────────────────────────────────────────────────────────────
@@ -1462,6 +1466,7 @@ export default function RewardPage() {
                 totalRaffles={totalRaffles}
                 userTicketBalance={ticketBalance}
                 acceptedSponsorApps={acceptedSponsorApps}
+                boozTokenAddress={pageBoozToken as string | undefined}
               />
             ) : (
               <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
