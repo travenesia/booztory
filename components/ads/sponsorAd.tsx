@@ -196,7 +196,7 @@ function LiveBadge() {
 // maxBodyH is passed from the modal — measured from window, not the container itself.
 // This avoids the chicken-and-egg problem where measuring h-full gives the forced
 // panel height rather than the content's natural height.
-function AdContent({ ad, maxBodyH }: { ad: ActiveAd; maxBodyH?: number }) {
+function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; flush?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState<number>(0)
 
@@ -310,10 +310,10 @@ function AdContent({ ad, maxBodyH }: { ad: ActiveAd; maxBodyH?: number }) {
         <img
           src={ad.imageUrl}
           alt={ad.sponsorName || "Sponsor"}
-          className="w-full rounded-lg object-cover"
+          className={cn("w-full object-cover", !flush && "rounded-lg")}
           style={{
             aspectRatio: ad.ratio === "9:16" ? "9/16" : ad.ratio === "1:1" ? "1/1" : "16/9",
-            maxHeight: "260px",
+            ...(flush ? {} : { maxHeight: "260px" }),
           }}
         />
       )}
@@ -324,8 +324,11 @@ function AdContent({ ad, maxBodyH }: { ad: ActiveAd; maxBodyH?: number }) {
         const isVertical = ct === "youtubeshorts" || ct === "tiktok"
         return (
           <div
-            className="rounded-lg overflow-hidden"
-            style={{ aspectRatio: isVertical ? "9/16" : "16/9", maxHeight: "260px" }}
+            className={cn("overflow-hidden", !flush && "rounded-lg")}
+            style={{
+              aspectRatio: isVertical ? "9/16" : "16/9",
+              ...(flush ? {} : { maxHeight: "260px" }),
+            }}
           >
             <ContentEmbed
               contentType={ct}
@@ -796,92 +799,107 @@ export function SponsorAdFloatingBar() {
   )
 }
 
-// ── SponsorAdSidebar — left + right pills on desktop, bottom-right on mobile ───
-// Shown on all non-homepage routes. Clicking any pill opens a floating popup.
+// ── SponsorAdSidebar — auto-shown panel on non-homepage routes ────────────────
+// Desktop only: fixed to the right of the content area. Hidden on mobile.
+// Styled like the mobile homepage popup (dark panel, top bar, content, social icons).
+
+const SIDEBAR_W = 315
+const SIDEBAR_TOP = 72   // px below viewport top (topbar 48 + margin 24)
+const TOPBAR_H   = 36   // top bar row inside panel
+const SOCIAL_H   = 32   // social icons row (present or not, reserved)
+const BOTTOM_PAD = 16   // breathing room at the bottom
 
 export function SponsorAdSidebar() {
   const pathname = usePathname()
-  const [open, setOpen]   = useState(false)
-  const [side, setSide]   = useState<"left" | "right" | "mobile">("right")
   const ad = useSponsorAd()
   const countdown = useAdCountdown(ad?.endTime ?? 0)
 
+  // Compute available body height from viewport so the panel never overflows
+  const [bodyH, setBodyH] = useState(200)
+  useEffect(() => {
+    function compute() {
+      const avail = window.innerHeight - SIDEBAR_TOP - TOPBAR_H - SOCIAL_H - BOTTOM_PAD
+      setBodyH(Math.max(100, avail))
+    }
+    compute()
+    window.addEventListener("resize", compute)
+    return () => window.removeEventListener("resize", compute)
+  }, [])
+
   if (!ad || pathname === "/") return null
 
-  function toggle(s: typeof side) {
-    if (open && side === s) { setOpen(false) } else { setSide(s); setOpen(true) }
-  }
 
-  const pillClass = "flex flex-col items-center gap-1.5 bg-white border border-indigo-100 rounded-lg px-2 py-3 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all"
-  const pillLabel = (
-    <span
-      className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider"
-      style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-    >
-      Ads
-    </span>
-  )
+  const linkEntries = Object.entries(ad.links).filter(([, v]) => v)
+  const isTwitterEmbed = ad.adType === "embed" && !!ad.embedUrl && urlToContentType(ad.embedUrl) === "twitter"
+  const panelBg = isTwitterEmbed ? "bg-white" : "bg-black"
 
-  const Popup = (
-    <div className="w-44 bg-white border border-indigo-100 rounded-xl shadow-lg overflow-hidden">
-      <div className="flex items-center justify-between px-2.5 py-2 bg-indigo-50 border-b border-indigo-100">
-        <div className="flex items-center gap-1 min-w-0">
-          <span className="text-[9px] text-gray-400 flex-shrink-0">Ads by</span>
+  const panel = (
+    <div className={cn("flex flex-col rounded-xl shadow-xl overflow-hidden w-[315px]", panelBg)}>
+      {/* Top bar: Live + sponsor name + countdown */}
+      <div className={cn(
+        "flex items-center justify-between px-2.5 py-2 flex-shrink-0",
+        isTwitterEmbed ? "bg-black/5 border-b border-gray-100" : "bg-white/5"
+      )}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <LiveBadge />
           {ad.sponsorName && (
-            <span className="text-[9px] text-indigo-600 font-semibold truncate ml-1">{ad.sponsorName}</span>
+            <span className="flex items-center gap-1 min-w-0">
+              <span className={cn("text-[9px]", isTwitterEmbed ? "text-gray-400" : "text-white/60")}>Ads by</span>
+              <span className={cn("text-[9px] font-semibold truncate", isTwitterEmbed ? "text-gray-700" : "text-white")}>
+                {ad.sponsorName}
+              </span>
+            </span>
           )}
         </div>
-        <LiveBadge />
-      </div>
-      {countdown && (
-        <div className="px-2.5 pt-1.5 pb-0">
-          <span className="text-[9px] font-mono text-indigo-400 tabular-nums">{countdown}</span>
-        </div>
-      )}
-      <div className="p-2.5">
-        <AdContent ad={ad} />
+        {countdown && (
+          <span className={cn(
+            "text-[9px] font-mono tabular-nums whitespace-nowrap flex-shrink-0 ml-1",
+            isTwitterEmbed ? "text-gray-500" : "text-white/70"
+          )}>
+            {countdown}
+          </span>
+        )}
       </div>
 
-      {/* Footer */}
-      <AdPanelFooter ad={ad} small />
+      {/* Content — modal mode for pixel-exact embed sizing */}
+      <div className="overflow-hidden">
+        <AdContent ad={ad} maxBodyH={bodyH} />
+      </div>
+
+      {/* Bottom social icons */}
+      {linkEntries.length > 0 && (
+        <div className={cn(
+          "flex items-center justify-center gap-4 py-2 flex-shrink-0",
+          isTwitterEmbed ? "bg-black/5 border-t border-gray-100" : "bg-white/5"
+        )}>
+          {linkEntries.map(([key, href]) => (
+            <a
+              key={key}
+              href={href as string}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={LINK_LABELS[key] ?? key}
+              className="flex items-center justify-center hover:opacity-70 transition-opacity"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LINK_ICONS[key] ?? ""}
+                alt={key}
+                width={14}
+                height={14}
+                style={isTwitterEmbed ? undefined : { filter: "brightness(0) invert(1)" }}
+              />
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   )
 
   return (
-    <>
-      {/* Backdrop — click outside any pill/popup to close */}
-      {open && <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />}
-
-      {/* Left pill (desktop) — popup floats to the right of it */}
-      <div className="fixed top-24 z-50 hidden xl:block" style={{ right: "calc(50% + 341px)" }}>
-        <button onClick={() => toggle("left")} className={pillClass} aria-label="Show sponsor">
-          {pillLabel}
-        </button>
-        {open && side === "left" && (
-          <div className="absolute top-0 left-full ml-2">{Popup}</div>
-        )}
-      </div>
-
-      {/* Right pill (desktop) — popup floats to the left of it */}
-      <div className="fixed top-24 z-50 hidden xl:block" style={{ left: "calc(50% + 341px)" }}>
-        <button onClick={() => toggle("right")} className={pillClass} aria-label="Show sponsor">
-          {pillLabel}
-        </button>
-        {open && side === "right" && (
-          <div className="absolute top-0 right-full mr-2">{Popup}</div>
-        )}
-      </div>
-
-      {/* Mobile — floating pill bottom-right, popup floats above it */}
-      <div className="fixed bottom-20 right-4 z-50 xl:hidden">
-        <button onClick={() => toggle("mobile")} className={pillClass} aria-label="Show sponsor">
-          {pillLabel}
-        </button>
-        {open && side === "mobile" && (
-          <div className="absolute bottom-full right-0 mb-2">{Popup}</div>
-        )}
-      </div>
-    </>
+    <div className="fixed top-[72px] z-50 hidden xl:block" style={{ left: "calc(50% + 325px)" }}>
+      {panel}
+    </div>
   )
 }
 

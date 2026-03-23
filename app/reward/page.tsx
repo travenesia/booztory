@@ -6,7 +6,7 @@ import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/lib/wagmi"
 import { formatUnits, parseAbiItem } from "viem"
 import { HiBolt, HiTrophy } from "react-icons/hi2"
-import { Ticket, BadgeCheck } from "lucide-react"
+import { Ticket, BadgeCheck, Flame } from "lucide-react"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -460,38 +460,32 @@ function ActiveRaffleCard({
             <span className="text-sm font-bold text-white/80">Raffle #{Number(selectedId) + 1}</span>
           )}
         </div>
-        <div className="text-2xl font-bold text-center mt-3">
+        <div className="text-4xl font-bold text-center mt-3">
           {totalPrize > 0n
             ? (isBoozPrize ? `${totalPrizeFormatted} $BOOZ` : `$${totalPrizeFormatted}`)
             : "—"}
         </div>
-        <div className="text-xs text-white/60 text-center mt-2">
-          {Number(winnerCount)} winner{Number(winnerCount) !== 1 ? "s" : ""} ·{" "}
-          {Number(totalTickets).toLocaleString()} ticket{Number(totalTickets) !== 1 ? "s" : ""} ·{" "}
-          {Number(uniqueEntrants).toLocaleString()} unique entrant{Number(uniqueEntrants) !== 1 ? "s" : ""}
-        </div>
 
         {/* Sponsor info */}
         {raffleSponsor && (
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10">
-            <span className="text-xs text-white/60">
-              Sponsored by <span className="font-semibold text-white">{raffleSponsor.sponsorName}</span>
-            </span>
-            {sponsorLinks && (
-              <div className="flex items-center gap-2">
-                {SPONSOR_LINK_ICONS.map(({ key, icon, alt }) => {
-                  const href = sponsorLinks[key]
-                  if (!href) return null
-                  return (
-                    <a key={key} href={href} target="_blank" rel="noopener noreferrer"
+          <div className="flex flex-col items-center gap-2 mt-2 pt-2 pb-4 border-t border-white/10">
+            <span className="text-xs text-white/60 text-center">Sponsored by</span>
+            <span className="text-sm font-semibold text-white text-center">{raffleSponsor.sponsorName}</span>
+            {sponsorLinks && (() => {
+              const links = SPONSOR_LINK_ICONS.filter(({ key }) => sponsorLinks[key])
+              if (links.length === 0) return null
+              return (
+                <div className="flex items-center justify-center gap-3">
+                  {links.map(({ key, icon, alt }) => (
+                    <a key={key} href={sponsorLinks[key]} target="_blank" rel="noopener noreferrer"
                       className="opacity-60 hover:opacity-100 transition-opacity">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={icon} width={14} height={14} alt={alt} className="invert" />
                     </a>
-                  )
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         )}
 
@@ -1406,31 +1400,54 @@ export default function RewardPage() {
         {tab === "raffle" && (
           <div className="space-y-4">
 
-            {/* Stats row */}
-            {address && (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-gray-200 rounded-xl p-3 text-center shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">Points</div>
-                  <div className="text-base font-black text-gray-900">{pointsBalance.toLocaleString()}</div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-xl p-3 text-center shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">Tickets</div>
-                  <div className="text-base font-black text-indigo-600">{ticketBalance.toLocaleString()}</div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-xl p-3 text-center shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">Burned</div>
-                  <div className="text-base font-black text-rose-500">{burnedTickets.toLocaleString()}</div>
-                </div>
+            {/* Single raffle card — defaults to latest, dropdown inside to switch */}
+            {totalRaffles > 0 ? (
+              <ActiveRaffleCard
+                raffleId={BigInt(totalRaffles - 1)}
+                userAddress={address}
+                isOwner={isOwner}
+                totalRaffles={totalRaffles}
+                userTicketBalance={ticketBalance}
+                acceptedSponsorApps={acceptedSponsorApps}
+                boozTokenAddress={pageBoozToken as string | undefined}
+              />
+            ) : (
+              <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+                <HiTrophy className="mx-auto text-gray-300 mb-3" size={32} />
+                <p className="text-sm font-semibold text-gray-500">No active raffles right now</p>
+                <p className="text-xs text-gray-400 mt-1">Earn points by minting slots and donating, then convert to tickets</p>
               </div>
             )}
 
             {/* Convert points → tickets */}
             {address && maxConvertible > 0 && (
               <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <Ticket size={15} className="text-indigo-600" />
                   <span className="text-sm font-bold text-indigo-900">Convert Points → Tickets</span>
                 </div>
+
+                {/* Inline stats */}
+                <div className="flex items-center mb-3 bg-indigo-100/60 rounded-lg overflow-hidden">
+                  <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
+                    <HiBolt className="text-amber-500" size={14} />
+                    <span className="text-xs text-indigo-700">Points</span>
+                    <span className="text-xs font-bold text-gray-900">{pointsBalance.toLocaleString()}</span>
+                  </div>
+                  <div className="w-px self-stretch bg-indigo-200" />
+                  <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
+                    <Ticket size={13} className="text-indigo-500" />
+                    <span className="text-xs text-indigo-700">Tickets</span>
+                    <span className="text-xs font-bold text-indigo-600">{ticketBalance.toLocaleString()}</span>
+                  </div>
+                  <div className="w-px self-stretch bg-indigo-200" />
+                  <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
+                    <Flame size={13} className="text-rose-500" />
+                    <span className="text-xs text-indigo-700">Burned</span>
+                    <span className="text-xs font-bold text-rose-500">{burnedTickets.toLocaleString()}</span>
+                  </div>
+                </div>
+
                 <p className="text-xs text-indigo-700 mb-3">
                   {pointsPerTicket} points = 1 ticket · up to {maxConvertible} ticket{maxConvertible !== 1 ? "s" : ""} available
                 </p>
@@ -1467,25 +1484,6 @@ export default function RewardPage() {
                     {isConverting ? "Converting..." : "Convert"}
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Single raffle card — defaults to latest, dropdown inside to switch */}
-            {totalRaffles > 0 ? (
-              <ActiveRaffleCard
-                raffleId={BigInt(totalRaffles - 1)}
-                userAddress={address}
-                isOwner={isOwner}
-                totalRaffles={totalRaffles}
-                userTicketBalance={ticketBalance}
-                acceptedSponsorApps={acceptedSponsorApps}
-                boozTokenAddress={pageBoozToken as string | undefined}
-              />
-            ) : (
-              <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-                <HiTrophy className="mx-auto text-gray-300 mb-3" size={32} />
-                <p className="text-sm font-semibold text-gray-500">No active raffles right now</p>
-                <p className="text-xs text-gray-400 mt-1">Earn points by minting slots and donating, then convert to tickets</p>
               </div>
             )}
 

@@ -78,7 +78,9 @@ export function PageTopbar({ title }: PageTopbarProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/social/x.svg" alt="X" width={13} height={13} />
           </a>
-          <ConnectWalletButton />
+          <div className="hidden md:block">
+            <ConnectWalletButton />
+          </div>
         </div>
 
       </div>
