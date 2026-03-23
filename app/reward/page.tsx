@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/
 import { useIsMobile } from "@/hooks/use-mobile"
 import { GMContent } from "@/components/modals/gmModal"
 import { usePriceTiers } from "@/hooks/usePriceTiers"
+import { useWalletName } from "@/hooks/useWalletName"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -95,6 +96,20 @@ function groupPrizes(prizeList: bigint[]): { start: number; end: number; amount:
 
 // TODO: move to NEXT_PUBLIC_RAFFLE_DEPLOY_BLOCK env var once confirmed on mainnet
 const RAFFLE_DEPLOY_BLOCK = 38_200_000n
+
+// ── WinnerName ────────────────────────────────────────────────────────────────
+// Wrapper so useWalletName can be called per winner without violating Rules of Hooks
+function WinnerName({ address, isYou }: { address: string; isYou: boolean }) {
+  const name = useWalletName(address)
+  return (
+    <span className={cn(
+      "font-mono text-xs truncate",
+      isYou ? "text-green-700 font-bold" : "text-gray-600"
+    )}>
+      {name ?? `${address.slice(0, 6)}...${address.slice(-4)}`}{isYou ? " (you)" : ""}
+    </span>
+  )
+}
 
 // ── ActiveRaffleCard ───────────────────────────────────────────────────────────
 function ActiveRaffleCard({
@@ -594,7 +609,7 @@ function ActiveRaffleCard({
             </div>
             <button
               onClick={handleEnter}
-              disabled={isEntering || !ticketInput || parseInt(ticketInput) < 1}
+              disabled={isEntering || !ticketInput || parseInt(ticketInput) < 1 || parseInt(ticketInput) > userTicketBalance}
               className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               {isEntering ? "Entering..." : hasEntered ? "Add More" : "Enter"}
@@ -701,12 +716,7 @@ function ActiveRaffleCard({
                   {tickets > 0 && (
                     <span className="text-xs text-gray-400 shrink-0">{tickets}×</span>
                   )}
-                  <span className={cn(
-                    "font-mono text-xs truncate",
-                    isYou ? "text-green-700 font-bold" : "text-gray-600"
-                  )}>
-                    {`${addr.slice(0, 6)}...${addr.slice(-4)}`}{isYou ? " (you)" : ""}
-                  </span>
+                  <WinnerName address={addr} isYou={isYou} />
                 </div>
                 {/* FIX (Issue 4): prize button links to Basescan draw tx; VRF proof link added below */}
                 <div className="flex flex-col items-end gap-1">
@@ -758,6 +768,10 @@ export default function RewardPage() {
   const [minUniqueInput, setMinUniqueInput] = useState("")
   const [isSettingThreshold, setIsSettingThreshold] = useState(false)
   const [isSettingMinUnique, setIsSettingMinUnique] = useState(false)
+  const [rtRaffleIdInput, setRtRaffleIdInput] = useState("")
+  const [rtThresholdInput, setRtThresholdInput] = useState("")
+  const [rtMinUniqueInput, setRtMinUniqueInput] = useState("")
+  const [isSettingRaffleThresholds, setIsSettingRaffleThresholds] = useState(false)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [crToken, setCrToken] = useState<"usdc" | "booz">("usdc")
   const [crPrizes, setCrPrizes] = useState<string[]>(["", "", ""])
@@ -876,13 +890,12 @@ export default function RewardPage() {
     query: { enabled: _recentCount > 0, refetchInterval: 60_000 },
   })
 
-  // FIX: data result was never consumed — only refetch() is called after writes and on
-  // tab focus. Removed the 60s poll since there is nothing to display from this read.
-  const { refetch: refetchActiveRaffles } = useReadContract({
+  const { data: activeRaffleIdsRaw, refetch: refetchActiveRaffles } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
     functionName: "getActiveRaffles",
     chainId: APP_CHAIN.id,
+    query: { refetchInterval: 30_000 },
   })
 
   // ── Owner reads ─────────────────────────────────────────────────────────────
@@ -975,6 +988,7 @@ export default function RewardPage() {
 
   const raffleUsdc = raffleUsdcRaw as bigint | undefined
   const raffleUsdcNum = raffleUsdc !== undefined ? Number(raffleUsdc) / 1_000_000 : undefined
+  const activeRaffleIds = (activeRaffleIdsRaw as bigint[] | undefined) ?? []
 
   // ── Sponsor apps parsed ──────────────────────────────────────────────────────
   const acceptedSponsorApps = useMemo((): AcceptedSponsor[] => {
@@ -1135,6 +1149,38 @@ export default function RewardPage() {
       toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
     } finally {
       setIsSettingMinUnique(false)
+    }
+  }
+
+  async function handleSetRaffleThresholds() {
+    const raffleId = parseInt(rtRaffleIdInput)
+    const threshold = parseInt(rtThresholdInput)
+    const minUnique = parseInt(rtMinUniqueInput)
+    if (!isOwner || isNaN(raffleId) || raffleId < 0) return
+    if (rtThresholdInput && (isNaN(threshold) || threshold < 1)) return
+    if (rtMinUniqueInput && (isNaN(minUnique) || minUnique < 1)) return
+    if (!rtThresholdInput && !rtMinUniqueInput) return
+    const t = rtThresholdInput ? BigInt(threshold) : BigInt(defaultThreshold ?? 1)
+    const u = rtMinUniqueInput ? BigInt(minUnique) : BigInt(defaultMinUnique ?? 1)
+    setIsSettingRaffleThresholds(true)
+    try {
+      const tx = await writeContractAsync({
+        address: RAFFLE_ADDRESS,
+        abi: RAFFLE_ABI,
+        functionName: "setRaffleThresholds",
+        args: [BigInt(raffleId), t, u],
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      setRtRaffleIdInput("")
+      setRtThresholdInput("")
+      setRtMinUniqueInput("")
+      toast({ title: "Updated", description: `Raffle #${raffleId} thresholds updated.` })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("user rejected") || msg.includes("User rejected")) return
+      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
+    } finally {
+      setIsSettingRaffleThresholds(false)
     }
   }
 
@@ -1499,6 +1545,51 @@ export default function RewardPage() {
                       className="bg-amber-500 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors whitespace-nowrap"
                     >
                       {isSettingMinUnique ? "Saving..." : "Set"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* ── Per-Raffle Thresholds ── */}
+                <div className="space-y-3 pt-4 border-t border-amber-200">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">Override Raffle Thresholds</p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      Override draw thresholds for a specific raffle by ID. Leave a field blank to keep its current value.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <select
+                      value={rtRaffleIdInput}
+                      onChange={e => setRtRaffleIdInput(e.target.value)}
+                      className="w-36 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    >
+                      <option value="">Select raffle</option>
+                      {[...activeRaffleIds].reverse().map(id => (
+                        <option key={id.toString()} value={id.toString()}>Raffle #{Number(id) + 1}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={1}
+                      value={rtThresholdInput}
+                      onChange={e => setRtThresholdInput(e.target.value)}
+                      placeholder={`Tickets (now ${defaultThreshold ?? "…"})`}
+                      className="flex-1 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      value={rtMinUniqueInput}
+                      onChange={e => setRtMinUniqueInput(e.target.value)}
+                      placeholder={`Wallets (now ${defaultMinUnique ?? "…"})`}
+                      className="flex-1 border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                    <button
+                      onClick={handleSetRaffleThresholds}
+                      disabled={isSettingRaffleThresholds || !rtRaffleIdInput || (!rtThresholdInput && !rtMinUniqueInput)}
+                      className="bg-amber-500 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors whitespace-nowrap"
+                    >
+                      {isSettingRaffleThresholds ? "Saving..." : "Set"}
                     </button>
                   </div>
                 </div>
