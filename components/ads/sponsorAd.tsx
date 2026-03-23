@@ -2,13 +2,13 @@
 
 import { useState, useMemo, useEffect, useRef } from "react"
 import type React from "react"
+import { HiMiniArrowRight } from "react-icons/hi2"
 import { useReadContract, useReadContracts } from "wagmi"
 import { usePathname } from "next/navigation"
 import { RAFFLE_ADDRESS, RAFFLE_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { cn } from "@/lib/utils"
-import { X, Megaphone } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -162,7 +162,12 @@ function useAdCountdown(endTime: number): string {
       const h = Math.floor((diff % 86400) / 3600)
       const m = Math.floor((diff % 3600) / 60)
       const s = diff % 60
-      setDisplay(`${d}:${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`)
+      const parts: string[] = []
+      if (d > 0) parts.push(`${d}d`)
+      if (d > 0 || h > 0) parts.push(`${String(h).padStart(2, "0")}h`)
+      if (d > 0 || h > 0 || m > 0) parts.push(`${String(m).padStart(2, "0")}m`)
+      parts.push(`${String(s).padStart(2, "0")}s`)
+      setDisplay(parts.join(" "))
     }
     calc()
     const id = setInterval(calc, 1_000)
@@ -170,6 +175,20 @@ function useAdCountdown(endTime: number): string {
   }, [endTime])
 
   return display
+}
+
+// ── LiveBadge — pulsing dot to indicate ad is currently active ────────────────
+
+function LiveBadge() {
+  return (
+    <span className="flex items-center gap-1 flex-shrink-0">
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+      </span>
+      <span className="text-[9px] font-bold text-green-600 uppercase tracking-wide">Live</span>
+    </span>
+  )
 }
 
 // ── AdContent — main ad body (image / embed / text) ──────────────────────────
@@ -386,16 +405,62 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
   const ad = useSponsorAd()
   const countdown = useAdCountdown(ad?.endTime ?? 0)
 
-  // Available body height = viewport - modal margins(96) - header(44) - footer(44) - body padding(2)
-  const [maxBodyH, setMaxBodyH] = useState(400)
+  // Pre-compute exact video dimensions so the panel width = video width (no side gaps)
+  const [videoW, setVideoW] = useState(360)
+  const [videoH, setVideoH] = useState(480)
+
   useEffect(() => {
-    const update = () => setMaxBodyH(Math.max(100, window.innerHeight - 186))
-    update()
-    window.addEventListener("resize", update)
-    return () => window.removeEventListener("resize", update)
-  }, [])
+    function compute() {
+      if (!ad) return
+      const HEADER_H  = 0   // header removed — all info in right column
+      const FOOTER_H  = 0   // tagline hidden in popup
+      const V_MARGIN  = 32   // 16px top + 16px bottom
+      const H_MARGIN  = 32   // 16px left + 16px right
+      const SOCIAL_W  = 48  // right column always present (live + countdown + links): 36px + 12px gap
+
+      const availW = Math.floor(window.innerWidth  - H_MARGIN - SOCIAL_W)
+      const availH = Math.floor(window.innerHeight - V_MARGIN - HEADER_H - FOOTER_H)
+
+      let vw = availW, vh = availH
+
+      if (ad.adType === "image") {
+        const [rw, rh] = ad.ratio === "9:16" ? [9, 16] : ad.ratio === "1:1" ? [1, 1] : [16, 9]
+        const maxW = (ad.ratio === "16:9" || ad.ratio === "1:1") ? Math.min(availW, 560) : availW
+        vw = maxW; vh = Math.round(vw * rh / rw)
+        if (vh > availH) { vh = availH; vw = Math.round(vh * rw / rh) }
+      } else if (ad.adType === "embed" && ad.embedUrl) {
+        const ct = urlToContentType(ad.embedUrl)
+        if (!ct || ct === "twitter") {
+          vw = Math.min(availW, 550); vh = availH
+        } else if (ct === "spotify") {
+          vw = Math.min(availW, 400); vh = Math.min(availH, 352)
+        } else {
+          const isVert = ct === "youtubeshorts" || ct === "tiktok"
+          if (isVert) {
+            vh = availH; vw = Math.round(vh * 9 / 16)
+            if (vw > availW) { vw = availW; vh = Math.round(vw * 16 / 9) }
+          } else {
+            vw = Math.min(availW, 560); vh = Math.round(vw * 9 / 16)
+            if (vh > availH) { vh = availH; vw = Math.round(vh * 16 / 9) }
+          }
+        }
+      } else {
+        // text ad
+        vw = Math.min(availW, 480); vh = Math.min(availH, 240)
+      }
+
+      setVideoW(Math.max(200, vw))
+      setVideoH(Math.max(100, vh))
+    }
+
+    compute()
+    window.addEventListener("resize", compute)
+    return () => window.removeEventListener("resize", compute)
+  }, [ad])
 
   if (!ad) return null
+
+  const linkEntries = Object.entries(ad.links).filter(([, v]) => v)
 
   return (
     <div className={cn("relative w-full", className)}>
@@ -403,13 +468,16 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 w-full text-[11px] py-1 group"
       >
-        <Megaphone size={11} className="text-indigo-400 flex-shrink-0" />
-        <span className="font-bold text-indigo-400 uppercase tracking-wide">Sponsored</span>
-        <span className="text-gray-300">·</span>
-        <span className="text-gray-500 group-hover:text-gray-700 transition-colors truncate">
+        <LiveBadge />
+        <span className="text-gray-400 flex-shrink-0">Ads by</span>
+        <span className="text-gray-600 group-hover:text-gray-800 transition-colors font-semibold flex-shrink-0">
           {ad.sponsorName}
         </span>
-        <span className="ml-auto text-gray-300 group-hover:text-gray-400 transition-colors flex-shrink-0">
+        {ad.tagline && (
+          <span className="text-gray-400 italic truncate hidden sm:inline">· {ad.tagline}</span>
+        )}
+        <span className="ml-auto text-gray-400 font-mono tabular-nums flex-shrink-0">{countdown}</span>
+        <span className="text-gray-300 group-hover:text-gray-400 transition-colors flex-shrink-0 ml-1">
           {open ? "‹" : "›"}
         </span>
       </button>
@@ -418,47 +486,59 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-50 bg-black/40"
+            className="fixed inset-0 z-50 bg-black/80"
             onClick={() => setOpen(false)}
             aria-hidden
           />
 
-          {/* Modal — auto-height, centered in viewport with 48px clearance all sides */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-12 pointer-events-none">
-            <div
-              className="w-full max-w-lg pointer-events-auto bg-white rounded-xl shadow-xl overflow-hidden flex flex-col"
-              style={{ maxHeight: "calc(100vh - 96px)" }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 border-b border-indigo-100">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Megaphone size={12} className="text-indigo-400 flex-shrink-0" />
-                  <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wide flex-shrink-0">Sponsored</span>
-                  {ad.sponsorName && (
-                    <span className="text-[11px] text-indigo-600 font-semibold truncate">· {ad.sponsorName}</span>
-                  )}
+          {/* Centered layout: panel + social links column */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="flex items-start gap-3 pointer-events-auto">
+
+              {/* Panel — exact video width, no side padding */}
+              <div
+                className="flex flex-col bg-black rounded-xl shadow-xl overflow-hidden"
+                style={{ width: videoW }}
+              >
+
+                {/* Body — no padding so content fills edge-to-edge */}
+                <div className="overflow-hidden">
+                  <AdContent ad={ad} maxBodyH={videoH} />
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                  {countdown && (
-                    <span className="text-[11px] font-mono text-indigo-400 tabular-nums">{countdown}</span>
-                  )}
-                  <button
-                    onClick={() => setOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    aria-label="Close ad"
+
+              </div>
+
+              {/* Right column — ads by, live status, countdown, social links */}
+              <div className="flex flex-col items-center gap-3 self-center">
+                {ad.sponsorName && (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] text-white/60 uppercase tracking-wide">Ads by</span>
+                    <span className="text-[10px] text-white font-semibold text-center leading-tight max-w-[60px] break-words">
+                      {ad.sponsorName}
+                    </span>
+                  </div>
+                )}
+                <LiveBadge />
+                {countdown && (
+                  <span className="text-[10px] font-mono text-white/80 tabular-nums bg-black/30 rounded-md px-1.5 py-0.5 whitespace-nowrap">
+                    {countdown}
+                  </span>
+                )}
+                {linkEntries.map(([key, href]) => (
+                  <a
+                    key={key}
+                    href={href as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={LINK_LABELS[key] ?? key}
+                    className="w-9 h-9 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-100 hover:border-indigo-200 hover:shadow-lg transition-all"
                   >
-                    <X size={15} />
-                  </button>
-                </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={LINK_ICONS[key] ?? ""} alt={key} width={16} height={16} />
+                  </a>
+                ))}
               </div>
 
-              {/* Body — auto-height, sized by fittedStyle inside AdContent */}
-              <div className="overflow-hidden p-1">
-                <AdContent ad={ad} maxBodyH={maxBodyH} />
-              </div>
-
-              {/* Footer */}
-              <AdPanelFooter ad={ad} />
             </div>
           </div>
         </>
@@ -482,35 +562,27 @@ export function SponsorAdToggle({ className }: { className?: string }) {
           onClick={() => setExpanded(true)}
           className="flex items-center gap-1.5 w-full text-[11px] py-1 group"
         >
-          <Megaphone size={11} className="text-indigo-400 flex-shrink-0" />
-          <span className="font-bold text-indigo-400 uppercase tracking-wide">Sponsored</span>
-          <span className="text-gray-300">·</span>
-          <span className="text-gray-500 group-hover:text-gray-700 transition-colors truncate">
+          <span className="text-gray-400 flex-shrink-0">Ads by</span>
+          <span className="text-gray-600 group-hover:text-gray-800 transition-colors truncate font-semibold">
             {ad.sponsorName}
           </span>
           <span className="ml-auto text-gray-300 group-hover:text-gray-400 transition-colors flex-shrink-0">›</span>
         </button>
       ) : (
         <div className="rounded-xl border border-indigo-100 bg-white overflow-hidden shadow-sm">
-          {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 border-b border-indigo-100">
+          {/* Header — tap to collapse */}
+          <button
+            onClick={() => setExpanded(false)}
+            className="w-full flex items-center justify-between px-3 py-2 bg-indigo-50 border-b border-indigo-100"
+          >
             <div className="flex items-center gap-1.5 min-w-0">
-              <Megaphone size={11} className="text-indigo-400 flex-shrink-0" />
-              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide flex-shrink-0">
-                Sponsored · {ad.durationDays}d
-              </span>
+              <span className="text-[10px] text-gray-400 flex-shrink-0">Ads by</span>
               {ad.sponsorName && (
-                <span className="text-[10px] text-indigo-600 font-semibold truncate">· {ad.sponsorName}</span>
+                <span className="text-[10px] text-indigo-600 font-semibold truncate">{ad.sponsorName}</span>
               )}
             </div>
-            <button
-              onClick={() => setExpanded(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-2"
-              aria-label="Close ad"
-            >
-              <X size={13} />
-            </button>
-          </div>
+            <LiveBadge />
+          </button>
           {/* Content */}
           <div className="p-3">
             <AdContent ad={ad} />
@@ -521,6 +593,202 @@ export function SponsorAdToggle({ className }: { className?: string }) {
         </div>
       )}
     </div>
+  )
+}
+
+// ── SponsorAdFloatingBar — fixed strip below topbar (purple, no layout shift) ──
+// Sits at top-12 (below the h-12 topbar). Fixed so it never pushes content down.
+
+export function SponsorAdFloatingBar() {
+  const [open, setOpen] = useState(false)
+  const ad = useSponsorAd()
+  const countdown = useAdCountdown(ad?.endTime ?? 0)
+
+  // Same dimension pre-computation as SponsorAdDesktopPopover
+  const [videoW, setVideoW] = useState(360)
+  const [videoH, setVideoH] = useState(480)
+
+  useEffect(() => {
+    function compute() {
+      if (!ad) return
+      const SOCIAL_W = 48
+      const V_MARGIN = 32
+      const H_MARGIN = 32
+      const availW = Math.floor(window.innerWidth  - H_MARGIN - SOCIAL_W)
+      const availH = Math.floor(window.innerHeight - V_MARGIN)
+
+      let vw = availW, vh = availH
+
+      if (ad.adType === "image") {
+        const [rw, rh] = ad.ratio === "9:16" ? [9, 16] : ad.ratio === "1:1" ? [1, 1] : [16, 9]
+        const maxW = (ad.ratio === "16:9" || ad.ratio === "1:1") ? Math.min(availW, 560) : availW
+        vw = maxW; vh = Math.round(vw * rh / rw)
+        if (vh > availH) { vh = availH; vw = Math.round(vh * rw / rh) }
+      } else if (ad.adType === "embed" && ad.embedUrl) {
+        const ct = urlToContentType(ad.embedUrl)
+        if (!ct || ct === "twitter") {
+          vw = Math.min(availW, 550); vh = availH
+        } else if (ct === "spotify") {
+          vw = Math.min(availW, 400); vh = Math.min(availH, 352)
+        } else {
+          const isVert = ct === "youtubeshorts" || ct === "tiktok"
+          if (isVert) {
+            vh = availH; vw = Math.round(vh * 9 / 16)
+            if (vw > availW) { vw = availW; vh = Math.round(vw * 16 / 9) }
+          } else {
+            vw = Math.min(availW, 560); vh = Math.round(vw * 9 / 16)
+            if (vh > availH) { vh = availH; vw = Math.round(vh * 16 / 9) }
+          }
+        }
+      } else {
+        vw = Math.min(availW, 480); vh = Math.min(availH, 240)
+      }
+
+      setVideoW(Math.max(200, vw))
+      setVideoH(Math.max(100, vh))
+    }
+    compute()
+    window.addEventListener("resize", compute)
+    return () => window.removeEventListener("resize", compute)
+  }, [ad])
+
+  if (!ad) return null
+
+  const linkEntries = Object.entries(ad.links).filter(([, v]) => v)
+
+  return (
+    <>
+      {/* Fixed purple strip — no layout shift */}
+      <div className="fixed top-12 left-0 right-0 z-40 bg-gradient-to-r from-sky-200 via-blue-100 to-sky-200 px-4 py-1.5">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center justify-between w-full max-w-lg mx-auto text-[11px] group"
+        >
+          <LiveBadge />
+          <span className="flex items-center gap-1 flex-shrink-0">
+            <span className="text-sky-600">Ads by</span>
+            <span className="text-sky-800 group-hover:text-sky-900 transition-colors font-semibold">{ad.sponsorName}</span>
+          </span>
+          {ad.tagline && (
+            <span className="text-sky-500 italic truncate hidden sm:inline">· {ad.tagline}</span>
+          )}
+          <span className="text-sky-600 font-mono tabular-nums flex-shrink-0">{countdown}</span>
+          <HiMiniArrowRight className="text-sky-400 group-hover:text-sky-600 transition-colors flex-shrink-0 w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 bg-black/80"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+
+            {/* Mobile popup: top bar + content + bottom social icons */}
+            <div className="xl:hidden flex flex-col pointer-events-auto">
+              <div
+                className="flex flex-col bg-black rounded-xl shadow-xl overflow-hidden"
+                style={{ width: videoW }}
+              >
+                {/* Top bar: Live + name + countdown */}
+                <div className="flex items-center justify-between px-3 py-2 bg-white/5 flex-shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <LiveBadge />
+                    {ad.sponsorName && (
+                      <span className="flex items-center gap-1 min-w-0">
+                        <span className="text-[9px] text-white/60">Ads by</span>
+                        <span className="text-[10px] text-white font-semibold truncate">{ad.sponsorName}</span>
+                      </span>
+                    )}
+                  </div>
+                  {countdown && (
+                    <span className="text-[10px] font-mono text-white/70 tabular-nums whitespace-nowrap flex-shrink-0">{countdown}</span>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="overflow-hidden">
+                  <AdContent ad={ad} maxBodyH={videoH} />
+                </div>
+
+                {/* Bottom: social icons, no background, white */}
+                {linkEntries.length > 0 && (
+                  <div className="flex items-center justify-center gap-5 py-2.5 bg-white/5 flex-shrink-0">
+                    {linkEntries.map(([key, href]) => (
+                      <a
+                        key={key}
+                        href={href as string}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={LINK_LABELS[key] ?? key}
+                        className="flex items-center justify-center hover:opacity-70 transition-opacity"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={LINK_ICONS[key] ?? ""}
+                          alt={key}
+                          width={14}
+                          height={14}
+                          style={{ filter: "brightness(0) invert(1)" }}
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop popup: panel + right column */}
+            <div className="hidden xl:flex items-start gap-3 pointer-events-auto">
+              <div
+                className="flex flex-col bg-black rounded-xl shadow-xl overflow-hidden"
+                style={{ width: videoW }}
+              >
+                <div className="overflow-hidden">
+                  <AdContent ad={ad} maxBodyH={videoH} />
+                </div>
+              </div>
+
+              {/* Right column */}
+              <div className="flex flex-col items-center gap-3 self-center">
+                {ad.sponsorName && (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] text-white/60 uppercase tracking-wide">Ads by</span>
+                    <span className="text-[10px] text-white font-semibold text-center leading-tight max-w-[60px] break-words">
+                      {ad.sponsorName}
+                    </span>
+                  </div>
+                )}
+                <LiveBadge />
+                {countdown && (
+                  <span className="text-[10px] font-mono text-white/80 tabular-nums bg-black/30 rounded-md px-1.5 py-0.5 whitespace-nowrap">
+                    {countdown}
+                  </span>
+                )}
+                {linkEntries.map(([key, href]) => (
+                  <a
+                    key={key}
+                    href={href as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={LINK_LABELS[key] ?? key}
+                    className="w-9 h-9 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-100 hover:border-indigo-200 hover:shadow-lg transition-all"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={LINK_ICONS[key] ?? ""} alt={key} width={16} height={16} />
+                  </a>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -542,30 +810,24 @@ export function SponsorAdSidebar() {
 
   const pillClass = "flex flex-col items-center gap-1.5 bg-white border border-indigo-100 rounded-lg px-2 py-3 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all"
   const pillLabel = (
-    <>
-      <Megaphone size={12} className="text-indigo-400" />
-      <span
-        className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider"
-        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-      >
-        Sponsored
-      </span>
-    </>
+    <span
+      className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider"
+      style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+    >
+      Ads
+    </span>
   )
 
   const Popup = (
     <div className="w-44 bg-white border border-indigo-100 rounded-xl shadow-lg overflow-hidden">
       <div className="flex items-center justify-between px-2.5 py-2 bg-indigo-50 border-b border-indigo-100">
         <div className="flex items-center gap-1 min-w-0">
-          <Megaphone size={10} className="text-indigo-400 flex-shrink-0" />
-          <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wide flex-shrink-0">Sponsored</span>
+          <span className="text-[9px] text-gray-400 flex-shrink-0">Ads by</span>
           {ad.sponsorName && (
-            <span className="text-[9px] text-indigo-600 font-semibold truncate ml-1">· {ad.sponsorName}</span>
+            <span className="text-[9px] text-indigo-600 font-semibold truncate ml-1">{ad.sponsorName}</span>
           )}
         </div>
-        <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-1" aria-label="Close ad">
-          <X size={12} />
-        </button>
+        <LiveBadge />
       </div>
       {countdown && (
         <div className="px-2.5 pt-1.5 pb-0">

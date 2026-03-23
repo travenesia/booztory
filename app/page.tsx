@@ -14,7 +14,7 @@ import { useCurrentSlot } from "@/hooks/useContractContent"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SponsorAdToggle, SponsorAdDesktopPopover } from "@/components/ads/sponsorAd"
+import { SponsorAdFloatingBar } from "@/components/ads/sponsorAd"
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -109,11 +109,11 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col">
       <Topbar />
+      <SponsorAdFloatingBar />
 
       {/* Mobile + tablet layout */}
       <div className="xl:hidden flex-1 flex flex-col relative pt-4 pb-4 px-6 items-center justify-center mt-12 mb-12">
         <div className="w-full max-w-md flex flex-col gap-2">
-          {!isLoading && !isDesktop && <SponsorAdDesktopPopover />}
           {isLoading ? (
             <div className="w-full animate-pulse">
               <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />
@@ -168,7 +168,6 @@ export default function Home() {
 
         {/* Right: content card */}
         <div className="flex flex-col items-center justify-center py-4 gap-2">
-          {!isLoading && isDesktop && <SponsorAdDesktopPopover className="max-w-sm" />}
           {isLoading ? (
             <div className="w-full animate-pulse">
               <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />
