@@ -93,6 +93,9 @@ function groupPrizes(prizeList: bigint[]): { start: number; end: number; amount:
   return groups
 }
 
+// TODO: move to NEXT_PUBLIC_RAFFLE_DEPLOY_BLOCK env var once confirmed on mainnet
+const RAFFLE_DEPLOY_BLOCK = 38_200_000n
+
 // ── ActiveRaffleCard ───────────────────────────────────────────────────────────
 function ActiveRaffleCard({
   raffleId: initialRaffleId,
@@ -119,6 +122,14 @@ function ActiveRaffleCard({
   const [isCancelling, setIsCancelling] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+
+  // Read boozToken address directly from contract — more reliable than env-derived TOKEN_ADDRESS
+  const { data: contractBoozToken } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "boozToken",
+    chainId: APP_CHAIN.id,
+  })
 
   const { data: raffleRaw, refetch: refetchRaffle } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -202,15 +213,55 @@ function ActiveRaffleCard({
     setDrawTxHash(undefined)
     if (!drawBlock || !publicClient) return
     let cancelled = false
+    // FIX (Issue 1): use drawBlock as both bounds (1-block window) with RAFFLE_DEPLOY_BLOCK as
+    // a defensive floor so we never query before the contract existed.
+    // FIX (Issue 2): raffleId is an indexed topic — viem's args filter ensures we only get
+    // the DrawCompleted event for this specific raffle, not all historical draws.
+    const safeFrom = BigInt(Math.max(drawBlock, Number(RAFFLE_DEPLOY_BLOCK)))
     publicClient.getLogs({
       address: RAFFLE_ADDRESS as `0x${string}`,
       event: parseAbiItem("event DrawCompleted(uint256 indexed raffleId, address[] winners)"),
       args: { raffleId: selectedId },
-      fromBlock: BigInt(drawBlock),
+      fromBlock: safeFrom,
       toBlock: BigInt(drawBlock),
     }).then(logs => {
       if (!cancelled && logs[0]?.transactionHash) setDrawTxHash(logs[0].transactionHash)
     }).catch(() => {})
+    return () => { cancelled = true }
+  }, [drawBlock, publicClient, selectedId])
+
+  // FIX (Issue 4): Fetch DrawRequested event to get the Chainlink VRF requestId.
+  // We don't know which block the draw was requested in, so we scan from RAFFLE_DEPLOY_BLOCK
+  // to the drawBlock (or latest if not yet drawn) in 2000-block chunks to avoid Alchemy
+  // timeouts on wide range queries.
+  const [vrfRequestId, setVrfRequestId] = useState<bigint | undefined>()
+  useEffect(() => {
+    setVrfRequestId(undefined)
+    if (!publicClient || !drawBlock) return
+    let cancelled = false
+    async function fetchRequestId() {
+      const from = RAFFLE_DEPLOY_BLOCK
+      const to   = BigInt(drawBlock)
+      const CHUNK = 2000n
+      for (let start = from; start <= to; start += CHUNK) {
+        if (cancelled) return
+        const end = start + CHUNK - 1n < to ? start + CHUNK - 1n : to
+        try {
+          const logs = await publicClient!.getLogs({
+            address: RAFFLE_ADDRESS as `0x${string}`,
+            event: parseAbiItem("event DrawRequested(uint256 indexed raffleId, uint256 requestId)"),
+            args: { raffleId: selectedId },
+            fromBlock: start,
+            toBlock: end,
+          })
+          if (logs.length > 0) {
+            if (!cancelled) setVrfRequestId((logs[0].args as { requestId: bigint }).requestId)
+            return
+          }
+        } catch { /* skip failed chunk, continue */ }
+      }
+    }
+    fetchRequestId()
     return () => { cancelled = true }
   }, [drawBlock, publicClient, selectedId])
 
@@ -235,15 +286,27 @@ function ActiveRaffleCard({
 
   if (!raffle) return null
 
+  // FIX (Issue 3): Wait for boozToken read to resolve before computing prize decimals.
+  // Without this guard, the initial render uses prizeDecimals=6 (USDC fallback) for BOOZ
+  // prizes, causing raw 18-decimal amounts to display as astronomically large USDC values.
+  if (contractBoozToken === undefined) return null
+
   // status: 0 = Active, 1 = Drawn, 2 = Cancelled
   const [prizeTokens, winnerCount, startTime, endTime, raffleStatus, drawThreshold, minUniqueEntrants, drawRequested, totalTickets, uniqueEntrants] = raffle
 
   const isCancelled = raffleStatus === 2
 
-  // Determine prize token type
+  // Determine prize token type — compare against contract's boozToken state (not env var)
+  const boozTokenAddr = (contractBoozToken as string | undefined) ?? TOKEN_ADDRESS
   const isBoozPrize = (prizeTokens as string[]).length > 0 &&
-    (prizeTokens as string[])[0]?.toLowerCase() === TOKEN_ADDRESS.toLowerCase()
+    (prizeTokens as string[])[0]?.toLowerCase() === boozTokenAddr.toLowerCase()
   const prizeDecimals = isBoozPrize ? 18 : 6
+
+  // FIX (Issue 4): VRF proof URL — constructed from requestId fetched via DrawRequested event.
+  // TODO: CHAIN_ID is derived from APP_CHAIN.id at runtime; no hardcoding needed.
+  const vrfUrl = vrfRequestId !== undefined
+    ? `https://vrf.chain.link/${APP_CHAIN.id}/${vrfRequestId}`
+    : undefined
 
   // prizeAmounts is [tokenIndex][winnerIndex] — take token 0's per-winner amounts
   const prizeList = Array.from(
@@ -687,31 +750,45 @@ function ActiveRaffleCard({
                     {`${addr.slice(0, 6)}...${addr.slice(-4)}`}{isYou ? " (you)" : ""}
                   </span>
                 </div>
-                {drawTxUrl ? (
-                  <a
-                    href={drawTxUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      "flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap",
-                      isYou
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    )}
-                  >
-                    {isBoozPrize ? `${amtFormatted} $BOOZ` : `$${amtFormatted} USDC`}
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M2.5 2.5H9.5M9.5 2.5V9.5M9.5 2.5L2.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </a>
-                ) : (
-                  <span className={cn(
-                    "text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap",
-                    isYou ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
-                  )}>
-                    {isBoozPrize ? `${amtFormatted} $BOOZ` : `$${amtFormatted} USDC`}
-                  </span>
-                )}
+                {/* FIX (Issue 4): prize button links to Basescan draw tx; VRF proof link added below */}
+                <div className="flex flex-col items-end gap-1">
+                  {drawTxUrl ? (
+                    <a
+                      href={drawTxUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap",
+                        isYou
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      )}
+                    >
+                      {isBoozPrize ? `${amtFormatted} $BOOZ` : `$${amtFormatted} USDC`}
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.5 2.5H9.5M9.5 2.5V9.5M9.5 2.5L2.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </a>
+                  ) : (
+                    <span className={cn(
+                      "text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap",
+                      isYou ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                    )}>
+                      {isBoozPrize ? `${amtFormatted} $BOOZ` : `$${amtFormatted} USDC`}
+                    </span>
+                  )}
+                  {/* VRF proof link — only shown once vrfRequestId is resolved from DrawRequested event */}
+                  {vrfUrl && (
+                    <a
+                      href={vrfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-indigo-400 hover:text-indigo-600 whitespace-nowrap"
+                    >
+                      VRF proof ↗
+                    </a>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -795,6 +872,14 @@ export default function RewardPage() {
   })
 
   // ── Raffle reads ────────────────────────────────────────────────────────────
+  // Read boozToken from contract directly — avoids env-var mismatch in token detection
+  const { data: pageBoozToken } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "boozToken",
+    chainId: APP_CHAIN.id,
+  })
+
   const { data: nextRaffleIdRaw, refetch: refetchNextRaffleId } = useReadContract({
     address: RAFFLE_ADDRESS,
     abi: RAFFLE_ABI,
@@ -964,8 +1049,9 @@ export default function RewardPage() {
         const [prizeTokens, , startTime, , raffleStatus] = rData
         if (raffleStatus === 2) return false // cancelled — doesn't count
         if (Number(startTime) < s.acceptedAt || Number(startTime) >= s.acceptedAt + s.duration) return false
-        // Must be USDC prize
-        if ((prizeTokens as string[])[0]?.toLowerCase() === TOKEN_ADDRESS.toLowerCase()) return false
+        // Must be USDC prize (skip BOOZ raffles — check against contract's boozToken)
+        const boozAddr = ((pageBoozToken as string | undefined) ?? TOKEN_ADDRESS).toLowerCase()
+        if ((prizeTokens as string[])[0]?.toLowerCase() === boozAddr) return false
         // Prize amount must match
         const prizeData = (allRafflePrizesRaw ?? [])[i]?.result as readonly (readonly bigint[])[] | undefined
         const totalPrize = (prizeData?.[0] ?? []).reduce((a: bigint, b: bigint) => a + b, 0n)

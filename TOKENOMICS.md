@@ -289,6 +289,7 @@ Frontend verifies signature = owner address → displays ad. No on-chain transac
 - [ ] Consider: progress indicator during multi-step USDC raffle creation (approve → create → deposit)
 
 ### Raffle card (`ActiveRaffleCard`)
+- [ ] **Fix prize display — wrong amount & ticker on BOOZ raffles**: `isBoozPrize` was comparing `prizeTokens[0]` against env-derived `TOKEN_ADDRESS`. If they diverge (env var missing/stale at raffle creation), BOOZ amounts show with 6-decimal USDC formatting (e.g. 10,000 BOOZ → `$10,000,000,000,000,000.00 USDC`). Fix: read `boozToken` directly from the raffle contract state for the comparison. Changes staged in `app/reward/page.tsx` (not yet tested).
 - [ ] Show raffle start date alongside end date
 - [ ] On drawn raffle: show winner ENS/Basename instead of raw address (currently truncated hex)
 - [ ] Ticket entry: validate input doesn't exceed user's available ticket balance before submitting
