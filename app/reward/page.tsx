@@ -227,35 +227,29 @@ function ActiveRaffleCard({
   }, [drawBlock, publicClient, selectedId])
 
   // FIX (Issue 4): Fetch DrawRequested event to get the Chainlink VRF requestId.
-  // We don't know which block the draw was requested in, so we scan from RAFFLE_DEPLOY_BLOCK
-  // to the drawBlock (or latest if not yet drawn) in 2000-block chunks to avoid Alchemy
-  // timeouts on wide range queries.
+  // DrawRequested is emitted when owner calls requestDraw(); Chainlink VRF fulfills in 1-3 blocks.
+  // So DrawRequested is always within a small window before drawBlock.
+  // Scan drawBlock-2000 to drawBlock — a single getLogs call instead of a 500-chunk loop.
   const [vrfRequestId, setVrfRequestId] = useState<bigint | undefined>()
   useEffect(() => {
     setVrfRequestId(undefined)
     if (!publicClient || !drawBlock) return
     let cancelled = false
     async function fetchRequestId() {
-      const from = RAFFLE_DEPLOY_BLOCK
       const to   = BigInt(drawBlock)
-      const CHUNK = 2000n
-      for (let start = from; start <= to; start += CHUNK) {
-        if (cancelled) return
-        const end = start + CHUNK - 1n < to ? start + CHUNK - 1n : to
-        try {
-          const logs = await publicClient!.getLogs({
-            address: RAFFLE_ADDRESS as `0x${string}`,
-            event: parseAbiItem("event DrawRequested(uint256 indexed raffleId, uint256 requestId)"),
-            args: { raffleId: selectedId },
-            fromBlock: start,
-            toBlock: end,
-          })
-          if (logs.length > 0) {
-            if (!cancelled) setVrfRequestId((logs[0].args as { requestId: bigint }).requestId)
-            return
-          }
-        } catch { /* skip failed chunk, continue */ }
-      }
+      const from = to - 2000n > RAFFLE_DEPLOY_BLOCK ? to - 2000n : RAFFLE_DEPLOY_BLOCK
+      try {
+        const logs = await publicClient!.getLogs({
+          address: RAFFLE_ADDRESS as `0x${string}`,
+          event: parseAbiItem("event DrawRequested(uint256 indexed raffleId, uint256 requestId)"),
+          args: { raffleId: selectedId },
+          fromBlock: from,
+          toBlock: to,
+        })
+        if (logs.length > 0 && !cancelled) {
+          setVrfRequestId((logs[0].args as { requestId: bigint }).requestId)
+        }
+      } catch { /* ignore RPC errors — VRF link just won't show */ }
     }
     fetchRequestId()
     return () => { cancelled = true }
