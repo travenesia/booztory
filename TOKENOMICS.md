@@ -1,6 +1,6 @@
 # Booztory — Tokenomics & Roadmap
 
-Last updated: 2026-03-26
+Last updated: 2026-03-27
 
 ---
 
@@ -348,6 +348,17 @@ Confirmed on current Base Sepolia deploy:
 |---|---|
 | BOOZ balance inline with Payment Method label (discount/free paths) | ✅ Done |
 | URL/Text inline pill switcher in label row (no separate tab bar) | ✅ Done |
+
+### UI / Frontend — Donation Modal
+| Feature | Status |
+|---|---|
+| Non-dismissible transaction lock overlay during USDC approve → donate flow | ✅ Done |
+
+### UI / Frontend — Navigation
+| Feature | Status |
+|---|---|
+| "New" badge removed from Reward nav (topbar + pageTopbar) | ✅ Done |
+| Drop shadows removed from loading skeletons (faq, history, upcoming) | ✅ Done |
 
 ### Smart Contracts
 | Contract | Status |
