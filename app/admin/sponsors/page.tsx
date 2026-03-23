@@ -5,6 +5,7 @@ import { useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
+import { Copy, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useWalletName } from "@/hooks/useWalletName"
 import { usePriceTiers } from "@/hooks/usePriceTiers"
@@ -59,6 +60,14 @@ function renderFormattedText(text: string): React.ReactNode {
 
 function ApplicationRow({ appId, onAction }: { appId: number; onAction: () => void }) {
   const [isActing, setIsActing] = useState(false)
+  const [copied,   setCopied]   = useState(false)
+
+  function copyAddress() {
+    if (!sponsor) return
+    navigator.clipboard.writeText(sponsor)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
 
@@ -82,8 +91,11 @@ function ApplicationRow({ appId, onAction }: { appId: number; onAction: () => vo
   const statusInfo  = APP_STATUS_MAP[status]
   const parsed      = parseAdContent(adContent)
   const links       = parseAdLink(adLinkRaw)
-  const totalPaid   = (Number(prizePaid) + Number(feePaid)) / 1_000_000
-  const days        = Math.round(Number(duration) / 86400)
+  const totalPaid     = (Number(prizePaid) + Number(feePaid)) / 1_000_000
+  const totalSeconds  = Number(duration)
+  const durationLabel = totalSeconds < 86400
+    ? `${Math.round(totalSeconds / 3600)}h`
+    : `${Math.round(totalSeconds / 86400)}d`
   const submittedDate = new Date(Number(submittedAt) * 1000).toLocaleDateString()
   const acceptedDate  = Number(acceptedAt) > 0 ? new Date(Number(acceptedAt) * 1000).toLocaleDateString() : null
   const linkEntries = LINK_ICONS.filter(c => links[c.key])
@@ -102,89 +114,134 @@ function ApplicationRow({ appId, onAction }: { appId: number; onAction: () => vo
     } finally { setIsActing(false) }
   }
 
+  const L = "text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1"
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center flex-wrap gap-1.5 mb-1">
-            <span className="text-xs font-bold text-gray-400">#{appId}</span>
-            <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", statusInfo.color)}>
-              {statusInfo.label}
-            </span>
-            <span className="text-xs text-gray-400 capitalize">{adType || "—"}</span>
-          </div>
-          <p className="text-xs text-gray-500 truncate">
-            {sponsorName ?? (sponsor ? `${sponsor.slice(0, 6)}…${sponsor.slice(-4)}` : "—")}
-          </p>
+      <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
+        <div className="flex items-center flex-wrap gap-1.5">
+          <span className="text-xs font-bold text-gray-400">#{appId}</span>
+          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", statusInfo.color)}>
+            {statusInfo.label}
+          </span>
+          <span className="text-xs text-gray-400 capitalize">{adType || "—"}</span>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-sm font-bold text-gray-900">${totalPaid.toFixed(2)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{durationLabel} · {submittedDate}</p>
           {acceptedDate && (
             <p className="text-[10px] text-green-600 mt-0.5">Accepted {acceptedDate}</p>
           )}
         </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-sm font-bold text-gray-900">${totalPaid.toFixed(2)}</div>
-          <div className="text-xs text-gray-400">{days}d · {submittedDate}</div>
-        </div>
       </div>
 
-      {/* Sponsor name */}
-      {parsed.sponsorName && (
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Sponsor</p>
-          <p className="text-xs font-semibold text-gray-800">{parsed.sponsorName}</p>
-        </div>
-      )}
+      {/* Divider */}
+      <div className="border-t border-gray-100 mx-4" />
 
-      {/* Ad content */}
-      {adType === "image" && parsed.imageUrl && (
-        <div className="space-y-1">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Image</p>
-          <p className="text-xs text-gray-700 truncate font-mono">{parsed.imageUrl}</p>
-          {parsed.ratio   && <p className="text-xs text-gray-400">Ratio: {parsed.ratio}</p>}
-          {parsed.tagline && <p className="text-xs text-gray-600 italic">"{parsed.tagline}"</p>}
-        </div>
-      )}
-      {adType === "embed" && parsed.embedUrl && (
-        <div className="space-y-1">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Embed</p>
-          <p className="text-xs text-gray-700 truncate font-mono">{parsed.embedUrl}</p>
-          {parsed.tagline && <p className="text-xs text-gray-600 italic">"{parsed.tagline}"</p>}
-        </div>
-      )}
-      {adType === "text" && parsed.text && (
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Ad Text</p>
-          <p className="text-xs text-gray-700">{renderFormattedText(parsed.text)}</p>
-        </div>
-      )}
+      {/* Detail fields */}
+      <div className="px-4 py-3 space-y-3">
 
-      {/* Links */}
-      {linkEntries.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {linkEntries.map(c => (
-            <a key={c.key} href={links[c.key]} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.icon} alt={c.label} width={12} height={12} />
-              <span className="text-xs text-gray-600 font-medium">{c.label}</span>
-            </a>
-          ))}
+        <div>
+          <p className={L}>Submitted by</p>
+          <button
+            onClick={copyAddress}
+            className="flex items-center gap-1.5 group p-0"
+            title={copied ? "Copied!" : "Copy address"}
+          >
+            <span className="text-xs text-gray-700 font-mono group-hover:text-gray-900 transition-colors">
+              {sponsorName ?? (sponsor ? `${sponsor.slice(0, 6)}…${sponsor.slice(-4)}` : "—")}
+            </span>
+            {copied
+              ? <Check size={11} className="text-green-500" />
+              : <Copy size={11} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+            }
+          </button>
         </div>
-      )}
+
+        {parsed.sponsorName && (
+          <div>
+            <p className={L}>Sponsor Name</p>
+            <p className="text-sm font-semibold text-gray-800">{parsed.sponsorName}</p>
+          </div>
+        )}
+
+        {adType === "image" && parsed.imageUrl && (
+          <>
+            <div>
+              <p className={L}>Image URL</p>
+              <p className="text-xs text-gray-700 truncate font-mono bg-gray-50 px-2 py-1 rounded">{parsed.imageUrl}</p>
+            </div>
+            {parsed.ratio && (
+              <div>
+                <p className={L}>Aspect Ratio</p>
+                <p className="text-xs text-gray-700">{parsed.ratio}</p>
+              </div>
+            )}
+            {parsed.tagline && (
+              <div>
+                <p className={L}>Tagline</p>
+                <p className="text-xs text-gray-700">{parsed.tagline}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {adType === "embed" && parsed.embedUrl && (
+          <>
+            <div>
+              <p className={L}>Embed URL</p>
+              <p className="text-xs text-gray-700 truncate font-mono bg-gray-50 px-2 py-1 rounded">{parsed.embedUrl}</p>
+            </div>
+            {parsed.tagline && (
+              <div>
+                <p className={L}>Tagline</p>
+                <p className="text-xs text-gray-700">{parsed.tagline}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {adType === "text" && parsed.text && (
+          <div>
+            <p className={L}>Ad Text</p>
+            <p className="text-xs text-gray-700 leading-relaxed">{renderFormattedText(parsed.text)}</p>
+          </div>
+        )}
+
+        {linkEntries.length > 0 && (
+          <div>
+            <p className={L}>Links</p>
+            <div className="flex flex-wrap gap-2">
+              {linkEntries.map(c => (
+                <a key={c.key} href={links[c.key]} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.icon} alt={c.label} width={12} height={12} />
+                  <span className="text-xs text-gray-600 font-medium">{c.label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
 
       {/* Actions — pending only */}
       {status === 0 && (
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-px border-t border-gray-100">
           <button onClick={() => act("acceptApplication")} disabled={isActing}
-            className="flex-1 bg-green-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+            className="flex-1 bg-green-50 text-green-700 text-xs font-bold py-2.5 hover:bg-green-100 disabled:opacity-50 transition-colors rounded-bl-xl">
             {isActing ? "…" : "Accept"}
           </button>
           <button onClick={() => act("rejectApplication")} disabled={isActing}
-            className="flex-1 bg-red-50 border border-red-200 text-red-700 text-xs font-bold py-2 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors">
+            className="flex-1 bg-red-50 text-red-700 text-xs font-bold py-2.5 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-br-xl">
             {isActing ? "…" : "Reject"}
           </button>
         </div>
       )}
+
     </div>
   )
 }

@@ -110,6 +110,18 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
   const predefinedAmounts = [1, 5, 10]
 
   return (
+    <>
+    {isDonating && (
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-3 shadow-xl max-w-xs w-full mx-4">
+          <Loader2 className="animate-spin text-indigo-600" size={28} />
+          <p className="text-sm font-semibold text-gray-900 text-center">Processing donation…</p>
+          <p className="text-xs text-gray-400 text-center leading-relaxed">
+            Please keep this page open and confirm both transactions in your wallet.
+          </p>
+        </div>
+      </div>
+    )}
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-[425px] rounded-xl bg-gray-0 text-elegance-timeless-noir [&>button]:right-3 [&>button]:top-3 [&>button]:h-7 [&>button]:w-7 [&>button]:rounded-full [&>button]:bg-white [&>button]:border [&>button]:border-gray-200 [&>button]:shadow-[0_2px_8px_rgba(0,0,0,0.15)] [&>button]:opacity-100 [&>button]:!inline-flex [&>button]:items-center [&>button]:justify-center [&>button_svg]:h-3.5 [&>button_svg]:w-3.5 [&>button_svg]:text-gray-800 [&>button_svg]:stroke-[2.5] [&>button_svg]:relative [&>button_svg]:z-10"
@@ -175,5 +187,6 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   )
 }

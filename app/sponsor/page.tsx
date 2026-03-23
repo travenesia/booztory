@@ -346,7 +346,6 @@ function ApplicationRow({
   const prizePaid   = app?.[5] ?? 0n
   const feePaid     = app?.[6] ?? 0n
   const submittedAt = app?.[7] ?? 0n
-  const acceptedAt  = app?.[8] ?? 0n
   const status      = (app?.[9] ?? 0) as AppStatus
 
   const isOwnApp    = !!address && !!sponsor && address.toLowerCase() === sponsor.toLowerCase()
@@ -383,90 +382,101 @@ function ApplicationRow({
 
   const linkEntries = LINK_CONFIG.filter(c => links[c.key])
 
+  const LABEL = "text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1"
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+      {/* Header row */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center flex-wrap gap-1.5 mb-1">
-            <span className="text-xs font-bold text-gray-400">#{appId}</span>
-            <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", statusInfo.color)}>
-              {statusInfo.label}
-            </span>
-            <span className="text-xs text-gray-400 capitalize">{adType || "—"}</span>
-          </div>
+        <div className="flex items-center flex-wrap gap-1.5">
+          <span className="text-xs font-bold text-gray-400">#{appId}</span>
+          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", statusInfo.color)}>
+            {statusInfo.label}
+          </span>
+          <span className="text-xs text-gray-400 capitalize">{adType || "—"}</span>
         </div>
         <div className="text-right flex-shrink-0">
           <div className="text-sm font-bold text-gray-900">${totalPaid.toFixed(2)}</div>
-          <div className="text-xs text-gray-400">{days}d · {submittedDate}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{days}d · {submittedDate}</div>
         </div>
       </div>
 
-      {parsed.sponsorName && (
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Sponsor</p>
-          <p className="text-xs text-gray-700">{parsed.sponsorName}</p>
-        </div>
-      )}
+      {/* Divider */}
+      <div className="border-t border-gray-100" />
 
-      {adType === "image" && parsed.imageUrl && (
-        <div className="space-y-1.5">
+      {/* Detail fields */}
+      <div className="space-y-3">
+        {parsed.sponsorName && (
           <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Image URL</p>
-            <p className="text-xs text-gray-700 truncate font-mono">{parsed.imageUrl}</p>
+            <p className={LABEL}>Sponsor</p>
+            <p className="text-sm text-gray-800 font-medium">{parsed.sponsorName}</p>
           </div>
-          {parsed.ratio && <p className="text-xs text-gray-400">Ratio: {parsed.ratio}</p>}
-          {parsed.tagline && (
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Tagline</p>
-              <p className="text-xs text-gray-700">{parsed.tagline}</p>
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {adType === "embed" && parsed.embedUrl && (
-        <div className="space-y-1.5">
+        {adType === "image" && parsed.imageUrl && (
+          <>
+            <div>
+              <p className={LABEL}>Image URL</p>
+              <p className="text-xs text-gray-700 truncate font-mono">{parsed.imageUrl}</p>
+            </div>
+            {parsed.ratio && (
+              <div>
+                <p className={LABEL}>Aspect Ratio</p>
+                <p className="text-xs text-gray-700">{parsed.ratio}</p>
+              </div>
+            )}
+            {parsed.tagline && (
+              <div>
+                <p className={LABEL}>Tagline</p>
+                <p className="text-xs text-gray-700">{parsed.tagline}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {adType === "embed" && parsed.embedUrl && (
+          <>
+            <div>
+              <p className={LABEL}>Embed URL</p>
+              <p className="text-xs text-gray-700 truncate font-mono">{parsed.embedUrl}</p>
+            </div>
+            {parsed.tagline && (
+              <div>
+                <p className={LABEL}>Tagline</p>
+                <p className="text-xs text-gray-700">{parsed.tagline}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {adType === "text" && parsed.text && (
           <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Embed URL</p>
-            <p className="text-xs text-gray-700 truncate font-mono">{parsed.embedUrl}</p>
+            <p className={LABEL}>Ad Text</p>
+            <p className="text-xs text-gray-700">{renderFormattedText(parsed.text)}</p>
           </div>
-          {parsed.tagline && (
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Tagline</p>
-              <p className="text-xs text-gray-700">{parsed.tagline}</p>
+        )}
+
+        {linkEntries.length > 0 && (
+          <div>
+            <p className={LABEL}>Links</p>
+            <div className="flex flex-wrap gap-2">
+              {linkEntries.map(c => (
+                <a
+                  key={c.key}
+                  href={links[c.key]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.icon} alt={c.label} width={12} height={12} className="flex-shrink-0" />
+                  <span className="text-xs text-gray-600 font-medium">{c.label}</span>
+                </a>
+              ))}
             </div>
-          )}
-        </div>
-      )}
-
-      {adType === "text" && parsed.text && (
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Ad Text</p>
-          <p className="text-xs text-gray-700">{renderFormattedText(parsed.text)}</p>
-        </div>
-      )}
-
-      {/* Sponsor links */}
-      {linkEntries.length > 0 && (
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Links</p>
-          <div className="flex flex-wrap gap-2">
-            {linkEntries.map(c => (
-              <a
-                key={c.key}
-                href={links[c.key]}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.icon} alt={c.label} width={12} height={12} className="flex-shrink-0" />
-                <span className="text-xs text-gray-600 font-medium">{c.label}</span>
-              </a>
-            ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {isOwnApp && status === 2 && (
         <p className="text-xs text-gray-500 text-center pt-1">
@@ -670,6 +680,19 @@ export default function SponsorPage() {
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="Advertise" />
+
+      {/* Transaction lock overlay — blocks UI during the 2-step approve+submit flow */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-3 shadow-xl max-w-xs w-full mx-4">
+            <Loader2 className="animate-spin text-indigo-600" size={28} />
+            <p className="text-sm font-semibold text-gray-900 text-center">Submitting your application…</p>
+            <p className="text-xs text-gray-400 text-center leading-relaxed">
+              Please keep this page open and confirm both transactions in your wallet.
+            </p>
+          </div>
+        </div>
+      )}
 
       <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
 
@@ -958,7 +981,7 @@ export default function SponsorPage() {
               {/* Sponsor links */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Sponsor Links <span className="text-red-400 font-normal">* at least one</span>
+                  Sponsor Links <span className="text-red-400 font-normal normal-case">*at least one</span>
                 </label>
                 <div className="space-y-2">
                   {LINK_CONFIG.map(c => (
