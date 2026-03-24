@@ -5,6 +5,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract, usePub
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/lib/wagmi"
 import { formatUnits, parseAbiItem } from "viem"
+import Link from "next/link"
 import { HiBolt, HiTrophy } from "react-icons/hi2"
 import { FaCoins } from "react-icons/fa6"
 import { Ticket, BadgeCheck, Flame } from "lucide-react"
@@ -993,7 +994,14 @@ export default function RewardPage() {
 
   return (
     <main className="min-h-screen pt-12 pb-12">
-      <PageTopbar title="Rewards" />
+      <PageTopbar
+        title="Rewards"
+        rightExtra={
+          <Link href="/leaderboard" aria-label="Leaderboard" className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 transition-colors">
+            <HiTrophy size={20} />
+          </Link>
+        }
+      />
 
       <section className="py-6 px-6 max-w-[650px] mx-auto w-full">
 

@@ -1,0 +1,55 @@
+# ── Aggregated per-wallet totals (used for All Time queries) ──────────────────
+type Wallet @entity {
+  id: ID!               # lowercased hex address
+  totalSlots: BigInt!   # all mint paths combined
+  bestStreak: Int!      # highest GMClaimed streakCount ever
+  totalPoints: BigInt!  # sum of all PointsEarned
+  totalDonated: BigInt! # sum of (creatorAmount + feeAmount) as donor — 6-decimal USDC
+  totalReceived: BigInt! # sum of creatorAmount received — 6-decimal USDC
+  totalWins: Int!       # raffle wins
+  totalWinnings: BigInt! # cumulative USDC won in raffles — 6-decimal
+}
+
+# ── Slot entity — maps tokenId → creator for DonationReceived lookup ──────────
+type Slot @entity {
+  id: ID!        # tokenId as string
+  creator: Bytes!
+}
+
+# ── Timestamped events — used for 30-day filtered queries ─────────────────────
+type SlotMintEvent @entity {
+  id: ID!
+  creator: Bytes!
+  blockTimestamp: BigInt!
+}
+
+type GMClaimEvent @entity {
+  id: ID!
+  user: Bytes!
+  streakCount: Int!
+  blockTimestamp: BigInt!
+}
+
+type PointsEarnedEvent @entity {
+  id: ID!
+  user: Bytes!
+  amount: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type DonationEvent @entity {
+  id: ID!
+  donor: Bytes!
+  creator: Bytes!
+  creatorAmount: BigInt!
+  totalAmount: BigInt!   # creatorAmount + feeAmount
+  blockTimestamp: BigInt!
+}
+
+type WinEvent @entity {
+  id: ID!
+  winner: Bytes!
+  raffleId: BigInt!
+  usdcAmount: BigInt!   # USDC prize for this winner — 6-decimal
+  blockTimestamp: BigInt!
+}

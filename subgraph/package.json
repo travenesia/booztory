@@ -1,0 +1,16 @@
+{
+  "name": "booztory-subgraph",
+  "version": "1.0.0",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy:sepolia": "graph deploy booztory --network base-sepolia",
+    "deploy:mainnet": "graph deploy booztory --network base"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "^0.35.1"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.87.0"
+  }
+}

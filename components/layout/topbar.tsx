@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
-import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder } from "react-icons/hi2"
+import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder, HiTrophy } from "react-icons/hi2"
 import { HiBolt } from "react-icons/hi2"
 import { FaRankingStar } from "react-icons/fa6"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
@@ -151,11 +151,12 @@ export function Topbar() {
             {/* Page links */}
             <div className="flex flex-col px-3 py-3 gap-0.5">
               {[
-                { href: "/upcoming", label: "Upcoming",  Icon: HiMiniForward,  color: "text-blue-500"   },
-                { href: "/history",  label: "History",   Icon: HiFolder,       color: "text-amber-500"  },
-                { href: "/reward",   label: "Reward",    Icon: FaRankingStar,  color: "text-purple-500" },
-                { href: "/sponsor",  label: "Sponsor",   Icon: HiMegaphone,    color: "text-indigo-500" },
-                { href: "/faq",      label: "FAQ",       Icon: HiMiniShieldCheck, color: "text-gray-500" },
+                { href: "/upcoming",    label: "Upcoming",    Icon: HiMiniForward,     color: "text-blue-500"   },
+                { href: "/history",    label: "History",     Icon: HiFolder,          color: "text-amber-500"  },
+                { href: "/reward",     label: "Reward",      Icon: FaRankingStar,     color: "text-purple-500" },
+                { href: "/leaderboard",label: "Leaderboard", Icon: HiTrophy,          color: "text-amber-500"  },
+                { href: "/sponsor",    label: "Sponsor",     Icon: HiMegaphone,       color: "text-indigo-500" },
+                { href: "/faq",        label: "FAQ",         Icon: HiMiniShieldCheck, color: "text-gray-500"   },
               ].map(({ href, label, Icon, color }) => (
                 <Link
                   key={href}

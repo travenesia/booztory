@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { HiMiniArrowSmallLeft } from "react-icons/hi2"
@@ -10,6 +11,7 @@ import { GMButton } from "@/components/modals/gmModal"
 
 interface PageTopbarProps {
   title: string
+  rightExtra?: React.ReactNode
 }
 
 const navItems: { name: string; href: string; badge?: boolean }[] = [
@@ -21,7 +23,7 @@ const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "FAQ", href: "/faq" },
 ]
 
-export function PageTopbar({ title }: PageTopbarProps) {
+export function PageTopbar({ title, rightExtra }: PageTopbarProps) {
   const pathname = usePathname()
 
   return (
@@ -65,6 +67,8 @@ export function PageTopbar({ title }: PageTopbarProps) {
 
         {/* Right */}
         <div className="flex items-center gap-2">
+          {/* Extra slot — mobile only (e.g. shortcut icon on specific pages) */}
+          {rightExtra && <div className="md:hidden">{rightExtra}</div>}
           {/* GM button — desktop */}
           <GMButton />
 

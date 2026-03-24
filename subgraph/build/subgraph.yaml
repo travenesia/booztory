@@ -1,0 +1,62 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Booztory
+    network: base-sepolia
+    source:
+      address: "0x28C5A076d234975FC72a8Ca79b4E1a510b904418"
+      abi: Booztory
+      startBlock: 39218660
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Wallet
+        - Slot
+        - SlotMintEvent
+        - GMClaimEvent
+        - PointsEarnedEvent
+        - DonationEvent
+      abis:
+        - name: Booztory
+          file: Booztory\Booztory.json
+      eventHandlers:
+        - event: SlotMinted(indexed uint256,indexed address,uint256,uint256)
+          handler: handleSlotMinted
+        - event: FreeSlotMinted(indexed uint256,indexed address,uint256)
+          handler: handleFreeSlotMinted
+        - event: DiscountSlotMinted(indexed uint256,indexed address,uint256,uint256)
+          handler: handleDiscountSlotMinted
+        - event: GMClaimed(indexed address,uint16,uint256)
+          handler: handleGMClaimed
+        - event: PointsEarned(indexed address,uint256,string)
+          handler: handlePointsEarned
+        - event: DonationReceived(indexed uint256,indexed address,uint256,uint256)
+          handler: handleDonationReceived
+      file: Booztory\Booztory.wasm
+  - kind: ethereum
+    name: BooztoryRaffle
+    network: base-sepolia
+    source:
+      address: "0xc94ee6bA5a38961C7B1456C015cE1D24a4A099aF"
+      abi: BooztoryRaffle
+      startBlock: 39218660
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Wallet
+        - WinEvent
+      abis:
+        - name: BooztoryRaffle
+          file: BooztoryRaffle\BooztoryRaffle.json
+      eventHandlers:
+        - event: DrawCompleted(indexed uint256,address[])
+          handler: handleDrawCompleted
+      file: BooztoryRaffle\BooztoryRaffle.wasm

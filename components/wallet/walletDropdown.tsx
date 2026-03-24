@@ -5,7 +5,8 @@ import { useReadContract } from "wagmi"
 import { useSession, signOut } from "next-auth/react"
 import { useState } from "react"
 import { Copy, Check } from "lucide-react"
-import { HiBolt, HiOutlinePower } from "react-icons/hi2"
+import { HiBolt, HiOutlinePower, HiTrophy } from "react-icons/hi2"
+import Link from "next/link"
 import { FaCoins } from "react-icons/fa6"
 import { useWalletName } from "@/hooks/useWalletName"
 import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
@@ -109,12 +110,17 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
             </button>
           </div>
         </div>
-        <div
-          className="flex items-center gap-1 flex-shrink-0 cursor-default"
-          title={pointsBalance !== undefined ? `You have ${Number(pointsBalance).toLocaleString()} Points` : "Points"}
-        >
-          <FaCoins className="text-orange-500" size={14} />
-          <span className="text-sm font-bold text-gray-800">{pointsBalance !== undefined ? Number(pointsBalance).toLocaleString() : "—"}</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div
+            className="flex items-center gap-1 cursor-default"
+            title={pointsBalance !== undefined ? `You have ${Number(pointsBalance).toLocaleString()} Points` : "Points"}
+          >
+            <FaCoins className="text-orange-500" size={14} />
+            <span className="text-sm font-bold text-gray-800">{pointsBalance !== undefined ? Number(pointsBalance).toLocaleString() : "—"}</span>
+          </div>
+          <Link href="/leaderboard" onClick={onClose} title="Leaderboard">
+            <HiTrophy className="w-4 h-4 text-amber-500 hover:text-amber-600 transition-colors" />
+          </Link>
         </div>
       </div>
 

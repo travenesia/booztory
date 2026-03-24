@@ -452,7 +452,7 @@ Confirmed on current Base Sepolia deploy:
 - [ ] NFT Pass collection: design, deploy, snapshot slot minters for allowlist
 - [ ] Add NFT mint path functions to `Booztory.sol` (`setNFTContract`, `mintSlotWithNFTDiscount`, `mintSlotFreeWithNFT`)
 - [ ] Frontend: NFT path options in submit content modal
-- [ ] Leaderboard: deploy The Graph subgraph + `/api/leaderboard` + `/leaderboard` page (see §14)
+- [x] Leaderboard: deploy The Graph subgraph + `/api/leaderboard` + `/leaderboard` page (see §14) ✅
 - [ ] Profile page `/profile/[address]` — per-wallet stats (see §15)
 
 ---
@@ -601,7 +601,10 @@ graph init --from-contract <BOOZTORY_ADDRESS> --network base-sepolia
 ```
 
 ### Status
-- [ ] Build now on Base Sepolia, update to Base mainnet at launch
+- [x] Subgraph v0.0.3 deployed (Base Sepolia, startBlock 39218660) ✅
+- [x] `/api/leaderboard` route — queries subgraph, 30 min cache ✅
+- [x] `/leaderboard` page — 6 tabs, 30d/All Time, connected wallet row, mock fallback ✅
+- [ ] Update subgraph to Base mainnet at launch (change network + addresses + USDC address in raffle.ts)
 
 ---
 
