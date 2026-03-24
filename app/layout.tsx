@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Nunito } from "next/font/google"
+import { GoogleAnalytics } from "@next/third-parties/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { ScrollToTop } from "@/components/layout/scrollToTop"
@@ -92,6 +93,7 @@ export default function RootLayout({
           </WagmiClientWrapper>
         </SessionProvider>
       </body>
+      <GoogleAnalytics gaId="G-G7CY80LZ3W" />
     </html>
   )
 }
