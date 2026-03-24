@@ -342,6 +342,9 @@ Confirmed on current Base Sepolia deploy:
 | `chainId: APP_CHAIN.id` on all writeContractAsync calls (Farcaster chain fix) | ✅ Done |
 | Text ad body padding `px-6`, sponsor name not shown inside text panel | ✅ Done |
 | Sponsor ad backdrop opacity `bg-black/90` | ✅ Done |
+| Upcoming / Past ad schedule tabs with pagination (max 5/page) | ✅ Done |
+| AdScheduleCard — platform icon, social links, clickable ad type (embed→link, image/text→popup) | ✅ Done |
+| "Read before you apply" accordion (FAQ style, collapsed by default) | ✅ Done |
 
 ### UI / Frontend — Submit Content Modal
 | Feature | Status |
@@ -359,6 +362,11 @@ Confirmed on current Base Sepolia deploy:
 |---|---|
 | "New" badge removed from Reward nav (topbar + pageTopbar) | ✅ Done |
 | Drop shadows removed from loading skeletons (faq, history, upcoming) | ✅ Done |
+
+### UI / Frontend — Analytics
+| Feature | Status |
+|---|---|
+| Google Analytics 4 (`@next/third-parties/google`, ID `G-G7CY80LZ3W`) | ✅ Done |
 
 ### Smart Contracts
 | Contract | Status |

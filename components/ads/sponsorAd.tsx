@@ -485,13 +485,13 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-50 bg-black/90"
+            className="fixed inset-0 z-[60] bg-black/90"
             onClick={() => setOpen(false)}
             aria-hidden
           />
 
           {/* Centered layout: panel + social links column */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
             <div className="flex items-start gap-3 pointer-events-auto">
 
               {/* Panel — exact video width, no side padding */}
@@ -686,12 +686,12 @@ export function SponsorAdFloatingBar() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-50 bg-black/90"
+            className="fixed inset-0 z-[60] bg-black/90"
             onClick={() => setOpen(false)}
             aria-hidden
           />
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
 
             {/* Mobile popup: top bar + content + bottom social icons */}
             <div className="xl:hidden flex flex-col pointer-events-auto">
