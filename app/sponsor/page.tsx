@@ -2,16 +2,20 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import type React from "react"
-import { useAccount, useReadContract, useWriteContract } from "wagmi"
+import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
-import { Loader2, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
+import { FaYoutube, FaTiktok, FaXTwitter, FaVimeo, FaSpotify, FaTwitch } from "react-icons/fa6"
 import { useToast } from "@/hooks/use-toast"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { cn } from "@/lib/utils"
 import { RAFFLE_ADDRESS, RAFFLE_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { HiClipboardDocument } from "react-icons/hi2"
 import { ContentEmbed } from "@/components/content/contentEmbed"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { usePriceTiers } from "@/hooks/usePriceTiers"
 
 const AD_TYPES = [
@@ -494,6 +498,194 @@ function ApplicationRow({
   )
 }
 
+// ── Ad type icon helper ────────────────────────────────────────────────────────
+
+function AdTypeIcon({ adType, embedUrl, size = 12 }: { adType: AdTypeId; embedUrl: string; size?: number }) {
+  if (adType === "image") return <ImageIcon size={size} className="text-gray-500" />
+  if (adType === "text")  return <FileText  size={size} className="text-gray-500" />
+  // embed — detect platform
+  if (embedUrl.includes("youtube.com") || embedUrl.includes("youtu.be")) return <FaYoutube size={size} className="text-red-500" />
+  if (embedUrl.includes("tiktok.com"))  return <FaTiktok  size={size} className="text-gray-900" />
+  if (embedUrl.includes("twitter.com") || embedUrl.includes("x.com"))    return <FaXTwitter size={size} className="text-gray-900" />
+  if (embedUrl.includes("vimeo.com"))   return <FaVimeo   size={size} className="text-blue-500" />
+  if (embedUrl.includes("spotify.com")) return <FaSpotify size={size} className="text-green-500" />
+  if (embedUrl.includes("twitch.tv"))   return <FaTwitch  size={size} className="text-purple-500" />
+  return <ImageIcon size={size} className="text-gray-400" />
+}
+
+function adTypeLabel(adType: AdTypeId, embedUrl: string): string {
+  if (adType === "image") return "Image Ad"
+  if (adType === "text")  return "Text Ad"
+  if (embedUrl.includes("youtube.com") || embedUrl.includes("youtu.be")) return "YouTube Ad"
+  if (embedUrl.includes("tiktok.com"))  return "TikTok Ad"
+  if (embedUrl.includes("twitter.com") || embedUrl.includes("x.com"))    return "X / Twitter Ad"
+  if (embedUrl.includes("vimeo.com"))   return "Vimeo Ad"
+  if (embedUrl.includes("spotify.com")) return "Spotify Ad"
+  if (embedUrl.includes("twitch.tv"))   return "Twitch Ad"
+  return "Embed Ad"
+}
+
+// ── AdScheduleCard ─────────────────────────────────────────────────────────────
+
+type AdScheduleItem = {
+  appId: number
+  sponsorName: string
+  adType: AdTypeId
+  prizePaid: number
+  days: number
+  acceptedAt: number
+  endTime: number
+  adLinkRaw: string
+  embedUrl: string
+  adContent: string
+}
+
+function AdScheduleCard({ item }: { item: AdScheduleItem }) {
+  const [now, setNow]       = useState(Math.floor(Date.now() / 1000))
+  const [embedOpen, setEmbedOpen] = useState(false)
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const { sponsorName, adType, prizePaid, days, acceptedAt, endTime, adLinkRaw, embedUrl } = item
+  const links      = parseAdLink(adLinkRaw)
+  const linkEntries = LINK_CONFIG.filter(c => links[c.key])
+
+  const isLive     = now >= acceptedAt && now < endTime
+  const isUpcoming = now < acceptedAt
+  const isPast     = now >= endTime
+
+  function formatCountdown(secs: number) {
+    const d = Math.floor(secs / 86400)
+    const h = Math.floor((secs % 86400) / 3600)
+    const m = Math.floor((secs % 3600) / 60)
+    const s = secs % 60
+    if (d > 0) return `${d}d ${h}h`
+    if (h > 0) return `${h}h ${m}m`
+    return `${m}m ${s}s`
+  }
+
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+
+      {/* Row 1: badges left, prize pool right */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5">
+            Sponsored
+          </span>
+          {isLive && (
+            <span className="text-[10px] font-bold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+              Live
+            </span>
+          )}
+          {isUpcoming && (
+            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+              Upcoming
+            </span>
+          )}
+          {isPast && (
+            <span className="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
+              Past
+            </span>
+          )}
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-sm font-bold text-gray-900">${prizePaid.toFixed(0)} <span className="text-gray-400 font-normal">prize pool</span></p>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-100" />
+
+      {/* Row 2: sponsor name + date/countdown */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-gray-800">{sponsorName}</p>
+        <p className="text-xs text-gray-400 text-right flex-shrink-0">
+          {isLive && `Ends ${new Date(endTime * 1000).toLocaleDateString()}`}
+          {isUpcoming && formatCountdown(acceptedAt - now)}
+          {isPast && `${new Date(acceptedAt * 1000).toLocaleDateString()} – ${new Date(endTime * 1000).toLocaleDateString()}`}
+        </p>
+      </div>
+
+      {/* Row 3: ad type + duration left, social icons right */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          {adType === "embed" && embedUrl ? (
+            <a
+              href={embedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:opacity-70 transition-opacity"
+            >
+              <AdTypeIcon adType={adType} embedUrl={embedUrl} size={12} />
+              <span className="text-[11px] text-gray-500">{adTypeLabel(adType, embedUrl)}</span>
+            </a>
+          ) : (
+            <button
+              onClick={() => setEmbedOpen(true)}
+              className="flex items-center gap-1 hover:opacity-70 transition-opacity px-0"
+            >
+              <AdTypeIcon adType={adType} embedUrl={embedUrl} size={12} />
+              <span className="text-[11px] text-gray-500">{adTypeLabel(adType, embedUrl)}</span>
+            </button>
+          )}
+          <span className="text-gray-200">·</span>
+          <Clock size={12} className="text-gray-400" />
+          <span className="text-[11px] text-gray-400">{days}d</span>
+        </div>
+
+        {linkEntries.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            {linkEntries.map(c => (
+              <a
+                key={c.key}
+                href={links[c.key]}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={c.label}
+                className="flex items-center justify-center w-6 h-6 rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.icon} alt={c.label} width={12} height={12} className="flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {(adType === "image" || adType === "text") && (
+        <Dialog open={embedOpen} onOpenChange={setEmbedOpen}>
+          <DialogContent className="p-0 max-w-sm rounded-2xl overflow-hidden border border-gray-200">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{sponsorName}</DialogTitle>
+            </DialogHeader>
+            {adType === "image" && item.adContent && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={parseAdContent(item.adContent).imageUrl ?? ""}
+                alt={sponsorName}
+                className="w-full h-auto object-contain"
+              />
+            )}
+            {adType === "text" && item.adContent && (
+              <div className="flex flex-col items-center justify-center gap-3 px-8 py-10 text-center bg-gray-50">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{sponsorName}</p>
+                <p className="text-sm font-semibold text-gray-800 leading-snug">
+                  {renderFormattedText(parseAdContent(item.adContent).text ?? "")}
+                </p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  )
+}
+
 // ── SponsorLinkInput ───────────────────────────────────────────────────────────
 
 function SponsorLinkInput({
@@ -679,6 +871,68 @@ export default function SponsorPage() {
   }
 
   const appIds = Array.from({ length: appCount }, (_, i) => i)
+  const [activeTab, setActiveTab] = useState<"apply" | "upcoming" | "past">("apply")
+  const [upcomingPage, setUpcomingPage] = useState(0)
+  const [pastPage, setPastPage] = useState(0)
+  const ITEMS_PER_PAGE = 5
+
+  // Batch-read all applications in one multicall
+  const { data: allAppsData } = useReadContracts({
+    contracts: appIds.map(id => ({
+      address: RAFFLE_ADDRESS,
+      abi: RAFFLE_ABI,
+      functionName: "applications" as const,
+      args: [BigInt(id)] as const,
+      chainId: APP_CHAIN.id,
+    })),
+    query: { enabled: appCount > 0, refetchInterval: 60_000 },
+  })
+
+  const acceptedApps = useMemo<AdScheduleItem[]>(() => {
+    if (!allAppsData) return []
+    return appIds.flatMap((id, i) => {
+      const raw = allAppsData[i]?.result as readonly [string, string, string, string, bigint, bigint, bigint, bigint, bigint, number] | undefined
+      if (!raw || raw[9] !== 1) return []
+      const acceptedAt = Number(raw[8])
+      const duration   = Number(raw[4])
+      const endTime    = acceptedAt + duration
+      const parsed     = parseAdContent(raw[2])
+      return [{
+        appId:       id,
+        sponsorName: parsed.sponsorName || "Sponsor",
+        adType:      raw[1] as AdTypeId,
+        prizePaid:   Number(raw[5]) / 1_000_000,
+        days:        Math.round(duration / 86400),
+        acceptedAt,
+        endTime,
+        adLinkRaw:   raw[3] ?? "",
+        embedUrl:    raw[1] === "embed" ? (parseAdContent(raw[2]).embedUrl ?? "") : "",
+        adContent:   raw[2] ?? "",
+      }]
+    })
+  }, [allAppsData, appIds])
+
+  const nowSec = Math.floor(Date.now() / 1000)
+
+  const upcomingApps = useMemo(() =>
+    acceptedApps.filter(a => a.endTime > nowSec).sort((a, b) => a.acceptedAt - b.acceptedAt),
+    [acceptedApps, nowSec]
+  )
+  const pastApps = useMemo(() =>
+    acceptedApps.filter(a => a.endTime <= nowSec).sort((a, b) => b.endTime - a.endTime),
+    [acceptedApps, nowSec]
+  )
+
+  const upcomingSlice     = upcomingApps.slice(upcomingPage * ITEMS_PER_PAGE, (upcomingPage + 1) * ITEMS_PER_PAGE)
+  const pastSlice         = pastApps.slice(pastPage * ITEMS_PER_PAGE, (pastPage + 1) * ITEMS_PER_PAGE)
+  const totalUpcomingPages = Math.ceil(upcomingApps.length / ITEMS_PER_PAGE)
+  const totalPastPages    = Math.ceil(pastApps.length / ITEMS_PER_PAGE)
+
+  const TABS = [
+    { id: "apply",    label: "Apply"    },
+    { id: "upcoming", label: "Upcoming" },
+    { id: "past",     label: "Past"     },
+  ] as const
 
   return (
     <main className="min-h-screen pt-12 pb-12">
@@ -716,7 +970,7 @@ export default function SponsorPage() {
 
       <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
 
-        {/* Hero */}
+        {/* Hero — always visible */}
         <div
           className="relative rounded-2xl overflow-hidden text-white"
           style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)" }}
@@ -780,10 +1034,62 @@ export default function SponsorPage() {
           )}
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex bg-gray-100 rounded-xl p-1">
+          {TABS.map((t, i) => (
+            <>
+              {i > 0 && activeTab !== t.id && activeTab !== TABS[i - 1].id && (
+                <div key={`sep-${t.id}`} className="w-px my-1.5 bg-gray-300 flex-shrink-0" />
+              )}
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={cn(
+                  "flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all",
+                  activeTab === t.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                {t.label}
+              </button>
+            </>
+          ))}
+        </div>
+
+        {/* ── Apply tab ── */}
+        {activeTab === "apply" && (<>
+
+        {/* Read before you apply — accordion */}
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="read" className="bg-gray-0 rounded-lg border border-gray-300">
+            <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
+              <span className="flex items-center gap-2 font-bold text-gray-900">
+                <HiClipboardDocument size={15} className="text-gray-500 flex-shrink-0" />
+                Read before you apply
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 pt-1 px-4">
+              <ul className="space-y-2.5 text-xs text-gray-500 leading-relaxed list-none">
+                <li>
+                  <span className="font-semibold text-gray-700">🏆 Prize pool</span> — your deposit is locked on-chain and paid out to raffle winners during your sponsorship. Real incentive that drives real engagement.
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-700">📣 Ad placement</span> — your ad runs as a floating widget on the main feed for all users, plus a desktop sidebar panel for the full duration.
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-700">🔒 Escrow protection</span> — funds are held on-chain until approved. Rejected? Full refund automatically returned. No response in 30 days? Claim it yourself, no questions asked.
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-700">⛓️ 100% on-chain</span> — no middlemen, no hidden fees. Everything is verifiable on Base.
+                </li>
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
         {/* Application form */}
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
-            <p className="font-semibold text-gray-900">Apply to Advertise</p>
+            <p className="font-bold text-gray-900">Apply to Advertise</p>
             <p className="text-xs text-gray-400 mt-0.5">Payment held in escrow until approved</p>
           </div>
 
@@ -1102,24 +1408,76 @@ export default function SponsorPage() {
           </div>
         )}
 
-        {/* How it works */}
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-          <p className="font-semibold text-gray-700 text-sm">What you are paying for</p>
-          <ul className="space-y-2.5 text-xs text-gray-500 leading-relaxed list-none">
-            <li>
-              <span className="font-semibold text-gray-700">Prize pool deposit</span> — locked on-chain and paid out to raffle winners during your sponsorship period. This is the incentive that drives user engagement with your brand.
-            </li>
-            <li>
-              <span className="font-semibold text-gray-700">Platform fee</span> — covers ad placement and raffle operations for the duration you select.
-            </li>
-            <li>
-              <span className="font-semibold text-gray-700">Ad placement</span> — your ad appears as a floating widget on the main feed (all devices) and as sidebar panels on desktop for 7, 14, or 30 days.
-            </li>
-            <li>
-              <span className="font-semibold text-gray-700">Escrow protection</span> — funds are held on-chain. If we reject your application, your full payment is refundable. No response within 3 days? You can claim a refund yourself — no need to contact us.
-            </li>
-          </ul>
-        </div>
+
+        </>)}
+
+        {/* ── Upcoming tab ── */}
+        {activeTab === "upcoming" && (
+          <div className="space-y-3">
+            {upcomingApps.length === 0 ? (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-400">
+                No upcoming sponsors yet
+              </div>
+            ) : (
+              <>
+                {upcomingSlice.map(item => <AdScheduleCard key={item.appId} item={item} />)}
+                {totalUpcomingPages > 1 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      onClick={() => setUpcomingPage(p => Math.max(0, p - 1))}
+                      disabled={upcomingPage === 0}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-800 disabled:opacity-30 transition-colors"
+                    >
+                      ← Prev
+                    </button>
+                    <span className="text-xs text-gray-400">{upcomingPage + 1} / {totalUpcomingPages}</span>
+                    <button
+                      onClick={() => setUpcomingPage(p => Math.min(totalUpcomingPages - 1, p + 1))}
+                      disabled={upcomingPage >= totalUpcomingPages - 1}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-800 disabled:opacity-30 transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Past tab ── */}
+        {activeTab === "past" && (
+          <div className="space-y-3">
+            {pastApps.length === 0 ? (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-400">
+                No past sponsors yet
+              </div>
+            ) : (
+              <>
+                {pastSlice.map(item => <AdScheduleCard key={item.appId} item={item} />)}
+                {totalPastPages > 1 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      onClick={() => setPastPage(p => Math.max(0, p - 1))}
+                      disabled={pastPage === 0}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-800 disabled:opacity-30 transition-colors"
+                    >
+                      ← Prev
+                    </button>
+                    <span className="text-xs text-gray-400">{pastPage + 1} / {totalPastPages}</span>
+                    <button
+                      onClick={() => setPastPage(p => Math.min(totalPastPages - 1, p + 1))}
+                      disabled={pastPage >= totalPastPages - 1}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-800 disabled:opacity-30 transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
       </section>
 
