@@ -106,7 +106,7 @@ function ApplicationRow({ appId, onAction }: { appId: number; onAction: () => vo
       const tx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: fn, args: [BigInt(appId)], chainId: APP_CHAIN.id })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetch(); onAction()
-      toast({ title: fn === "acceptApplication" ? "Accepted" : "Rejected", description: `Application #${appId} updated.` })
+      toast({ title: fn === "acceptApplication" ? "Accepted" : "Rejected", description: `Application #${appId} updated.`, variant: fn === "acceptApplication" ? "success" : "default" })
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.toLowerCase().includes("rejected")) return

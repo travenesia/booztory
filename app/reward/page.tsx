@@ -358,7 +358,7 @@ function ActiveRaffleCard({
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
-      toast({ title: "Draw Triggered!", description: `VRF request submitted for Raffle #${Number(selectedId) + 1}.` })
+      toast({ title: "Draw Triggered!", description: `VRF request submitted for Raffle #${Number(selectedId) + 1}.`, variant: "success" })
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return
@@ -408,7 +408,7 @@ function ActiveRaffleCard({
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
-      toast({ title: "Raffle Cancelled", description: `Raffle #${Number(selectedId) + 1} has been cancelled.` })
+      toast({ title: "Raffle Cancelled", description: `Raffle #${Number(selectedId) + 1} has been cancelled.`, variant: "destructive" })
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return

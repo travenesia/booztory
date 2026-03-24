@@ -375,7 +375,7 @@ function ApplicationRow({
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchAppData()
       onAction()
-      toast({ title: "Refunded", description: "Payment returned to your wallet." })
+      toast({ title: "Refunded", description: "Payment returned to your wallet.", variant: "success" })
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return
@@ -855,7 +855,7 @@ export default function SponsorPage() {
       setLinks({ website: "", x: "", discord: "", telegram: "" })
       setSubmitDone(true)
       refetchAppCount()
-      toast({ title: "Application submitted!", description: "We'll review it within 24–48 hours." })
+      toast({ title: "Application submitted!", description: "We'll review it within 24–48 hours.", variant: "success" })
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return

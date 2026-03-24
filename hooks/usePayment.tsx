@@ -138,7 +138,7 @@ export function usePayment() {
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
-        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points." })
+        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points.", variant: "success" })
         fireConfetti()
         resetPaymentState()
         return { success: true }
@@ -178,7 +178,7 @@ export function usePayment() {
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
-        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points." })
+        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points.", variant: "success" })
         fireConfetti()
         resetPaymentState()
         return { success: true }
@@ -207,7 +207,7 @@ export function usePayment() {
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
-        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 15 points." })
+        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 15 points.", variant: "success" })
         fireConfetti()
         resetPaymentState()
         return { success: true }

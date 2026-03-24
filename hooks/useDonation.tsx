@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { useWriteContract, useSwitchChain, useChainId } from "wagmi"
-import { waitForTransactionReceipt } from "wagmi/actions"
+import { useWriteContract, useSwitchChain, useChainId, useAccount } from "wagmi"
+import { readContract, waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
 import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
@@ -14,6 +14,7 @@ export function useDonation() {
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
+  const { address } = useAccount()
 
   /**
    * Donate to a slot creator.
@@ -24,7 +25,7 @@ export function useDonation() {
     async (
       amount: number,
       tokenId: bigint,
-    ): Promise<{ success: boolean; error?: string }> => {
+    ): Promise<{ success: boolean; earnedReward?: boolean; error?: string }> => {
       if (amount <= 0) return { success: false, error: "Amount must be greater than 0" }
 
       setIsDonating(true)
@@ -34,6 +35,19 @@ export function useDonation() {
         // Ensure wallet is on the correct chain before transacting
         if (chainId !== APP_CHAIN.id) {
           await switchChainAsync({ chainId: APP_CHAIN.id })
+        }
+
+        // Check if donor will earn rewards (cooldown must have elapsed)
+        let earnedReward = false
+        if (address) {
+          const cooldown = await readContract(wagmiConfig, {
+            address: BOOZTORY_ADDRESS,
+            abi: BOOZTORY_ABI,
+            functionName: "donateCooldown",
+            args: [address],
+            chainId: APP_CHAIN.id,
+          })
+          earnedReward = Date.now() / 1000 >= Number(cooldown) + 86400
         }
 
         const tokenAmount = parseUnits(amount.toString(), 6)
@@ -70,7 +84,7 @@ export function useDonation() {
         }, 250)
 
         setIsDonating(false)
-        return { success: true }
+        return { success: true, earnedReward }
       } catch (error) {
         setIsDonating(false)
         const errorMessage = error instanceof Error ? error.message : "Donation failed"

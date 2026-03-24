@@ -400,7 +400,7 @@ export function ContentSubmissionDrawer() {
         return
       }
       if (!session?.user?.id) {
-        toast({ title: "Authentication Required", description: "You must be signed in to submit content.", variant: "destructive" })
+        toast({ title: "Authentication Required", description: "You must be signed in to submit content.", variant: "warning" })
         return
       }
       if (isProcessingRef.current || isSubmitting || isProcessing) return
@@ -424,7 +424,7 @@ export function ContentSubmissionDrawer() {
         )
         if (!mintResult.success) {
           if (mintResult.error === "Payment was cancelled") {
-            toast({ title: "Payment Cancelled", description: "Content submission was cancelled." })
+            toast({ title: "Payment Cancelled", description: "Content submission was cancelled.", variant: "destructive" })
             return
           }
           throw new Error(mintResult.error || "Mint failed")
@@ -432,7 +432,7 @@ export function ContentSubmissionDrawer() {
         if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("contentSubmitted"))
         if (!abortControllerRef.current?.signal.aborted) {
           onOpenChange(false)
-          toast({ title: "Content Submitted!", description: "Your text has been scheduled and will appear shortly.", duration: 5000 })
+          toast({ title: "Content Submitted!", description: "Your text has been scheduled and will appear shortly.", variant: "success", duration: 5000 })
           confetti({ particleCount: 150, spread: 90, origin: { y: 0.5, x: 0.5 }, angle: 90, startVelocity: 45 })
         }
       } catch (error) {
@@ -454,7 +454,7 @@ export function ContentSubmissionDrawer() {
       toast({
         title: "Invalid Input",
         description: "Please enter a valid URL before submitting.",
-        variant: "destructive",
+        variant: "warning",
       })
       return
     }
@@ -537,7 +537,7 @@ export function ContentSubmissionDrawer() {
 
       if (!mintResult.success) {
         if (mintResult.error === "Payment was cancelled") {
-          toast({ title: "Payment Cancelled", description: "Content submission was cancelled." })
+          toast({ title: "Payment Cancelled", description: "Content submission was cancelled.", variant: "destructive" })
           return
         }
         throw new Error(mintResult.error || "Mint failed")
@@ -559,6 +559,7 @@ export function ContentSubmissionDrawer() {
         toast({
           title: "Content Submitted!",
           description: "Your content has been scheduled and will appear shortly.",
+          variant: "success",
           duration: 5000,
         })
 

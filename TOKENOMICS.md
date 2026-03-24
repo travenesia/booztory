@@ -70,6 +70,10 @@ Free slot does NOT earn BOOZ — burn path is a dead end.
 | `mintSlot()` | 1 USDC | 1,000 | 0 | ✅ |
 | `mintSlotWithDiscount()` | 0.9 USDC | 1,000 | 1,000 | ✅ |
 | `mintSlotWithTokens()` | None | 0 | 10,000 | ✗ |
+| `mintSlotWithNFTDiscount()` | 0.5 USDC | 1,000 | 0 | ✅ |
+| `mintSlotFreeWithNFT()` | None | 0 | 0 | ✅ |
+
+NFT paths are exclusive — cannot be combined with BOOZ discount/free paths.
 
 ### Admin Setters
 - `setSlotMintReward`, `setFreeSlotCost`, `setDiscountBurnCost`, `setDiscountAmount`
@@ -186,6 +190,47 @@ Break-even at 100 mints/week. At 672 mints/week: ~85% margin after payout.
 - **Image:** Per content type, set via `setContentTypeImage(contentType, imageUrl)`
 - `external_url` points to booztory.com
 - `tokenURI()` returns on-chain base64-encoded JSON metadata
+
+---
+
+## 4b. NFT Pass — Platform Utility
+
+A separate ERC-721 collection (not the slot token) granting permanent platform perks to holders. Multiple collections can be approved simultaneously.
+
+### Perk Summary
+| Perk | Rule |
+|---|---|
+| 50% slot discount | Once per 24h per NFT token ID |
+| 1 free slot mint | Once per 30 days per NFT token ID |
+| Cooldown on transfer | Yes — stays with token ID (anti-exploit) |
+
+### Design Decisions
+- **Per token ID, not per wallet** — hold 3 NFTs = 3 discounted/free mints available
+- **Cooldown travels with NFT** — if sold, buyer inherits used/unused cooldown state; prevents borrow-use-return exploit
+- **Multiple collections** — `approvedNFTContracts[address] = bool`; any approved ERC-721 contract grants perks
+- **Exclusive paths** — NFT discount/free do not stack with BOOZ discount/free paths
+
+### Allowlist for NFT Drop
+- Who qualifies: any wallet where `getSlotsByCreator(address).length > 0` (has ever minted a slot)
+- Snapshot can be taken at any block, or checked live at NFT mint time
+- No contract changes needed — slot history is permanently on-chain
+
+### Contract Changes Required (Booztory.sol)
+```solidity
+mapping(address => bool) public approvedNFTContracts;
+mapping(address => mapping(uint256 => uint256)) public nftLastDiscountMint; // nftContract => tokenId => timestamp
+mapping(address => mapping(uint256 => uint256)) public nftLastFreeMint;     // nftContract => tokenId => timestamp
+
+function setNFTContract(address nft, bool approved) external onlyOwner
+function mintSlotWithNFTDiscount(address nftContract, uint256 nftTokenId, ...) external
+function mintSlotFreeWithNFT(address nftContract, uint256 nftTokenId, ...) external
+```
+
+### Implementation Status
+- [ ] NFT Pass collection designed and deployed
+- [ ] `setNFTContract(address, bool)` added to Booztory.sol
+- [ ] `mintSlotWithNFTDiscount()` + `mintSlotFreeWithNFT()` added
+- [ ] Frontend: new mint path options in submit content modal
 
 ---
 
@@ -404,6 +449,11 @@ Confirmed on current Base Sepolia deploy:
 - [ ] Instagram embed + custom video upload
 - [ ] BOOZ Phase 2: `setSoulbound(false)` → `mintTreasury()` → seed Uniswap v3 BOOZ/USDC pool
 - [ ] Additional BOOZ burn sinks: slot boost, leaderboard badge, governance
+- [ ] NFT Pass collection: design, deploy, snapshot slot minters for allowlist
+- [ ] Add NFT mint path functions to `Booztory.sol` (`setNFTContract`, `mintSlotWithNFTDiscount`, `mintSlotFreeWithNFT`)
+- [ ] Frontend: NFT path options in submit content modal
+- [ ] Leaderboard: deploy The Graph subgraph + `/api/leaderboard` + `/leaderboard` page (see §14)
+- [ ] Profile page `/profile/[address]` — per-wallet stats (see §15)
 
 ---
 
@@ -491,3 +541,97 @@ Confirmed on current Base Sepolia deploy:
 - [ ] World Chain deployment + World Mini App
 - [ ] OP Mainnet and other OP Stack chains
 - [ ] Frontend chain toggle in browser (Base ↔ World Chain)
+
+---
+
+## 14. Leaderboard
+
+### Categories (top 10 each)
+| Category | Contract | Source event | Value tracked |
+|---|---|---|---|
+| Top Minters | Booztory | `SlotMinted` | Total slots minted (all-time) |
+| Top Streakers | Booztory | `GMClaimed` | Highest streak ever reached |
+| Top Points | Booztory | `PointsEarned` | Total points accumulated (all-time) |
+| Top Creators | Booztory | `DonationReceived` → tokenId lookup | Total USDC received as creator |
+| Top Donors | Booztory | `DonationReceived` | Total USDC donated (all-time) |
+| Top Winners | BooztoryRaffle | `DrawCompleted` (address[] winners) | Total raffle wins (all-time) |
+
+Connected wallet: show their value + position if in top 10, otherwise show value + "Outside top 10".
+
+### Architecture
+- **No contract changes** — indexes existing events already emitted
+- **The Graph subgraph** — indexes both `Booztory.sol` + `BooztoryRaffle.sol` (one subgraph, two data sources)
+- **`/api/leaderboard`** — queries The Graph, caches 30 min, serves frontend
+- **`/leaderboard`** page — reads from API route only, zero RPC pressure
+
+### Notes
+- `DonationReceived` doesn't include creator address — subgraph stores `tokenId → creator` from `SlotMinted` and looks it up on each donation
+- `DrawCompleted` emits `address[] winners` — subgraph increments win count for each address in the array
+- `GMClaimed` event is in `Booztory.sol` but **missing from frontend ABI** in `lib/contract.ts` — must be added before building profile page GM history (not blocking for subgraph)
+
+### Cache
+- 30 min server-side cache on `/api/leaderboard`
+- ~1,440 queries/month to The Graph — well within 100k free tier
+- Show "Updated every 30 minutes" label on page
+
+### Monthly Prize (future)
+- Owner reviews top ranks at month end
+- Manually distributes prize from accumulated fees
+- No contract changes needed — manual send or simple `distributeLeaderboardPrizes(address[], uint256[])` owner function
+
+### Implementation Steps
+
+**Step 1 — Subgraph**
+```bash
+npm install -g @graphprotocol/graph-cli
+graph init --from-contract <BOOZTORY_ADDRESS> --network base-sepolia
+```
+- Define entities in `schema.graphql`
+- Write event handlers in `src/mappings.ts` for both contracts
+- Deploy to Subgraph Studio (free) — update network to `base` at mainnet launch
+
+**Step 2 — API route**
+```
+/api/leaderboard — query The Graph GraphQL endpoint, cache 30 min
+```
+
+**Step 3 — Frontend**
+```
+/leaderboard — 6 category tabs, top 10 each, wallet position
+```
+
+### Status
+- [ ] Build now on Base Sepolia, update to Base mainnet at launch
+
+---
+
+## 15. Profile Page
+
+### Route
+`/profile/[address]` — public per-wallet profile page
+
+### Data to display
+| Section | Source | Notes |
+|---|---|---|
+| Display name | ENS / Basename / truncated address | Same as `useWalletName` |
+| Total slots minted | `SlotMinted` events (The Graph) | All 3 mint paths |
+| Total USDC received | `DonationReceived` events (The Graph) | Creator earnings |
+| Total USDC donated | `DonationReceived` events (The Graph) | As donor |
+| Current GM streak | `gmStreaks[address]` on-chain read | Live |
+| Highest streak ever | `highestStreak[address]` on-chain read | Live |
+| GM claim history | `GMClaimed` events (The Graph) | Full history |
+| Points balance | `points[address]` on-chain read | Live |
+| Slot history | `SlotMinted` events (The Graph) | Past content cards |
+| Total raffle wins | `DrawCompleted` events (The Graph) | All-time wins |
+| Leaderboard positions | From `/api/leaderboard` cache | Rank badges |
+
+### ABI Note
+`GMClaimed(address indexed user, uint16 streakCount, uint256 reward)` is defined in `Booztory.sol` but **missing from the frontend ABI** in `lib/contract.ts`. Must be added before building the profile page GM history feature.
+
+### Architecture
+- On-chain reads (name, streak, points) — wagmi `useReadContracts` multicall
+- Historical data (slots, donations, GM history) — The Graph (same subgraph as leaderboard)
+- No extra RPC pressure — reuses leaderboard subgraph
+
+### Status
+- [ ] Post-mainnet — depends on The Graph subgraph being deployed first

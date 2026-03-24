@@ -67,7 +67,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid donation amount.",
-        variant: "destructive",
+        variant: "warning",
       })
       return
     }
@@ -76,7 +76,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
       toast({
         title: "Authentication Required",
         description: "You must be signed in to make a donation.",
-        variant: "destructive",
+        variant: "warning",
       })
       return
     }
@@ -93,11 +93,14 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
 
       toast({
         title: "Donation Successful!",
-        description: `Thank you for donating $${amount} USDC to @${displayCreatorName}! You earned 1,000 $BOOZ and 5 points.`,
+        variant: "success",
+        description: result.earnedReward
+          ? `Thank you for donating $${amount} USDC to @${displayCreatorName}! You earned 1,000 $BOOZ and 5 points.`
+          : `Thank you for donating $${amount} USDC to @${displayCreatorName}!`,
       })
     } else {
       if (result.error === "Donation was cancelled") {
-        toast({ title: "Donation Cancelled", description: "Your donation was cancelled." })
+        toast({ title: "Donation Cancelled", description: "Your donation was cancelled.", variant: "destructive" })
       } else {
         toast({
           title: "Donation Failed",
@@ -142,7 +145,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
     )}
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[425px] rounded-xl bg-gray-0 text-elegance-timeless-noir [&>button]:right-3 [&>button]:top-3 [&>button]:h-7 [&>button]:w-7 [&>button]:rounded-full [&>button]:bg-white [&>button]:border [&>button]:border-gray-200 [&>button]:shadow-[0_2px_8px_rgba(0,0,0,0.15)] [&>button]:opacity-100 [&>button]:!inline-flex [&>button]:items-center [&>button]:justify-center [&>button_svg]:h-3.5 [&>button_svg]:w-3.5 [&>button_svg]:text-gray-800 [&>button_svg]:stroke-[2.5] [&>button_svg]:relative [&>button_svg]:z-10"
+        className="sm:max-w-[425px] rounded-xl bg-gray-0 text-elegance-timeless-noir [&>button]:hidden"
         style={keyboardOffset > 0 ? { top: `calc(50% - ${keyboardOffset / 2}px)`, transition: "top 0.3s ease" } : { transition: "top 0.3s ease" }}
       >
         <DialogHeader>
@@ -167,8 +170,8 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
                 disabled={isDonating}
                 className={`rounded-full w-12 h-12 flex items-center justify-center font-base text-sm border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   amount === value
-                    ? "bg-main text-main-foreground border-gray-900 shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
-                    : "bg-secondary-background text-foreground border-gray-300 shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+                    ? "bg-main text-main-foreground border-transparent shadow-custom-sm [--tw-shadow-color:#D6D9DD] hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+                    : "bg-secondary-background text-foreground border-gray-300 shadow-custom-sm [--tw-shadow-color:#D6D9DD] hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
                 }`}
               >
                 {value}
@@ -182,16 +185,17 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
               value={amount}
               onChange={(e) => setAmount(Number.parseFloat(e.target.value) || 0)}
               disabled={isDonating}
-              className="w-20 h-12 rounded-full shadow-shadow bg-secondary-background text-foreground border border-gray-300 focus:translate-x-boxShadowX focus:translate-y-boxShadowY focus:shadow-none transition-all focus:ring-0 focus-visible:ring-0 disabled:opacity-50"
+              className="w-20 h-12 rounded-full shadow-custom-sm [--tw-shadow-color:#D6D9DD] bg-secondary-background text-foreground border border-gray-300 focus:translate-x-boxShadowX focus:translate-y-boxShadowY focus:shadow-none transition-all focus:ring-0 focus-visible:ring-0 disabled:opacity-50"
             />
           </div>
         </div>
 
-        <DialogFooter className="pt-2">
+        <DialogFooter className="pt-2 flex-col gap-2">
           <Button
             onClick={handleDonate}
             disabled={isDonating || amount <= 0 || !session?.user?.id}
             className="w-full elegance-button h-10"
+            style={{ boxShadow: '6.4px 6.4px 0px 0px #D6D9DD' }}
           >
             {isDonating ? (
               <div className="flex items-center justify-center">
@@ -203,6 +207,9 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
             )}
           </Button>
         </DialogFooter>
+        <p className="text-[11px] text-center text-gray-400">
+          Earn 1,000 $BOOZ + 5 points on your first donation per day
+        </p>
       </DialogContent>
     </Dialog>
     </>

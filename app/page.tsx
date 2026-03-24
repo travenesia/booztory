@@ -76,7 +76,7 @@ export default function Home() {
       toast({
         title: "Connect Wallet First",
         description: "You need to connect your wallet to submit content.",
-        variant: "destructive",
+        variant: "warning",
       })
       return
     }
