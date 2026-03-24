@@ -124,6 +124,7 @@ export const ContentEmbed = memo(function ContentEmbed({
     return <TwitchEmbed url={contentUrl} aspectRatio={aspectRatio} isPreview={isPreview} responsive={responsive} />
   }
 
+
   // Text slot — render formatted text with basic bold/italic support
   if (contentType === "text") {
     const html = contentUrl

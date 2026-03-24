@@ -8,7 +8,7 @@ const Link = ({ href, children }: { href: string; children: React.ReactNode }) =
 )
 
 export const TweetText = ({ tweet }: { tweet: EnrichedTweet }) => (
-  <div className="mb-2 mt-4 truncate whitespace-pre-wrap text-xs text-gray-700">
+  <div className="mb-2 mt-4 whitespace-pre-wrap text-xs text-gray-700">
     {tweet.entities.map((item, i) => {
       switch (item.type) {
         case "hashtag":

@@ -553,6 +553,7 @@ export default function SponsorPage() {
   const [links,        setLinks]        = useState<SponsorLinks>({ website: "", x: "", discord: "", telegram: "" })
   const [durationIdx,  setDurationIdx]  = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStep,   setSubmitStep]   = useState<1 | 2>(1)
   const [submitDone,   setSubmitDone]   = useState(false)
   const adTextRef = useRef<HTMLTextAreaElement>(null)
 
@@ -631,6 +632,7 @@ export default function SponsorPage() {
   async function handleSubmit() {
     if (!isFormValid) return
     setIsSubmitting(true)
+    setSubmitStep(1)
     try {
       const approveTx = await writeContractAsync({
         address: USDC_ADDRESS, abi: ERC20_ABI,
@@ -638,6 +640,7 @@ export default function SponsorPage() {
         chainId: APP_CHAIN.id,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+      setSubmitStep(2)
 
       const adContent =
         adType === "image"
@@ -684,9 +687,26 @@ export default function SponsorPage() {
       {/* Transaction lock overlay — blocks UI during the 2-step approve+submit flow */}
       {isSubmitting && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-3 shadow-xl max-w-xs w-full mx-4">
+          <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-4 shadow-xl max-w-xs w-full mx-4">
             <Loader2 className="animate-spin text-indigo-600" size={28} />
             <p className="text-sm font-semibold text-gray-900 text-center">Submitting your application…</p>
+            {/* Progress bar */}
+            <div className="w-full flex flex-col gap-2">
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                  style={{ width: submitStep === 1 ? "50%" : "100%" }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-400">
+                <span className={submitStep >= 1 ? "text-indigo-600 font-medium" : ""}>
+                  {submitStep === 1 ? "⏳ " : "✓ "}Approving USDC
+                </span>
+                <span className={submitStep >= 2 ? "text-indigo-600 font-medium" : ""}>
+                  {submitStep === 2 ? "⏳ " : ""}Signing application
+                </span>
+              </div>
+            </div>
             <p className="text-xs text-gray-400 text-center leading-relaxed">
               Please keep this page open and confirm both transactions in your wallet.
             </p>

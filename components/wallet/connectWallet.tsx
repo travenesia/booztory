@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useSession, signIn } from "next-auth/react"
@@ -28,7 +29,9 @@ export function ConnectWalletButton() {
   const { openConnectModal } = useConnectModal()
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonWrapperRef = useRef<HTMLDivElement>(null)
   const isSigningInRef = useRef(false)
   const { toast } = useToast()
   const isMobile = useIsMobile()
@@ -43,9 +46,10 @@ export function ConnectWalletButton() {
   useEffect(() => {
     if (!open || isMobile) return
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      const clickedDropdown = dropdownRef.current?.contains(target)
+      const clickedButton = buttonWrapperRef.current?.contains(target)
+      if (!clickedDropdown && !clickedButton) setOpen(false)
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
@@ -230,21 +234,32 @@ export function ConnectWalletButton() {
     )
   }
 
-  // ── Desktop — click-outside dropdown ───────────────────────────────────────
+  // ── Desktop — click-outside dropdown (portalled to body to escape topbar stacking context) ──
   return (
-    <div className="relative flex flex-col items-center" ref={dropdownRef}>
+    <div className="relative flex flex-col items-center" ref={buttonWrapperRef}>
       <Button
         variant="noShadow"
         className="h-9 px-4 text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open && buttonWrapperRef.current) {
+            const rect = buttonWrapperRef.current.getBoundingClientRect()
+            setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+          }
+          setOpen((v) => !v)
+        }}
       >
         {buttonContent()}
       </Button>
 
-      {open && (
-        <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
+      {open && dropdownPos && typeof document !== "undefined" && createPortal(
+        <div
+          ref={dropdownRef}
+          className="w-72 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[60]"
+          style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right }}
+        >
           <WalletDropdownContent onClose={() => setOpen(false)} />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

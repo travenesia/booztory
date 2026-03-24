@@ -6,6 +6,7 @@ import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/lib/wagmi"
 import { formatUnits, parseAbiItem } from "viem"
 import { HiBolt, HiTrophy } from "react-icons/hi2"
+import { FaCoins } from "react-icons/fa6"
 import { Ticket, BadgeCheck, Flame } from "lucide-react"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
@@ -551,16 +552,16 @@ function ActiveRaffleCard({
                 {Number(totalTickets).toLocaleString()} / {Number(drawThreshold).toLocaleString()}{thresholdMet ? " ✓" : ""}
               </span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
               <div
-                className={cn("h-2 rounded-full transition-all", thresholdMet ? "bg-green-500" : "bg-blue-500")}
-                style={{ width: `${Math.min((Number(totalTickets) / Math.max(Number(drawThreshold), 1)) * 100, 100)}%` }}
+                className={cn("h-3 rounded-full transition-all", thresholdMet && uniqueMet ? "bg-green-500" : "bg-blue-500")}
+                style={{ width: `${Math.min((Number(totalTickets) / Math.max(Number(drawThreshold), 1)) * 50, 50) + Math.min((Number(uniqueEntrants) / Math.max(Number(minUniqueEntrants), 1)) * 50, 50)}%` }}
               />
             </div>
             <div className="flex justify-between text-xs text-gray-500">
               <span>Unique entrants</span>
               <span className={uniqueMet ? "text-green-600 font-semibold" : ""}>
-                {Number(uniqueEntrants)} / {Number(minUniqueEntrants)} min{uniqueMet ? " ✓" : ""}
+                {Number(uniqueEntrants)} / {Number(minUniqueEntrants)}{uniqueMet ? " ✓" : ""}
               </span>
             </div>
           </div>
@@ -946,6 +947,8 @@ export default function RewardPage() {
   const isConsecutive = lastClaimDay === today - 1n && streakDay > 0 && streakDay < 90
   const nextDay = claimedToday ? streakDay : isConsecutive ? streakDay + 1 : 1
   const displayReward = nextDay <= 7 ? (GM_DAY_REWARDS[nextDay - 1] ?? 5) : GM_FLAT_REWARD
+  const MILESTONE_POINT_BONUSES: Record<number, number> = { 7: 1, 14: 1, 30: 2, 60: 2, 90: 3 }
+  const displayPoints = 1 + (MILESTONE_POINT_BONUSES[nextDay] ?? 0) + (nextDay > 90 && (nextDay - 90) % 30 === 0 ? 3 : 0)
   const progressPctStreak = Math.min((streakDay / 90) * 100, 100)
 
   // Refetch all live data when user returns to this tab
@@ -1052,7 +1055,7 @@ export default function RewardPage() {
               {/* Inline stats */}
               <div className="flex items-center mb-3 bg-indigo-100/60 rounded-lg overflow-hidden">
                 <div className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2">
-                  <HiBolt className="text-amber-500" size={14} />
+                  <FaCoins className="text-orange-500" size={13} />
                   <span className="text-xs text-indigo-700">Points</span>
                   <span className="text-xs font-bold text-gray-900">{pointsBalance.toLocaleString()}</span>
                 </div>
@@ -1140,23 +1143,30 @@ export default function RewardPage() {
         {tab === "streak" && (
           <div className="space-y-4">
 
-            {/* Balances — USDC + BOOZ */}
+            {/* Balances — USDC + BOOZ + Points */}
             {address && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 flex items-center gap-3">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/usdc.svg" alt="USDC" width={42} height={42} className="flex-shrink-0" />
+                  <img src="/usdc.svg" alt="USDC" className="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide leading-none mb-0.5">$USDC</span>
-                    <span className="text-2xl font-black text-blue-900 leading-tight">{usdcFormatted}</span>
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-blue-600 uppercase tracking-wide leading-none mb-0.5">$USDC</span>
+                    <span className="text-sm sm:text-xl font-black text-blue-900 leading-tight">{usdcFormatted}</span>
                   </div>
                 </div>
-                <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-4 flex items-center gap-3">
+                <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/booz.svg" alt="BOOZ" width={42} height={42} className="flex-shrink-0" />
+                  <img src="/booz.svg" alt="BOOZ" className="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-semibold text-red-600 uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
-                    <span className="text-2xl font-black text-red-900 leading-tight">{boozFormatted}</span>
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-red-600 uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
+                    <span className="text-sm sm:text-xl font-black text-red-900 leading-tight">{boozFormatted}</span>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <FaCoins className="text-orange-500 flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-orange-600 uppercase tracking-wide leading-none mb-0.5">Points</span>
+                    <span className="text-base sm:text-xl font-black text-orange-900 leading-tight">{pointsBalance.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -1219,6 +1229,10 @@ export default function RewardPage() {
                     <HiBolt className="text-yellow-500" size={14} />
                     <span className="text-gray-900 font-bold text-sm">{displayReward}</span>
                     <span className="text-gray-400 text-sm">$BOOZ</span>
+                    <span className="text-gray-300 text-sm">+</span>
+                    <FaCoins className="text-orange-500" size={13} />
+                    <span className="text-gray-900 font-bold text-sm">{displayPoints}</span>
+                    <span className="text-gray-400 text-sm">points</span>
                   </div>
                 </div>
               )}
@@ -1251,39 +1265,57 @@ export default function RewardPage() {
 
             {/* How to Earn */}
             <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <p className="text-gray-900 font-semibold text-sm mb-4">How to Earn $BOOZ</p>
-              <div className="space-y-3">
+              <p className="text-gray-900 font-semibold text-sm mb-4">How to Earn $BOOZ & Points</p>
+              <div className="space-y-2">
                 {[
-                  { label: "Mint a slot (1 USDC)", reward: "+1,000" },
-                  { label: "Daily GM – Days 1–7", reward: "+5 to +35" },
-                  { label: "Daily GM – Days 8–90", reward: "+50" },
-                ].map(({ label, reward }) => (
-                  <div key={label} className="flex items-center justify-between">
-                    <span className="text-gray-500 text-sm">{label}</span>
-                    <div className="flex items-center gap-1">
-                      <HiBolt className="text-yellow-500" size={12} />
-                      <span className="text-gray-900 text-sm font-semibold">{reward} $BOOZ</span>
+                  { label: "Mint a slot (1 USDC)",          booz: "+1,000",    pts: "+15" },
+                  { label: "Donation (1 USDC/24 Hour)",     booz: "+1,000",    pts: "+5"  },
+                  { label: "Daily GM – Days 1–7",           booz: "+5 to +35", pts: "+1"  },
+                  { label: "Daily GM – Days 8–90",          booz: "+50",       pts: "+1"  },
+                ].map(({ label, booz, pts }) => (
+                  <div key={label} className="flex items-center justify-between gap-2">
+                    <span className="text-gray-500 text-xs">{label}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1">
+                        <HiBolt className="text-yellow-500" size={11} />
+                        <span className="text-gray-900 text-xs font-semibold">{booz} $BOOZ</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <FaCoins className="text-orange-500" size={10} />
+                        <span className="text-gray-900 text-xs font-semibold">{pts} pts</span>
+                      </div>
                     </div>
                   </div>
                 ))}
                 <div className="border-t border-gray-100 pt-3 space-y-2">
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Milestone bonuses (one-time)</p>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wide mb-2">Milestone bonuses (one-time)</p>
                   {[
-                    { label: "⚔️ Warrior (day 7)",  reward: "+50" },
-                    { label: "🛡️ Elite (day 14)",   reward: "+250" },
-                    { label: "👑 Epic (day 30)",     reward: "+350" },
-                    { label: "🔥 Legend (day 60)",   reward: "+500" },
-                    { label: "🔱 Mythic (day 90)",   reward: "+4,560" },
-                  ].map(({ label, reward }) => (
-                    <div key={label} className="flex items-center justify-between">
-                      <span className="text-gray-500 text-sm">{label}</span>
-                      <div className="flex items-center gap-1">
-                        <HiBolt className="text-yellow-500" size={12} />
-                        <span className="text-gray-900 text-sm font-semibold">{reward} $BOOZ</span>
+                    { label: "⚔️ Warrior (day 7)",  booz: "+50",    pts: "+1" },
+                    { label: "🛡️ Elite (day 14)",   booz: "+250",   pts: "+1" },
+                    { label: "👑 Epic (day 30)",     booz: "+350",   pts: "+2" },
+                    { label: "🔥 Legend (day 60)",   booz: "+500",   pts: "+2" },
+                    { label: "🔱 Mythic (day 90)",   booz: "+4,560", pts: "+3" },
+                  ].map(({ label, booz, pts }) => (
+                    <div key={label} className="flex items-center justify-between gap-2">
+                      <span className="text-gray-500 text-xs">{label}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-1">
+                          <HiBolt className="text-yellow-500" size={11} />
+                          <span className="text-gray-900 text-xs font-semibold">{booz} $BOOZ</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FaCoins className="text-orange-500" size={10} />
+                          <span className="text-gray-900 text-xs font-semibold">{pts} pts</span>
+                        </div>
                       </div>
                     </div>
                   ))}
-                  <p className="text-xs text-emerald-600 font-medium pt-1">= 10,000 $BOOZ total over 90 days</p>
+                  <div className="mt-4 border-t border-gray-100 flex justify-center pt-4">
+                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-4 py-1.5">
+                      <HiBolt className="text-emerald-500" size={13} />
+                      <span className="text-xs font-bold text-emerald-700">10,000 $BOOZ total over 90 days</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

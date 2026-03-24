@@ -132,10 +132,6 @@ export default function FAQPage() {
                     <ul className="space-y-1 ml-4">
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                        <span>Instagram</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
                         <span>Custom image, video, and text uploads</span>
                       </li>
                     </ul>
@@ -174,8 +170,8 @@ export default function FAQPage() {
                   <div className="flex items-start space-x-3">
                     <span className="w-2 h-2 bg-red-700 rounded-full mt-2 flex-shrink-0"></span>
                     <div>
-                      <p className="font-medium text-gray-900">Earn $BOOZ rewards</p>
-                      <p>Claim daily GM streaks and enter weekly raffles to earn $BOOZ tokens</p>
+                      <p className="font-medium text-gray-900">Earn $BOOZ & points</p>
+                      <p>Mint slots, donate, and claim daily GM streaks to earn $BOOZ and points — convert points into raffle tickets to win prizes</p>
                     </div>
                   </div>
                 </div>
@@ -197,11 +193,15 @@ export default function FAQPage() {
                     <ul className="space-y-1 ml-4">
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        <span>Mint a paid slot (1 USDC) — earns 1,000 $BOOZ</span>
+                        <span>Mint a slot (1 USDC) — 1,000 $BOOZ + 15 points</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        <span>Daily GM streak — 5 to 50 $BOOZ per day</span>
+                        <span>Donate to a creator (once per 24h) — 1,000 $BOOZ + 5 points</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span>Daily GM streak — 5 to 50 $BOOZ + 1 point per day</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
@@ -434,10 +434,6 @@ export default function FAQPage() {
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
                         <span>Creator analytics dashboard</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                        <span>Instagram support</span>
                       </li>
                     </ul>
                   </div>

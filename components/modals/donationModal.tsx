@@ -2,6 +2,7 @@
 
 import { DialogFooter } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -52,7 +53,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
     }
   }, [open])
 
-  const { processDonation, isDonating, resetDonationState } = useDonation()
+  const { processDonation, isDonating, donationStep, resetDonationState } = useDonation()
 
   useEffect(() => {
     if (!open) {
@@ -92,7 +93,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
 
       toast({
         title: "Donation Successful!",
-        description: `Thank you for donating $${amount} USDC to @${displayCreatorName}!`,
+        description: `Thank you for donating $${amount} USDC to @${displayCreatorName}! You earned 1,000 $BOOZ and 5 points.`,
       })
     } else {
       if (result.error === "Donation was cancelled") {
@@ -111,16 +112,33 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
 
   return (
     <>
-    {isDonating && (
+    {isDonating && typeof document !== "undefined" && createPortal(
       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-3 shadow-xl max-w-xs w-full mx-4">
+        <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-4 shadow-xl max-w-xs w-full mx-4">
           <Loader2 className="animate-spin text-indigo-600" size={28} />
           <p className="text-sm font-semibold text-gray-900 text-center">Processing donation…</p>
+          <div className="w-full flex flex-col gap-2">
+            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                style={{ width: donationStep === 1 ? "50%" : "100%" }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-gray-400">
+              <span className={donationStep >= 1 ? "text-indigo-600 font-medium" : ""}>
+                {donationStep > 1 ? "✓ " : "⏳ "}Approving USDC
+              </span>
+              <span className={donationStep >= 2 ? "text-indigo-600 font-medium" : ""}>
+                {donationStep === 2 ? "⏳ " : ""}Donating
+              </span>
+            </div>
+          </div>
           <p className="text-xs text-gray-400 text-center leading-relaxed">
             Please keep this page open and confirm both transactions in your wallet.
           </p>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi"
 import { HiBolt } from "react-icons/hi2"
+import { FaCoins } from "react-icons/fa6"
 import { Loader2 } from "lucide-react"
 import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
@@ -172,10 +173,10 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
       ) : (
         <div className="w-full bg-white/70 border border-gray-200 rounded-2xl flex flex-col items-center py-5 mb-5 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/booz.svg" alt="BOOZ" width={32} height={32} className="mb-2" />
+          <img src="/booz.svg" alt="BOOZ" width={64} height={64} className="mb-4 animate-bounce-slow" />
           <div className="flex items-baseline gap-1.5 mb-1">
             <span className="text-gray-900 font-bold text-2xl leading-none">
-              {claimedToday ? getDailyReward(streakCount) : displayReward} BOOZ
+              {claimedToday ? getDailyReward(streakCount) : displayReward} $BOOZ
             </span>
           </div>
           {nextMilestone && !claimedToday && (
@@ -243,23 +244,47 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
           )}
         </button>
       )}
+
+      <p className="text-[11px] text-gray-400 text-center flex items-center justify-center gap-1 mt-3">
+        Each claim earns $BOOZ and <FaCoins className="text-orange-500" size={11} /> points toward raffle tickets
+      </p>
     </div>
   )
+}
+
+// ── Shared: check if GM is claimable today ────────────────────────────────────
+
+function useGMClaimable() {
+  const { address } = useAccount()
+  const { data: streakRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "gmStreaks",
+    args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: !!address },
+  })
+  return useMemo(() => {
+    if (!address || !streakRaw) return false
+    const lastClaimDay = (streakRaw as [bigint, number, number])[0]
+    return lastClaimDay !== BigInt(getUtcDay())
+  }, [address, streakRaw])
 }
 
 // ── Desktop: icon + Dialog ────────────────────────────────────────────────────
 
 export function GMButton() {
   const [open, setOpen] = useState(false)
+  const claimable = useGMClaimable()
 
   return (
     <>
       <span
         onClick={() => setOpen(true)}
-        className="hidden md:flex items-center justify-center w-[28px] h-[28px] transition-colors text-gray-900 hover:text-[#cc0000] cursor-pointer"
+        className="hidden md:flex items-center justify-center w-[28px] h-[28px] transition-colors cursor-pointer"
         aria-label="Daily GM"
       >
-        <HiBolt size={14} />
+        <HiBolt size={14} className={claimable ? "text-orange-500 animate-pulse" : "text-gray-900 hover:text-[#cc0000]"} />
       </span>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="p-0 max-w-sm rounded-2xl overflow-hidden border border-gray-200" style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}>
@@ -277,15 +302,16 @@ export function GMButton() {
 
 export function GMMobileButton() {
   const [open, setOpen] = useState(false)
+  const claimable = useGMClaimable()
 
   return (
     <>
       <span
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center w-[28px] h-[28px] rounded-base transition-colors text-gray-900 hover:text-[#cc0000] cursor-pointer"
+        className="flex items-center justify-center w-[28px] h-[28px] rounded-base transition-colors cursor-pointer"
         aria-label="Daily GM"
       >
-        <HiBolt size={14} />
+        <HiBolt size={14} className={claimable ? "text-orange-500 animate-pulse" : "text-gray-900 hover:text-[#cc0000]"} />
       </span>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

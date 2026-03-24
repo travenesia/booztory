@@ -6,8 +6,9 @@ import { useSession, signOut } from "next-auth/react"
 import { useState } from "react"
 import { Copy, Check } from "lucide-react"
 import { HiBolt, HiOutlinePower } from "react-icons/hi2"
+import { FaCoins } from "react-icons/fa6"
 import { useWalletName } from "@/hooks/useWalletName"
-import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS } from "@/lib/contract"
+import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cache } from "@/lib/cache"
 
@@ -62,6 +63,15 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
     query: { enabled: !!address && TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" },
   })
 
+  const { data: pointsBalance } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "points",
+    args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: !!address },
+  })
+
   const handleCopy = async () => {
     if (!address) return
     await navigator.clipboard.writeText(address)
@@ -98,6 +108,13 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
               {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
             </button>
           </div>
+        </div>
+        <div
+          className="flex items-center gap-1 flex-shrink-0 cursor-default"
+          title={pointsBalance !== undefined ? `You have ${Number(pointsBalance).toLocaleString()} Points` : "Points"}
+        >
+          <FaCoins className="text-orange-500" size={14} />
+          <span className="text-sm font-bold text-gray-800">{pointsBalance !== undefined ? Number(pointsBalance).toLocaleString() : "—"}</span>
         </div>
       </div>
 

@@ -44,6 +44,7 @@ function parseReject(error: unknown): boolean {
 
 export function usePayment() {
   const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentStep, setPaymentStep] = useState<1 | 2>(1)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
@@ -92,6 +93,7 @@ export function usePayment() {
 
   const resetPaymentState = useCallback(() => {
     setIsProcessing(false)
+    setPaymentStep(1)
   }, [])
 
   // ── Shared setup ──────────────────────────────────────────────────────────────
@@ -115,6 +117,7 @@ export function usePayment() {
     async (slotData: SlotData): Promise<{ success: boolean; error?: string }> => {
       if (isProcessing) return { success: false, error: "Payment already in progress" }
       setIsProcessing(true)
+      setPaymentStep(1)
       try {
         await ensureChain()
 
@@ -125,6 +128,7 @@ export function usePayment() {
           args: [BOOZTORY_ADDRESS, slotPriceRef.current],
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+        setPaymentStep(2)
 
         const mintTx = await writeContractAsync({
           address: BOOZTORY_ADDRESS,
@@ -134,7 +138,7 @@ export function usePayment() {
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
-        toast({ title: "Slot Minted!", description: "Your content has been scheduled." })
+        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points." })
         fireConfetti()
         resetPaymentState()
         return { success: true }
@@ -150,6 +154,7 @@ export function usePayment() {
     async (slotData: SlotData): Promise<{ success: boolean; error?: string }> => {
       if (isProcessing) return { success: false, error: "Payment already in progress" }
       setIsProcessing(true)
+      setPaymentStep(1)
       try {
         await ensureChain()
 
@@ -162,6 +167,7 @@ export function usePayment() {
           args: [BOOZTORY_ADDRESS, discountedPrice],
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveUSDCTx })
+        setPaymentStep(2)
 
         // Step 3: Mint with discount
         const mintTx = await writeContractAsync({
@@ -172,7 +178,7 @@ export function usePayment() {
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
-        toast({ title: "Slot Minted!", description: "Your content has been scheduled." })
+        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points." })
         fireConfetti()
         resetPaymentState()
         return { success: true }
@@ -201,7 +207,7 @@ export function usePayment() {
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
-        toast({ title: "Slot Minted!", description: "Your content has been scheduled." })
+        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 15 points." })
         fireConfetti()
         resetPaymentState()
         return { success: true }
@@ -217,6 +223,7 @@ export function usePayment() {
     mintSlotWithDiscount,
     mintSlotWithTokens,
     isProcessing,
+    paymentStep,
     resetPaymentState,
     slotPrice,
     discountBurnCost,

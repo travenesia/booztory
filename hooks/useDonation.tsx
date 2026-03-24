@@ -10,6 +10,7 @@ import confetti from "canvas-confetti"
 
 export function useDonation() {
   const [isDonating, setIsDonating] = useState(false)
+  const [donationStep, setDonationStep] = useState<1 | 2>(1)
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
@@ -27,6 +28,7 @@ export function useDonation() {
       if (amount <= 0) return { success: false, error: "Amount must be greater than 0" }
 
       setIsDonating(true)
+      setDonationStep(1)
 
       try {
         // Ensure wallet is on the correct chain before transacting
@@ -44,6 +46,7 @@ export function useDonation() {
           args: [BOOZTORY_ADDRESS, tokenAmount],
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+        setDonationStep(2)
 
         // Step 2: Donate — contract sends 95% to creator, keeps 5% as fee
         const donateTx = await writeContractAsync({
@@ -86,7 +89,8 @@ export function useDonation() {
 
   const resetDonationState = useCallback(() => {
     setIsDonating(false)
+    setDonationStep(1)
   }, [])
 
-  return { processDonation, isDonating, resetDonationState }
+  return { processDonation, isDonating, donationStep, resetDonationState }
 }

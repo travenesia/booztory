@@ -61,6 +61,7 @@ export function ContentSubmissionDrawer() {
     mintSlotWithDiscount,
     mintSlotWithTokens,
     isProcessing,
+    paymentStep,
     resetPaymentState,
     slotPrice,
     discountBurnCost,
@@ -708,6 +709,37 @@ export function ContentSubmissionDrawer() {
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
 
   return (
+    <>
+    {/* Transaction lock overlay — blocks UI during 2-step approve+mint flow */}
+    {isProcessing && (
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-4 shadow-xl max-w-xs w-full mx-4">
+          <Loader2 className="animate-spin text-indigo-600" size={28} />
+          <p className="text-sm font-semibold text-gray-900 text-center">Processing payment…</p>
+          {paymentMethod !== "free" && (
+            <div className="w-full flex flex-col gap-2">
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                  style={{ width: paymentStep === 1 ? "50%" : "100%" }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-400">
+                <span className={paymentStep >= 1 ? "text-indigo-600 font-medium" : ""}>
+                  {paymentStep > 1 ? "✓ " : "⏳ "}Approving USDC
+                </span>
+                <span className={paymentStep >= 2 ? "text-indigo-600 font-medium" : ""}>
+                  {paymentStep === 2 ? "⏳ " : ""}Minting slot
+                </span>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-gray-400 text-center leading-relaxed">
+            Please keep this page open{paymentMethod !== "free" ? " and confirm both transactions" : ""} in your wallet.
+          </p>
+        </div>
+      </div>
+    )}
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
@@ -959,5 +991,6 @@ export function ContentSubmissionDrawer() {
         </div>
       </SheetContent>
     </Sheet>
+    </>
   )
 }

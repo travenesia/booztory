@@ -324,7 +324,7 @@ export type ContentItem = {
   id: string
   username: string
   submittedBy: string
-  contentType: "youtube" | "tiktok" | "twitter" | "vimeo" | "spotify"
+  contentType: "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch" | "text"
   contentUrl: string
   imageUrl: string
   scheduledTime: number

@@ -3,11 +3,15 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
-import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone } from "react-icons/hi2"
+import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder } from "react-icons/hi2"
 import { HiBolt } from "react-icons/hi2"
+import { FaRankingStar } from "react-icons/fa6"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { GMButton, GMContent } from "@/components/modals/gmModal"
 import { usePathname } from "next/navigation"
+import { useAccount } from "wagmi"
+import { useWalletName } from "@/hooks/useWalletName"
+import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { Drawer } from "vaul"
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
@@ -25,6 +29,10 @@ export function Topbar() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const [gmOpen, setGmOpen] = useState(false)
+  const { address } = useAccount()
+  const { data: session } = useSession()
+  const resolvedName = useWalletName(address)
+  const displayName = resolvedName || session?.user?.username || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null)
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
@@ -97,14 +105,20 @@ export function Topbar() {
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
           <Drawer.Content
-            className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-white outline-none"
+            className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-white outline-none after:hidden"
           >
             <Drawer.Title className="sr-only">Menu</Drawer.Title>
             <Drawer.Description className="sr-only">Navigation menu</Drawer.Description>
 
             {/* Header */}
             <div className="px-5 pt-6 pb-4">
-              <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
+              {displayName ? (
+                <span className="text-base font-bold text-gray-900 truncate block max-w-[200px]">
+                  👋 Gm, {displayName}
+                </span>
+              ) : (
+                <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
+              )}
             </div>
 
             <div className="mx-5 border-t border-gray-200" />
@@ -134,24 +148,30 @@ export function Topbar() {
 
             <div className="mx-5 border-t border-gray-200" />
 
-            {/* Secondary items */}
+            {/* Page links */}
             <div className="flex flex-col px-3 py-3 gap-0.5">
-              <Link
-                href="/sponsor"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-800 hover:bg-gray-100 active:bg-gray-100 transition-colors text-sm font-semibold"
-              >
-                <HiMegaphone size={18} className="text-indigo-500 flex-shrink-0" />
-                Sponsor
-              </Link>
-              <Link
-                href="/faq"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-800 hover:bg-gray-100 active:bg-gray-100 transition-colors text-sm font-semibold"
-              >
-                <HiMiniShieldCheck size={18} className="text-gray-500 flex-shrink-0" />
-                FAQ
-              </Link>
+              {[
+                { href: "/upcoming", label: "Upcoming",  Icon: HiMiniForward,  color: "text-blue-500"   },
+                { href: "/history",  label: "History",   Icon: HiFolder,       color: "text-amber-500"  },
+                { href: "/reward",   label: "Reward",    Icon: FaRankingStar,  color: "text-purple-500" },
+                { href: "/sponsor",  label: "Sponsor",   Icon: HiMegaphone,    color: "text-indigo-500" },
+                { href: "/faq",      label: "FAQ",       Icon: HiMiniShieldCheck, color: "text-gray-500" },
+              ].map(({ href, label, Icon, color }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-sm font-semibold",
+                    pathname === href
+                      ? "bg-gray-100 text-[#aa0000]"
+                      : "text-gray-800 hover:bg-gray-100"
+                  )}
+                >
+                  <Icon size={18} className={cn("flex-shrink-0", pathname === href ? "text-[#aa0000]" : color)} />
+                  {label}
+                </Link>
+              ))}
             </div>
 
             {/* Version */}
