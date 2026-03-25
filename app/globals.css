@@ -114,12 +114,12 @@
   .elegance-button {
     @apply text-white rounded-base shadow-custom-md hover:shadow-custom-md-hover;
     --tw-shadow-color: #D6D9DD;
-    background-color: #cc0000;
+    background-color: #E63946;
     transition: all 0.2s ease;
   }
 
   .elegance-button:hover {
-    background-color: #aa0000;
+    background-color: #c02030;
     transform: translateY(-1px) translateX(-1px);
   }
 

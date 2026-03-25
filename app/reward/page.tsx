@@ -1004,7 +1004,7 @@ export default function RewardPage() {
         }
       />
 
-      <section className="py-6 px-6 max-w-[650px] mx-auto w-full">
+      <section className="pt-6 pb-[136px] md:pb-[88px] px-6 max-w-[650px] mx-auto w-full">
 
         {/* Tab switcher */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
@@ -1167,7 +1167,7 @@ export default function RewardPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/booz.svg" alt="BOOZ" className="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
                   <div className="flex flex-col">
-                    <span className="text-[9px] sm:text-[10px] font-semibold text-red-600 uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-[#E63946] uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
                     <span className="text-sm sm:text-xl font-black text-red-900 leading-tight">{boozFormatted}</span>
                   </div>
                 </div>

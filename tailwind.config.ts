@@ -40,7 +40,7 @@ const config: Config = {
   			reverseBoxShadowY: '-4px'
   		},
   		colors: {
-  			main: '#cc0000',
+  			main: '#E63946',
   			'main-foreground': '#ffffff',
   			'secondary-background': '#FBFBFC',
   			gray: {

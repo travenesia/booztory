@@ -27,25 +27,53 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: "Booztory",
-    description: "Boost Your Content",
+    description: "Spotlight. Earn. Repeat. — The on-chain content spotlight on Base.",
     icons: {
       icon: "/favicon.ico",
+    },
+    openGraph: {
+      title: "Booztory",
+      description: "One slot. 15 minutes. All eyes on you. Pay 1 USDC, own the spotlight.",
+      url: appUrl,
+      siteName: "Booztory",
+      images: [
+        {
+          url: `${appUrl}/hero.png`,
+          width: 1200,
+          height: 630,
+          alt: "Booztory — Boost Your Content",
+        },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Booztory",
+      description: "One slot. 15 minutes. All eyes on you. Pay 1 USDC, own the spotlight.",
+      images: [`${appUrl}/hero.png`],
     },
     other: {
       "base:app_id": "69af300b298d227d6bc5439f",
       "fc:miniapp": JSON.stringify({
         version: "next",
         imageUrl: `${appUrl}/hero.png`,
+        screenshotUrls: [
+          `${appUrl}/screenshot/screenshot1.png`,
+          `${appUrl}/screenshot/screenshot2.png`,
+          `${appUrl}/screenshot/screenshot3.png`,
+          `${appUrl}/screenshot/screenshot4.png`,
+        ],
         button: {
           title: "Launch Booztory",
           action: {
             type: "launch_miniapp",
             name: "Booztory",
             url: appUrl,
-            splashImageUrl: `${appUrl}/logo-color.svg`,
-            splashBackgroundColor: "#ffffff",
+            splashImageUrl: `${appUrl}/logo-white.png`,
+            splashBackgroundColor: "#E63946",
           },
         },
+        castShareUrl: `https://warpcast.com/~/compose?text=Check%20out%20Booztory%20%F0%9F%94%A5%0AOwn%20the%20spotlight%20on-chain.%20Pay%201%20USDC%2C%20get%2015%20minutes.&embeds[]=${appUrl}`,
       }),
     },
   }

@@ -611,7 +611,7 @@ export default function LeaderboardPage() {
           )}
 
           {entries.length > 3 && (
-            <div className="px-4 pb-24 mt-4 space-y-1.5">
+            <div className="px-4 pb-[136px] md:pb-[88px] mt-4 space-y-1.5">
               {entries.slice(3).map((entry, i) => (
                 <LeaderRow
                   key={entry.address}

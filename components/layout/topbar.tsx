@@ -65,7 +65,7 @@ export function Topbar() {
         {/* Hamburger — mobile only */}
         <span
           onClick={() => setMenuOpen(true)}
-          className="md:hidden flex items-center justify-center w-8 h-8 mr-1 text-gray-900 hover:text-[#cc0000] cursor-pointer transition-colors"
+          className="md:hidden flex items-center justify-center w-8 h-8 mr-1 text-gray-900 hover:text-[#E63946] cursor-pointer transition-colors"
           aria-label="Open menu"
           role="button"
         >
@@ -88,8 +88,8 @@ export function Topbar() {
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors duration-150",
                   pathname === item.href
-                    ? "text-[#aa0000]"
-                    : "text-gray-900 hover:text-[#aa0000]"
+                    ? "text-[#E63946]"
+                    : "text-gray-900 hover:text-[#E63946]"
                 )}
               >
                 {item.name}
@@ -208,11 +208,11 @@ export function Topbar() {
                   className={cn(
                     "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-sm font-semibold",
                     pathname === href
-                      ? "bg-gray-100 text-[#aa0000]"
+                      ? "bg-gray-100 text-[#E63946]"
                       : "text-gray-800 hover:bg-gray-100"
                   )}
                 >
-                  <Icon size={18} className={cn("flex-shrink-0", pathname === href ? "text-[#aa0000]" : color)} />
+                  <Icon size={18} className={cn("flex-shrink-0", pathname === href ? "text-[#E63946]" : color)} />
                   {label}
                 </Link>
               ))}

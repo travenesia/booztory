@@ -48,7 +48,7 @@ export function Navbar() {
               href={item.href}
               className={cn(
                 "flex flex-1 items-center justify-center py-2 transition-all duration-200",
-                isActive ? "text-red-600 scale-110" : "text-gray-400 hover:text-gray-700",
+                isActive ? "text-[#E63946] scale-110" : "text-gray-400 hover:text-gray-700",
               )}
               aria-label={item.name}
             >
@@ -61,7 +61,7 @@ export function Navbar() {
         <div className="flex flex-1 items-center justify-center">
           <button
             onClick={handleSubmitClick}
-            className="flex items-center justify-center w-16 h-16 rounded-full bg-red-600 shadow-md -mt-8 border-2 border-white transition-transform duration-200 active:scale-95"
+            className="flex items-center justify-center w-16 h-16 rounded-full bg-[#E63946] shadow-md -mt-8 border-2 border-white transition-transform duration-200 active:scale-95"
             aria-label="Submit Content"
           >
             <HiFire size={40} className="text-white" />
@@ -76,7 +76,7 @@ export function Navbar() {
               href={item.href}
               className={cn(
                 "flex flex-1 items-center justify-center py-2 transition-all duration-200",
-                isActive ? "text-red-600 scale-110" : "text-gray-400 hover:text-gray-700",
+                isActive ? "text-[#E63946] scale-110" : "text-gray-400 hover:text-gray-700",
               )}
               aria-label={item.name}
             >

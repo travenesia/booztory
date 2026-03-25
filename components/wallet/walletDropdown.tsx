@@ -148,7 +148,7 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
           <img src="/booz.svg" alt="BOOZ" width={24} height={24} className="flex-shrink-0" />
           <div className="flex flex-col">
-            <span className="text-[9px] font-semibold text-red-600 uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
+            <span className="text-[9px] font-semibold text-[#E63946] uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
             <span className="text-sm font-black text-red-900 leading-tight">{formatBooz(boozBalance as bigint | undefined)}</span>
           </div>
         </div>

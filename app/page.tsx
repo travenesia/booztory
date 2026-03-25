@@ -136,9 +136,9 @@ export default function Home() {
       <div className="hidden xl:grid xl:grid-cols-2 xl:gap-12 xl:items-center flex-1 px-12 mt-12 xl:w-screen xl:ml-[calc(50%-50vw)]">
         {/* Left: platform info + CTA */}
         <div className="flex flex-col justify-center space-y-6 py-12">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-widest text-red-600 uppercase">
+          <p className="flex items-center gap-2 text-xs font-semibold tracking-widest text-[#E63946] uppercase">
             <motion.span
-              className="inline-block w-2 h-2 rounded-full bg-red-600"
+              className="inline-block w-2 h-2 rounded-full bg-[#E63946]"
               animate={{ opacity: [1, 0.2, 1] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             />

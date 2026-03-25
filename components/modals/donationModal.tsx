@@ -153,7 +153,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
             <div className="px-3 py-2.5 rounded-lg border border-red-200 bg-red-50 text-sm font-normal text-elegance-timeless-noir leading-relaxed">
               Hi <span className="font-semibold">@{session ? donorUsername : "you"}</span>
               <span className="text-gray-500">, consider supporting </span>
-              <span className="font-semibold text-[#cc0000]">@{displayCreatorName}</span>
+              <span className="font-semibold text-[#E63946]">@{displayCreatorName}</span>
             </div>
           </DialogTitle>
         </DialogHeader>

@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useMemo, useCallback } from "react"
-import type React from "react"
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
@@ -969,7 +968,7 @@ export default function SponsorPage() {
         </div>
       )}
 
-      <section className="py-6 px-6 max-w-[650px] mx-auto w-full space-y-4">
+      <section className="pt-6 pb-[136px] md:pb-[88px] px-6 max-w-[650px] mx-auto w-full space-y-4">
 
         {/* Hero — always visible */}
         <div
@@ -1038,12 +1037,11 @@ export default function SponsorPage() {
         {/* Tab switcher */}
         <div className="flex bg-gray-100 rounded-xl p-1">
           {TABS.map((t, i) => (
-            <>
+            <React.Fragment key={t.id}>
               {i > 0 && activeTab !== t.id && activeTab !== TABS[i - 1].id && (
-                <div key={`sep-${t.id}`} className="w-px my-1.5 bg-gray-300 flex-shrink-0" />
+                <div className="w-px my-1.5 bg-gray-300 flex-shrink-0" />
               )}
               <button
-                key={t.id}
                 onClick={() => setActiveTab(t.id)}
                 className={cn(
                   "flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all",
@@ -1052,7 +1050,7 @@ export default function SponsorPage() {
               >
                 {t.label}
               </button>
-            </>
+            </React.Fragment>
           ))}
         </div>
 

@@ -32,9 +32,9 @@ export function ContentStats({
 
   if (isPlaceholder && username === "@Booztory") {
     return (
-      <div className="h-8 w-full bg-[#cc0000] flex items-center justify-between rounded-b-[5px]">
+      <div className="h-8 w-full bg-[#E63946] flex items-center justify-between rounded-b-[5px]">
         <button
-          className={`p-0 rounded-none rounded-bl-[5px] bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center flex-shrink-0 ${
+          className={`p-0 rounded-none rounded-bl-[5px] bg-[#c02030] hover:bg-[#a81a28] active:bg-[#8f1522] transition-colors h-8 w-8 flex items-center justify-center flex-shrink-0 ${
             !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
           }`}
           onClick={onDonationClick}
@@ -55,10 +55,10 @@ export function ContentStats({
   }
 
   return (
-    <div className="h-8 w-full bg-[#cc0000] flex items-center justify-between rounded-b-[5px]">
+    <div className="h-8 w-full bg-[#E63946] flex items-center justify-between rounded-b-[5px]">
       <div className="flex items-center">
         <button
-          className={`p-0 rounded-none rounded-bl-[5px] bg-red-700 hover:bg-red-800 active:bg-red-900 transition-colors h-8 w-8 flex items-center justify-center flex-shrink-0 ${
+          className={`p-0 rounded-none rounded-bl-[5px] bg-[#c02030] hover:bg-[#a81a28] active:bg-[#8f1522] transition-colors h-8 w-8 flex items-center justify-center flex-shrink-0 ${
             !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
           }`}
           onClick={onDonationClick}

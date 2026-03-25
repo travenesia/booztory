@@ -39,7 +39,7 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
 
         {/* Left: logo + nav */}
         <div className="flex items-center gap-4 flex-1">
-          <Link href="/" className={cn("flex items-center gap-2 hover:text-[#cc0000]", mobileTransparent ? "text-white md:text-gray-900" : "text-gray-900")}>
+          <Link href="/" className={cn("flex items-center gap-2 hover:text-[#E63946]", mobileTransparent ? "text-white md:text-gray-900" : "text-gray-900")}>
             <HiMiniArrowSmallLeft size={24} className="md:hidden" onClick={(e) => { e.preventDefault(); router.back() }} />
             <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
             <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
@@ -54,8 +54,8 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold transition-colors duration-150",
                   pathname === item.href
-                    ? "text-[#aa0000]"
-                    : "text-gray-900 hover:text-[#aa0000]"
+                    ? "text-[#E63946]"
+                    : "text-gray-900 hover:text-[#E63946]"
                 )}
               >
                 {item.name}
