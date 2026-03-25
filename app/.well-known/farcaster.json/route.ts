@@ -29,7 +29,7 @@ export async function GET() {
       webhookUrl: `${URL}/api/webhook`,
       subtitle: "Own the Spotlight On-Chain",
       description:
-        "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base. No algorithm, no gatekeepers.",
+        "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, earn raffle entries, and boost your content on Base. No algorithm, no gatekeepers.",
       primaryCategory: "social",
       tags: ["content", "creator", "base", "onchain", "spotlight"],
       heroImageUrl: `${URL}/hero.jpg`,
