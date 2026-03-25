@@ -27,19 +27,18 @@ export async function GET() {
       splashImageUrl: `${URL}/logo-white.png`,
       splashBackgroundColor: "#E63946",
       webhookUrl: `${URL}/api/webhook`,
-      subtitle: "Boost Your Content, Own the Spotlight",
+      subtitle: "Own the Spotlight On-Chain",
       description:
         "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base. No algorithm, no gatekeepers.",
       primaryCategory: "social",
       tags: ["content", "creator", "base", "onchain", "spotlight"],
       heroImageUrl: `${URL}/hero.png`,
       tagline: "Spotlight. Earn. Repeat.",
-      ogTitle: "Booztory — Boost Your Content, Own the Spotlight",
+      ogTitle: "Booztory",
       ogDescription:
-        "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base.",
+        "Pay 1 USDC, own 15 min spotlight on-chain. Earn BOOZ, enter raffles. No algorithm, no gatekeepers.",
       ogImageUrl: `${URL}/hero.png`,
       screenshotUrls: [
-        `${URL}/screenshot/screenshot1.png`,
         `${URL}/screenshot/screenshot2.png`,
         `${URL}/screenshot/screenshot3.png`,
         `${URL}/screenshot/screenshot4.png`,
