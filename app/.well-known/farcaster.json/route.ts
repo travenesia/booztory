@@ -24,27 +24,27 @@ export async function GET() {
       name: "Booztory",
       homeUrl: URL,
       iconUrl: `${URL}/logo-color.png`,
-      splashImageUrl: `${URL}/splash.png`,
-      splashBackgroundColor: "#ffffff",
+      splashImageUrl: `${URL}/logo-white.png`,
+      splashBackgroundColor: "#E63946",
       webhookUrl: `${URL}/api/webhook`,
-      subtitle: "On-chain content spotlight",
+      subtitle: "Boost Your Content, Own the Spotlight",
       description:
-        "Pay 1 USDC for a 15-minute featured slot. No algorithm. No gatekeepers.",
+        "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base. No algorithm, no gatekeepers.",
       primaryCategory: "social",
       tags: ["content", "creator", "base", "onchain", "spotlight"],
       heroImageUrl: `${URL}/hero.png`,
-      tagline: "Your content. On-chain.",
-      ogTitle: "Booztory",
+      tagline: "Spotlight. Earn. Repeat.",
+      ogTitle: "Booztory — Boost Your Content, Own the Spotlight",
       ogDescription:
-        "Pay 1 USDC for a 15-minute featured content slot on Base.",
+        "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base.",
       ogImageUrl: `${URL}/hero.png`,
-      // TODO: replace with real screenshot URLs (up to 3, 1284×2778 recommended)
       screenshotUrls: [
-        "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+1",
-        "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+2",
-        "https://placehold.co/1284x2778/0090de/ffffff?text=Screenshot+3",
+        `${URL}/screenshot/screenshot1.png`,
+        `${URL}/screenshot/screenshot2.png`,
+        `${URL}/screenshot/screenshot3.png`,
+        `${URL}/screenshot/screenshot4.png`,
       ],
-      noindex: true, // Change to True for testing to prevent search engines from indexing the miniapp page
+      noindex: false,
     }),
   })
 }
