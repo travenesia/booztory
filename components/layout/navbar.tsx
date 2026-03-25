@@ -1,7 +1,7 @@
 "use client"
 
 import { HiHome, HiMiniForward, HiFolder, HiFire } from "react-icons/hi2"
-import { FaRankingStar } from "react-icons/fa6"
+import { RiCopperCoinFill } from "react-icons/ri"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -16,7 +16,7 @@ const navItems = [
 
 const navItemsRight = [
   { name: "History", href: "/history", icon: HiFolder },
-  { name: "Reward", href: "/reward", icon: FaRankingStar },
+  { name: "Reward", href: "/reward", icon: RiCopperCoinFill },
 ]
 
 export function Navbar() {

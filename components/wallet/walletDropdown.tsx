@@ -5,20 +5,27 @@ import { useReadContract } from "wagmi"
 import { useSession, signOut } from "next-auth/react"
 import { useState } from "react"
 import { Copy, Check } from "lucide-react"
-import { HiBolt, HiOutlinePower, HiTrophy } from "react-icons/hi2"
+import { HiBolt, HiOutlinePower } from "react-icons/hi2"
 import Link from "next/link"
-import { FaCoins } from "react-icons/fa6"
+import { FaCoins, FaRankingStar } from "react-icons/fa6"
 import { useWalletName } from "@/hooks/useWalletName"
 import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cache } from "@/lib/cache"
 
-// ── Gradient avatar from address ─────────────────────────────────────────────
-function addressToGradient(addr: string): string {
-  if (!addr) return "linear-gradient(135deg, #6366f1, #8b5cf6)"
-  const h1 = parseInt(addr.slice(2, 8), 16) % 360
-  const h2 = (h1 + 130) % 360
-  return `linear-gradient(135deg, hsl(${h1},65%,55%), hsl(${h2},65%,55%))`
+// ── Address-based avatar ──────────────────────────────────────────────────────
+const AVATARS = [
+  ...Array.from({ length: 20 }, (_, i) => `/avatars/boy${i + 1}.webp`),
+  ...Array.from({ length: 20 }, (_, i) => `/avatars/girl${i + 1}.webp`),
+]
+
+function addressAvatar(addr: string): string {
+  if (!addr) return AVATARS[0]
+  let hash = 0
+  for (let i = 2; i < addr.length; i++) {
+    hash = (addr.charCodeAt(i) + ((hash << 5) - hash)) | 0
+  }
+  return AVATARS[Math.abs(hash) % AVATARS.length]
 }
 
 // ── Balance formatting helpers ────────────────────────────────────────────────
@@ -93,9 +100,10 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
     <div className="flex flex-col w-full">
       {/* ── Profile ── */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <div
-          className="w-10 h-10 rounded-full flex-shrink-0"
-          style={{ background: "#d1d5db" }}
+        <img
+          src={addressAvatar(address)}
+          alt="avatar"
+          className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
         />
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-sm font-semibold text-gray-900 truncate">{displayName}</span>
@@ -119,7 +127,7 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
             <span className="text-sm font-bold text-gray-800">{pointsBalance !== undefined ? Number(pointsBalance).toLocaleString() : "—"}</span>
           </div>
           <Link href="/leaderboard" onClick={onClose} title="Leaderboard">
-            <HiTrophy className="w-4 h-4 text-amber-500 hover:text-amber-600 transition-colors" />
+            <FaRankingStar className="w-4 h-4 text-amber-500 hover:text-amber-600 transition-colors" />
           </Link>
         </div>
       </div>

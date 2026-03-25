@@ -6,8 +6,9 @@ import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/lib/wagmi"
 import { formatUnits, parseAbiItem } from "viem"
 import Link from "next/link"
+import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { HiBolt, HiTrophy } from "react-icons/hi2"
-import { FaCoins } from "react-icons/fa6"
+import { FaCoins, FaRankingStar } from "react-icons/fa6"
 import { Ticket, BadgeCheck, Flame } from "lucide-react"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
@@ -998,7 +999,7 @@ export default function RewardPage() {
         title="Rewards"
         rightExtra={
           <Link href="/leaderboard" aria-label="Leaderboard" className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 transition-colors">
-            <HiTrophy size={20} />
+            <FaRankingStar size={20} />
           </Link>
         }
       />
@@ -1331,6 +1332,11 @@ export default function RewardPage() {
         )}
       </section>
 
+      <div className="fixed bottom-12 md:bottom-0 left-0 right-0 h-20 pointer-events-none z-40">
+        <div className="relative h-full">
+          <ProgressiveBlur height="100%" position="bottom" />
+        </div>
+      </div>
       <Navbar />
 
       {/* GM Modal — Vaul drawer (mobile) / Dialog (desktop) */}

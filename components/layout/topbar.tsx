@@ -3,9 +3,11 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
-import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder, HiTrophy } from "react-icons/hi2"
+import { Copy, Check } from "lucide-react"
+import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder } from "react-icons/hi2"
 import { HiBolt } from "react-icons/hi2"
 import { FaRankingStar } from "react-icons/fa6"
+import { RiCopperCoinFill } from "react-icons/ri"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { GMButton, GMContent } from "@/components/modals/gmModal"
 import { usePathname } from "next/navigation"
@@ -15,6 +17,19 @@ import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { Drawer } from "vaul"
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+
+const AVATARS = [
+  ...Array.from({ length: 20 }, (_, i) => `/avatars/boy${i + 1}.webp`),
+  ...Array.from({ length: 20 }, (_, i) => `/avatars/girl${i + 1}.webp`),
+]
+function addressAvatar(addr: string): string {
+  if (!addr) return AVATARS[0]
+  let hash = 0
+  for (let i = 2; i < addr.length; i++) {
+    hash = (addr.charCodeAt(i) + ((hash << 5) - hash)) | 0
+  }
+  return AVATARS[Math.abs(hash) % AVATARS.length]
+}
 
 const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "Home", href: "/" },
@@ -29,10 +44,19 @@ export function Topbar() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const [gmOpen, setGmOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const { address } = useAccount()
   const { data: session } = useSession()
   const resolvedName = useWalletName(address)
   const displayName = resolvedName || session?.user?.username || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null)
+  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
+
+  const handleCopyAddress = async () => {
+    if (!address) return
+    await navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
@@ -105,17 +129,36 @@ export function Topbar() {
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
           <Drawer.Content
-            className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-white outline-none after:hidden"
+            className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-white outline-none after:hidden rounded-tr-[20px] rounded-br-[20px]"
           >
             <Drawer.Title className="sr-only">Menu</Drawer.Title>
             <Drawer.Description className="sr-only">Navigation menu</Drawer.Description>
 
             {/* Header */}
             <div className="px-5 pt-6 pb-4">
-              {displayName ? (
-                <span className="text-base font-bold text-gray-900 truncate block max-w-[200px]">
-                  👋 Gm, {displayName}
-                </span>
+              {address ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={addressAvatar(address)}
+                    alt="avatar"
+                    className="w-12 h-12 rounded-full flex-shrink-0 object-cover"
+                  />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-lg font-bold text-gray-900 truncate">
+                      Gm, {displayName} 👋
+                    </span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-sm text-gray-500 font-mono">{shortAddress}</span>
+                      <button
+                        onClick={handleCopyAddress}
+                        className="text-gray-400 hover:text-gray-700 transition-colors p-0.5 rounded"
+                        aria-label="Copy address"
+                      >
+                        {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <span className="text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
               )}
@@ -153,8 +196,8 @@ export function Topbar() {
               {[
                 { href: "/upcoming",    label: "Upcoming",    Icon: HiMiniForward,     color: "text-blue-500"   },
                 { href: "/history",    label: "History",     Icon: HiFolder,          color: "text-amber-500"  },
-                { href: "/reward",     label: "Reward",      Icon: FaRankingStar,     color: "text-purple-500" },
-                { href: "/leaderboard",label: "Leaderboard", Icon: HiTrophy,          color: "text-amber-500"  },
+                { href: "/reward",     label: "Reward",      Icon: RiCopperCoinFill,  color: "text-purple-500" },
+                { href: "/leaderboard",label: "Leaderboard", Icon: FaRankingStar,     color: "text-amber-500"  },
                 { href: "/sponsor",    label: "Sponsor",     Icon: HiMegaphone,       color: "text-indigo-500" },
                 { href: "/faq",        label: "FAQ",         Icon: HiMiniShieldCheck, color: "text-gray-500"   },
               ].map(({ href, label, Icon, color }) => (

@@ -6,6 +6,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract } from 
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
 import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
+import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { FaYoutube, FaTiktok, FaXTwitter, FaVimeo, FaSpotify, FaTwitch } from "react-icons/fa6"
 import { useToast } from "@/hooks/use-toast"
 import { PageTopbar } from "@/components/layout/pageTopbar"
@@ -1481,6 +1482,11 @@ export default function SponsorPage() {
 
       </section>
 
+      <div className="fixed bottom-12 md:bottom-0 left-0 right-0 h-20 pointer-events-none z-40">
+        <div className="relative h-full">
+          <ProgressiveBlur height="100%" position="bottom" />
+        </div>
+      </div>
       <Navbar />
     </main>
   )

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function FAQPage() {
@@ -443,6 +444,11 @@ export default function FAQPage() {
           </Accordion>
         </div>
       </section>
+      <div className="fixed bottom-12 md:bottom-0 left-0 right-0 h-20 pointer-events-none z-40">
+        <div className="relative h-full">
+          <ProgressiveBlur height="100%" position="bottom" />
+        </div>
+      </div>
       <Navbar />
     </main>
   )
