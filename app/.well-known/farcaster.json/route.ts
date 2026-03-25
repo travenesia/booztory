@@ -32,8 +32,11 @@ export async function GET() {
         "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, earn raffle entries, and boost your content on Base. No algorithm, no gatekeepers.",
       primaryCategory: "social",
       tags: ["content", "creator", "base", "onchain", "spotlight"],
+      imageUrl: `${URL}/hero.jpg`,
       heroImageUrl: `${URL}/hero.jpg`,
       tagline: "Spotlight. Earn. Repeat.",
+      buttonTitle: "Launch Booztory",
+      castShareUrl: `https://warpcast.com/~/compose?text=Check%20out%20Booztory%20%F0%9F%94%A5%0AOwn%20the%20spotlight%20on-chain.%20Pay%201%20USDC%2C%20get%2015%20minutes.&embeds[]=${URL}`,
       ogTitle: "Booztory",
       ogDescription:
         "Pay 1 USDC, own 15 min spotlight on-chain. Earn BOOZ, enter raffles. No algorithm, no gatekeepers.",
