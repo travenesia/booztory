@@ -638,3 +638,53 @@ graph init --from-contract <BOOZTORY_ADDRESS> --network base-sepolia
 
 ### Status
 - [ ] Post-mainnet — depends on The Graph subgraph being deployed first
+
+---
+
+## 16. AI Integration Plan
+
+### Overview
+AI features are additive — none require smart contract changes. All integrations sit at the API layer (Next.js route handlers) using the Claude API (`claude-haiku-4-5` for speed and low cost).
+
+---
+
+### Feature Roadmap
+
+#### Phase 1 — At Launch (low effort, high value)
+
+| Feature | Where | How |
+|---|---|---|
+| **Content Moderation** | `/api/moderate` — called at slot submission | Pass URL + metadata to Claude; flag spam, adult content, scams before or after mint |
+| **Smart Title & Description** | Submit content modal | On URL paste, fetch oEmbed metadata → Claude suggests optimized title + description for the slot |
+| **AI Chatbot** | Floating chat button (all pages) | Claude answers app mechanics, on-chain data queries, wallet-specific questions |
+
+#### Phase 2 — Post-Launch
+
+| Feature | Where | How |
+|---|---|---|
+| **Content Categorization** | At mint time | Auto-tag content (music, gaming, art, news, etc.) — enables filtering on history/upcoming pages |
+| **Spam / Sybil Detection** | `/api/moderate` | Detect wallets submitting repetitive or low-quality content; flag for review without blocking on-chain action |
+| **Weekly Spotlight Report** | Cron job or owner-triggered | Auto-written weekly recap — "Top content this week on Booztory" — shareable on Farcaster/X |
+
+#### Phase 3 — Growth Stage
+
+| Feature | Where | How |
+|---|---|---|
+| **Personalized Feed** | Homepage | Track wallet engagement history → surface relevant upcoming slots first |
+| **Creator Coach** | `/reward` or profile page | After slot ends, AI gives creator feedback on performance vs. week's trends |
+
+---
+
+### Chatbot Architecture
+
+- **Route:** `/api/chat` — POST, streaming response
+- **Model:** `claude-haiku-4-5-20251001` (fast, cheap)
+- **System prompt:** App mechanics (FAQ), tokenomics, mint paths, raffle rules
+- **Context injection:** Pass wallet address, BOOZ balance, current slot data per request
+- **UI:** Floating chat button → bottom sheet (mobile) / popover (desktop)
+- **Cost:** Negligible at current scale — thousands of messages per dollar
+
+---
+
+### Status
+- [ ] Post-mainnet — chatbot first, moderation second

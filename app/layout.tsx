@@ -73,7 +73,7 @@ export async function generateMetadata(): Promise<Metadata> {
             splashBackgroundColor: "#E63946",
           },
         },
-        castShareUrl: `https://warpcast.com/~/compose?text=Check%20out%20Booztory%20%F0%9F%94%A5%0AOwn%20the%20spotlight%20on-chain.%20Pay%201%20USDC%2C%20get%2015%20minutes.&embeds[]=${appUrl}`,
+        castShareUrl: appUrl,
       }),
     },
   }

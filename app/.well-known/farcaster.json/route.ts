@@ -36,7 +36,7 @@ export async function GET() {
       heroImageUrl: `${URL}/hero.jpg`,
       tagline: "Spotlight. Earn. Repeat.",
       buttonTitle: "Launch Booztory",
-      castShareUrl: `https://warpcast.com/~/compose?text=Check%20out%20Booztory%20%F0%9F%94%A5%0AOwn%20the%20spotlight%20on-chain.%20Pay%201%20USDC%2C%20get%2015%20minutes.&embeds[]=${URL}`,
+      castShareUrl: URL,
       ogTitle: "Booztory",
       ogDescription:
         "Pay 1 USDC, own 15 min spotlight on-chain. Earn BOOZ, enter raffles. No algorithm, no gatekeepers.",
