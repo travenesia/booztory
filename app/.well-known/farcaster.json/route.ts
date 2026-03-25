@@ -32,12 +32,12 @@ export async function GET() {
         "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base. No algorithm, no gatekeepers.",
       primaryCategory: "social",
       tags: ["content", "creator", "base", "onchain", "spotlight"],
-      heroImageUrl: `${URL}/hero.png`,
+      heroImageUrl: `${URL}/hero.jpg`,
       tagline: "Spotlight. Earn. Repeat.",
       ogTitle: "Booztory",
       ogDescription:
         "Pay 1 USDC, own 15 min spotlight on-chain. Earn BOOZ, enter raffles. No algorithm, no gatekeepers.",
-      ogImageUrl: `${URL}/hero.png`,
+      ogImageUrl: `${URL}/hero.jpg`,
       screenshotUrls: [
         `${URL}/screenshot/screenshot2.png`,
         `${URL}/screenshot/screenshot3.png`,

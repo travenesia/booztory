@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "Booztory",
       images: [
         {
-          url: `${appUrl}/hero.png`,
+          url: `${appUrl}/hero.jpg`,
           width: 1200,
           height: 630,
           alt: "Booztory — Boost Your Content",
@@ -50,13 +50,13 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "Booztory — Boost Your Content, Own the Spotlight",
       description: "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base. No algorithm, no gatekeepers.",
-      images: [`${appUrl}/hero.png`],
+      images: [`${appUrl}/hero.jpg`],
     },
     other: {
       "base:app_id": "69af300b298d227d6bc5439f",
       "fc:miniapp": JSON.stringify({
         version: "next",
-        imageUrl: `${appUrl}/hero.png`,
+        imageUrl: `${appUrl}/hero.jpg`,
         screenshotUrls: [
           `${appUrl}/screenshot/screenshot1.png`,
           `${appUrl}/screenshot/screenshot2.png`,
