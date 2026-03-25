@@ -32,8 +32,8 @@ export async function generateMetadata(): Promise<Metadata> {
       icon: "/favicon.ico",
     },
     openGraph: {
-      title: "Booztory",
-      description: "One slot. 15 minutes. All eyes on you. Pay 1 USDC, own the spotlight.",
+      title: "Booztory — Boost Your Content, Own the Spotlight",
+      description: "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base. No algorithm, no gatekeepers.",
       url: appUrl,
       siteName: "Booztory",
       images: [
@@ -48,8 +48,8 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: "Booztory",
-      description: "One slot. 15 minutes. All eyes on you. Pay 1 USDC, own the spotlight.",
+      title: "Booztory — Boost Your Content, Own the Spotlight",
+      description: "Own a spotlight on-chain. Pay 1 USDC, get 15 minutes of fame. Earn BOOZ rewards, enter weekly raffles, and boost your content on Base. No algorithm, no gatekeepers.",
       images: [`${appUrl}/hero.png`],
     },
     other: {
