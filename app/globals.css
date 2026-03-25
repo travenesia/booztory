@@ -91,6 +91,7 @@
   }
   .theme {
     --animate-shine: shine var(--duration) infinite linear;
+    --animate-meteor: meteor 5s linear infinite;
   }
 }
 
@@ -141,7 +142,6 @@
   [type="search"] {
     @apply rounded-full border-gray-300 bg-gray-0; /* Updated input style */
   }
-
 
   h1,
   h2,
@@ -327,16 +327,9 @@ main {
   animation: fadeIn 0.5s ease-out forwards;
 }
 
-@theme inline {
-  @keyframes shine {
-  0% {
-    background-position: 0% 0%;
-    }
-  50% {
-    background-position: 100% 100%;
-    }
-  to {
-    background-position: 0% 0%;
-    }
-  }
+@keyframes shine {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  to { background-position: 0% 0%; }
 }
+

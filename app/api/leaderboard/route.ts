@@ -6,6 +6,7 @@ import { NextResponse } from "next/server"
 const SUBGRAPH_URL = process.env.SUBGRAPH_URL
 
 const CACHE_SECONDS = 1800 // 30 minutes
+const SEVEN_DAYS_SECONDS  = 7  * 24 * 60 * 60
 const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60
 
 // ── GraphQL queries ───────────────────────────────────────────────────────────
@@ -118,12 +119,15 @@ export async function GET() {
     )
   }
 
-  const since = Math.floor(Date.now() / 1000) - THIRTY_DAYS_SECONDS
+  const now = Math.floor(Date.now() / 1000)
+  const since7d  = now - SEVEN_DAYS_SECONDS
+  const since30d = now - THIRTY_DAYS_SECONDS
 
   try {
-    const [allTime, thirtyDay] = await Promise.all([
+    const [allTime, sevenDay, thirtyDay] = await Promise.all([
       querySubgraph(ALL_TIME_QUERY),
-      querySubgraph(thirtyDayQuery(since)),
+      querySubgraph(thirtyDayQuery(since7d)),
+      querySubgraph(thirtyDayQuery(since30d)),
     ])
 
     // ── All Time ──
@@ -140,44 +144,36 @@ export async function GET() {
       winners:  (at.winners  ?? []).map(w => ({ address: w.id, value: usdcToFloat(w.totalWinnings ?? "0"), wins: w.totalWins ?? 0 })),
     }
 
-    // ── 30 Days ──
+    // ── Period helpers ──
     type SlotEv  = { creator: string; blockTimestamp: string }
     type GmEv    = { user: string; streakCount: number; blockTimestamp: string }
     type PtsEv   = { user: string; amount: string; blockTimestamp: string }
     type DonEv   = { donor: string; creator: string; creatorAmount: string; totalAmount: string; blockTimestamp: string }
     type WinEv   = { winner: string; usdcAmount: string; blockTimestamp: string }
+    type PeriodRaw = { slotMintEvents: SlotEv[]; gmclaimEvents: GmEv[]; pointsEarnedEvents: PtsEv[]; donationEvents: DonEv[]; winEvents: WinEv[] }
 
-    const td = thirtyDay as {
-      slotMintEvents: SlotEv[]
-      gmclaimEvents: GmEv[]
-      pointsEarnedEvents: PtsEv[]
-      donationEvents: DonEv[]
-      winEvents: WinEv[]
-    }
-
-    const thirtyDayResult = {
-      minters: aggregateCount(
-        (td.slotMintEvents ?? []).map(e => e.creator.toLowerCase())
-      ),
-      streakers: aggregateMax(
-        (td.gmclaimEvents ?? []).map(e => ({ address: e.user.toLowerCase(), value: e.streakCount }))
-      ),
-      points: aggregateSum(
-        (td.pointsEarnedEvents ?? []).map(e => ({ address: e.user.toLowerCase(), value: Number(e.amount) }))
-      ),
-      creators: aggregateSum(
-        (td.donationEvents ?? []).map(e => ({ address: e.creator.toLowerCase(), value: usdcToFloat(e.creatorAmount) }))
-      ),
-      donors: aggregateSum(
-        (td.donationEvents ?? []).map(e => ({ address: e.donor.toLowerCase(), value: usdcToFloat(e.totalAmount) }))
-      ),
-      winners: aggregateSum(
-        (td.winEvents ?? []).map(e => ({ address: e.winner.toLowerCase(), value: usdcToFloat(e.usdcAmount ?? "0") }))
-      ),
+    function buildPeriodResult(raw: PeriodRaw) {
+      return {
+        minters:  aggregateCount((raw.slotMintEvents ?? []).map(e => e.creator.toLowerCase())),
+        streakers: aggregateMax((raw.gmclaimEvents ?? []).map(e => ({ address: e.user.toLowerCase(), value: e.streakCount }))),
+        points:   aggregateSum((raw.pointsEarnedEvents ?? []).map(e => ({ address: e.user.toLowerCase(), value: Number(e.amount) }))),
+        creators: aggregateSum((raw.donationEvents ?? []).map(e => ({ address: e.creator.toLowerCase(), value: usdcToFloat(e.creatorAmount) }))),
+        donors:   aggregateSum((raw.donationEvents ?? []).map(e => ({ address: e.donor.toLowerCase(), value: usdcToFloat(e.totalAmount) }))),
+        winners: (() => {
+          const usdc = aggregateSum((raw.winEvents ?? []).map(e => ({ address: e.winner.toLowerCase(), value: usdcToFloat(e.usdcAmount ?? "0") })))
+          const winCounts = new Map<string, number>()
+          for (const e of raw.winEvents ?? []) winCounts.set(e.winner.toLowerCase(), (winCounts.get(e.winner.toLowerCase()) ?? 0) + 1)
+          return usdc.map(entry => ({ ...entry, wins: winCounts.get(entry.address) ?? 0 }))
+        })(),
+      }
     }
 
     return NextResponse.json(
-      { allTime: allTimeResult, "30d": thirtyDayResult },
+      {
+        allTime: allTimeResult,
+        "7d":  buildPeriodResult(sevenDay  as PeriodRaw),
+        "30d": buildPeriodResult(thirtyDay as PeriodRaw),
+      },
       {
         headers: {
           "Cache-Control": `s-maxage=${CACHE_SECONDS}, stale-while-revalidate`,

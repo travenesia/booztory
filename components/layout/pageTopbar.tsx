@@ -12,6 +12,7 @@ import { GMButton } from "@/components/modals/gmModal"
 interface PageTopbarProps {
   title: string
   rightExtra?: React.ReactNode
+  mobileTransparent?: boolean
 }
 
 const navItems: { name: string; href: string; badge?: boolean }[] = [
@@ -23,16 +24,21 @@ const navItems: { name: string; href: string; badge?: boolean }[] = [
   { name: "FAQ", href: "/faq" },
 ]
 
-export function PageTopbar({ title, rightExtra }: PageTopbarProps) {
+export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarProps) {
   const pathname = usePathname()
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
+    <header className={cn(
+      "fixed top-0 left-0 right-0 h-12 w-full z-50",
+      mobileTransparent
+        ? "bg-transparent border-none md:bg-white md:border-b md:border-gray-200"
+        : "bg-gray-0 border-b border-gray-200"
+    )}>
       <div className="flex items-center h-full px-6 md:px-12">
 
         {/* Left: logo + nav */}
         <div className="flex items-center gap-4 flex-1">
-          <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-[#cc0000]">
+          <Link href="/" className={cn("flex items-center gap-2 hover:text-[#cc0000]", mobileTransparent ? "text-white md:text-gray-900" : "text-gray-900")}>
             <HiMiniArrowSmallLeft size={24} className="md:hidden" />
             <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
             <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
@@ -63,7 +69,7 @@ export function PageTopbar({ title, rightExtra }: PageTopbarProps) {
         </div>
 
         {/* Mobile: page title — absolutely centered */}
-        <h1 className="md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-bold text-gray-900">{title}</h1>
+        <h1 className={cn("md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-bold", mobileTransparent ? "text-white" : "text-gray-900")}>{title}</h1>
 
         {/* Right */}
         <div className="flex items-center gap-2">

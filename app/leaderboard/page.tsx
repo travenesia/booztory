@@ -7,15 +7,24 @@ import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { useWalletName } from "@/hooks/useWalletName"
 import { HiCube, HiFire, HiBolt, HiStar, HiHeart, HiTrophy } from "react-icons/hi2"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SparklesText } from "@/components/ui/sparkles-text"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Period = "30d" | "all"
+type Period = "7d" | "30d" | "all"
 type CategoryId = "minters" | "streakers" | "points" | "creators" | "donors" | "winners"
 
 interface LeaderEntry {
   address: string
   value: number
   wins?: number  // winners tab: win count (value = USDC total)
+}
+
+// ── Period labels ──────────────────────────────────────────────────────────────
+const PERIOD_LABELS: Record<Period, string> = {
+  "all": "All",
+  "30d": "30D",
+  "7d":  "7D",
 }
 
 // ── Categories ─────────────────────────────────────────────────────────────────
@@ -40,25 +49,117 @@ function formatValue(value: number, category: CategoryId): string {
   }
 }
 
-// ── Gradient identicon ─────────────────────────────────────────────────────────
-function addressGradient(address: string): string {
+// ── Avatar helpers ─────────────────────────────────────────────────────────────
+const AVATARS = Array.from({ length: 15 }, (_, i) => `/avatars/boy${i + 1}.webp`)
+
+function addressAvatar(address: string): string {
   let hash = 0
   for (let i = 2; i < address.length; i++) {
     hash = (address.charCodeAt(i) + ((hash << 5) - hash)) | 0
   }
-  const h1 = Math.abs(hash) % 360
-  const h2 = (h1 + 137) % 360
-  return `linear-gradient(135deg, hsl(${h1},65%,58%), hsl(${h2},65%,44%))`
+  return AVATARS[Math.abs(hash) % AVATARS.length]
 }
 
 function Identicon({ address }: { address: string }) {
-  const letters = address.length >= 6 ? address.slice(2, 4).toUpperCase() : "??"
   return (
-    <div
-      className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-[11px] font-bold text-white shadow-sm"
-      style={{ background: addressGradient(address) }}
-    >
-      {letters}
+    <img
+      src={addressAvatar(address)}
+      alt="avatar"
+      className="w-9 h-9 rounded-full flex-shrink-0 object-cover shadow-sm"
+    />
+  )
+}
+
+// ── Podium top 3 ───────────────────────────────────────────────────────────────
+// avatarSize is desktop max; on mobile the column shrinks and avatar fills it via w-full
+const PODIUM_CONFIG: Record<1 | 2 | 3, { avatarSize: number; cardPb: string; badgeBg: string; sparkleColors: { first: string; second: string } }> = {
+  1: { avatarSize: 130, cardPb: "pb-14", badgeBg: "#06b6d4", sparkleColors: { first: "#fbbf24", second: "#f59e0b" } },
+  2: { avatarSize: 104, cardPb: "pb-8",  badgeBg: "#06b6d4", sparkleColors: { first: "#94a3b8", second: "#e2e8f0" } },
+  3: { avatarSize: 104, cardPb: "pb-8",  badgeBg: "#06b6d4", sparkleColors: { first: "#cd7f32", second: "#d97706" } },
+}
+
+function PodiumCard({ entry, rank, category }: { entry: LeaderEntry; rank: number; category: CategoryId }) {
+  const name = useWalletName(entry.address)
+  const display = name || `${entry.address.slice(0, 6)}...${entry.address.slice(-4)}`
+  const isFirst = rank === 1
+  const cfg = PODIUM_CONFIG[rank as 1 | 2 | 3]
+
+  return (
+    <div className="flex flex-col items-center w-full">
+      {/* crown spacer */}
+      {isFirst
+        ? <span className="text-2xl leading-none mb-1.5">👑</span>
+        : <div className="h-8" />
+      }
+
+      {/* avatar — w-full fills column; marginBottom -100% overlaps into card by one column-width */}
+      <div className="relative z-10 w-full aspect-square" style={{ marginBottom: "-100%" }}>
+        {/* outer ring matching card color */}
+        <div
+          className="rounded-full p-[5px] shadow-xl w-full h-full"
+          style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.55) 100%)" }}
+        >
+          <img
+            src={addressAvatar(entry.address)}
+            alt="avatar"
+            className="rounded-full w-full h-full object-cover"
+          />
+        </div>
+        {/* rank badge */}
+        <div
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white shadow"
+          style={{ background: cfg.badgeBg }}
+        >
+          {rank}
+        </div>
+      </div>
+
+      {/* card — paddingTop: calc(100% + 14px) reserves space for the overlapping avatar */}
+      <div
+        className={cn("flex flex-col items-center w-full", cfg.cardPb)}
+        style={{
+          paddingTop: "calc(100% + 14px)",
+          borderRadius: "9999px 9999px 40px 40px",
+          background: "linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.55) 100%)",
+        }}
+      >
+        <span className={cn("font-semibold text-white text-center w-full truncate px-2", isFirst ? "text-sm" : "text-xs")}>
+          {display}
+        </span>
+        <SparklesText
+          className={cn("font-black text-white mt-1", isFirst ? "text-lg" : "text-sm")}
+          colors={cfg.sparkleColors}
+          sparklesCount={isFirst ? 8 : 5}
+        >
+          {formatValue(entry.value, category)}
+        </SparklesText>
+      </div>
+    </div>
+  )
+}
+
+function PodiumTop3({ entries, category }: { entries: LeaderEntry[]; category: CategoryId }) {
+  if (entries.length === 0) return null
+
+  const slots = [
+    { entry: entries[1], rank: 2 as const },
+    { entry: entries[0], rank: 1 as const },
+    { entry: entries[2], rank: 3 as const },
+  ]
+
+  return (
+    <div className="mx-4 md:mx-6 rounded-b-3xl">
+      <div className="flex items-end justify-center px-4 pt-4 pb-5 gap-3 md:gap-4">
+        {slots.map(({ entry, rank }) => {
+          const cfg = PODIUM_CONFIG[rank]
+          const maxW = cfg.avatarSize + 10
+          return (
+            <div key={rank} className="flex-1 flex flex-col items-center" style={{ maxWidth: maxW }}>
+              {entry && <PodiumCard entry={entry} rank={rank} category={category} />}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -83,17 +184,17 @@ function rowGradient(rank: number, isYou?: boolean): React.CSSProperties | undef
 // ── Rank display ───────────────────────────────────────────────────────────────
 function RankDisplay({ rank, isYou }: { rank: number | null; isYou?: boolean }) {
   if (isYou && rank === null) {
-    return <span className="text-xs font-bold text-indigo-400 w-8 text-center flex-shrink-0">#99+</span>
+    return <span className="text-base font-bold text-indigo-400 w-9 text-center flex-shrink-0">99+</span>
   }
-  if (rank === 1) return <span className="text-xl w-8 text-center flex-shrink-0">👑</span>
-  if (rank === 2) return <span className="text-lg w-8 text-center flex-shrink-0">🥈</span>
-  if (rank === 3) return <span className="text-lg w-8 text-center flex-shrink-0">🥉</span>
+  if (rank === 1) return <span className="text-xl w-9 text-center flex-shrink-0">👑</span>
+  if (rank === 2) return <span className="text-lg w-9 text-center flex-shrink-0">🥈</span>
+  if (rank === 3) return <span className="text-lg w-9 text-center flex-shrink-0">🥉</span>
   return (
     <span className={cn(
-      "text-sm font-bold w-8 text-center flex-shrink-0",
+      "text-base font-bold w-9 text-center flex-shrink-0",
       isYou ? "text-indigo-400" : "text-gray-400"
     )}>
-      #{rank}
+      {rank}
     </span>
   )
 }
@@ -176,6 +277,14 @@ function YourRow({ address, category }: { address: string; category: CategoryId 
 // ── Mock data ──────────────────────────────────────────────────────────────────
 // TODO: replace with /api/leaderboard (The Graph subgraph, 30 min cache)
 const MOCK_DATA: Record<Period, Record<CategoryId, LeaderEntry[]>> = {
+  "7d": {
+    minters:  [{ address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F", value: 5 }],
+    streakers:[{ address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", value: 7 }],
+    points:   [{ address: "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", value: 900 }],
+    creators: [{ address: "0x976EA74026E726554dB657fA54763abd0C3a0aa9", value: 12.0 }],
+    donors:   [{ address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0", value: 10.0 }],
+    winners:  [{ address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906", value: 50.0, wins: 1 }],
+  },
   "30d": {
     minters: [
       { address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F", value: 18 },
@@ -329,13 +438,14 @@ const MOCK_DATA: Record<Period, Record<CategoryId, LeaderEntry[]>> = {
 // ── API response shape ─────────────────────────────────────────────────────────
 interface LeaderboardData {
   allTime: Record<CategoryId, LeaderEntry[]>
+  "7d":  Record<CategoryId, LeaderEntry[]>
   "30d": Record<CategoryId, LeaderEntry[]>
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function LeaderboardPage() {
   const [category, setCategory] = useState<CategoryId>("minters")
-  const [period, setPeriod] = useState<Period>("30d")
+  const [period, setPeriod] = useState<Period>("all")
   const { address: connectedAddress } = useAccount()
 
   // Live data — falls back to MOCK_DATA while loading or if subgraph not configured
@@ -352,8 +462,8 @@ export default function LeaderboardPage() {
     return () => { cancelled = true }
   }, [])
 
-  const liveOrMock = data ?? { allTime: MOCK_DATA.all, "30d": MOCK_DATA["30d"] }
-  const entries = period === "30d" ? liveOrMock["30d"][category] : liveOrMock.allTime[category]
+  const liveOrMock = data ?? { allTime: MOCK_DATA.all, "7d": MOCK_DATA["7d"], "30d": MOCK_DATA["30d"] }
+  const entries = period === "all" ? liveOrMock.allTime[category] : liveOrMock[period][category]
   const yourIndex = connectedAddress
     ? entries.findIndex(e => e.address.toLowerCase() === connectedAddress.toLowerCase())
     : -1
@@ -361,74 +471,103 @@ export default function LeaderboardPage() {
 
   return (
     <div className="h-screen md:h-auto md:min-h-screen flex flex-col">
-      <PageTopbar title="Leaderboard" />
+      {/* Mobile background — fixed full viewport including navbar/topbar */}
+      <div
+        className="block md:hidden fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/nightsky.jpg')" }}
+      />
+      {/* Desktop background */}
+      <div
+        className="hidden md:block fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/nightskyxl.jpg')" }}
+      />
+      <PageTopbar
+        title="Leaderboard"
+        mobileTransparent
+        rightExtra={
+          <Select value={period} onValueChange={v => setPeriod(v as Period)}>
+            <SelectTrigger className="h-7 w-16 text-xs font-bold bg-white/15 border-white/20 text-white rounded-full px-2 focus:ring-0 focus:ring-offset-0 [&>svg]:text-white [&>svg]:opacity-80">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="bg-slate-800 border-slate-600 min-w-[var(--radix-select-trigger-width)]">
+              {(Object.entries(PERIOD_LABELS) as [Period, string][]).map(([val, label]) => (
+                <SelectItem key={val} value={val} className="text-sm font-medium text-white focus:bg-slate-700 focus:text-white [&>span:last-child]:hidden pl-2">
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
       <Navbar />
 
       {/* Mobile: fixed viewport height with inner scroll. Desktop: natural page scroll */}
-      <div className="flex flex-col pt-14 pb-[72px] md:pb-6 h-full md:h-auto overflow-hidden md:overflow-visible">
+      <div className="flex flex-col pt-14 pb-[72px] md:pb-6 h-full md:h-auto overflow-visible">
 
-        {/* Period toggle + category tabs — non-scrolling header */}
-        <div className="flex-shrink-0 px-4 pt-4 space-y-6">
-          <div className="flex justify-center">
-            <div className="flex items-center rounded-full p-1 gap-0" style={{ background: "#f1f5f9" }}>
-              {(["30d", "all"] as Period[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={cn(
-                    "px-7 py-2 rounded-full text-sm font-semibold transition-all",
-                    period === p
-                      ? "text-white shadow-sm"
-                      : "text-gray-700 hover:text-gray-900"
-                  )}
-                  style={period === p ? { background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", boxShadow: "0 0 0 1.5px rgba(255,255,255,0.25)" } : undefined}
-                >
-                  {p === "30d" ? "30 Days" : "All Time"}
-                </button>
-              ))}
+        {/* Scrollable list: podium top 3 + tabs + rows 4-10 */}
+        <div className={cn("flex-1 overflow-y-auto md:overflow-visible md:flex-none transition-opacity duration-200 [&::-webkit-scrollbar]:hidden", loading && "opacity-50")} style={{ scrollbarWidth: "none" }}>
+          <PodiumTop3 entries={entries.slice(0, 3)} category={category} />
+
+          {/* Category tabs — below podium */}
+          <div className="px-4">
+            <div className="flex items-center gap-2">
+              {/* Period toggle — desktop only, before category tabs */}
+              <div className="hidden md:flex flex-shrink-0 items-center bg-gray-100 rounded-lg p-0.5 gap-0">
+                {(Object.entries(PERIOD_LABELS) as [Period, string][]).map(([p, label]) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md text-xs font-semibold transition-all",
+                      period === p ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1.5 flex-1 overflow-x-auto -mx-4 px-4 md:overflow-x-visible md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+                {CATEGORIES.map(cat => {
+                  const Icon = cat.icon
+                  const isActive = category === cat.id
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setCategory(cat.id)}
+                      className={cn(
+                        "flex-shrink-0 w-16 md:flex-1 md:w-auto flex flex-col items-center gap-1 py-2 md:flex-row md:gap-1.5 md:py-1.5 rounded-[5px] text-xs font-semibold transition-all",
+                        isActive ? "text-white" : "bg-white text-gray-500 border border-gray-200 hover:text-gray-700"
+                      )}
+                      style={isActive ? { background: cat.gradient, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" } : undefined}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {cat.activeLabel}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
+          {/* Your wallet row */}
+          {connectedAddress && !yourInTop10 && (
+            <div className="px-4 pt-3">
+              <YourRow address={connectedAddress} category={category} />
+            </div>
+          )}
 
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-4 px-4 md:overflow-x-visible md:mx-0 md:px-0">
-            {CATEGORIES.map(cat => {
-              const Icon = cat.icon
-              const isActive = category === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.id)}
-                  className={cn(
-                    "flex-shrink-0 w-16 md:flex-1 md:w-auto flex flex-col items-center gap-1 py-2 rounded-[5px] text-xs font-semibold transition-all",
-                    isActive ? "text-white" : "bg-white text-gray-500 border border-gray-200 hover:text-gray-700"
-                  )}
-                  style={isActive ? { background: cat.gradient, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" } : undefined}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {cat.activeLabel}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Your wallet row — fixed below tabs, above list */}
-        {connectedAddress && !yourInTop10 && (
-          <div className="flex-shrink-0 px-4 pt-3">
-            <YourRow address={connectedAddress} category={category} />
-          </div>
-        )}
-
-        {/* Scrollable list */}
-        <div className={cn("flex-1 overflow-y-auto md:overflow-visible md:flex-none px-4 py-3 space-y-1.5 transition-opacity duration-200", loading && "opacity-50")}>
-          {entries.map((entry, i) => (
-            <LeaderRow
-              key={entry.address}
-              entry={entry}
-              rank={i + 1}
-              category={category}
-              isYou={entry.address.toLowerCase() === (connectedAddress?.toLowerCase() ?? "")}
-            />
-          ))}
+          {entries.length > 3 && (
+            <div className="px-4 pb-3 mt-4 space-y-1.5">
+              {entries.slice(3).map((entry, i) => (
+                <LeaderRow
+                  key={entry.address}
+                  entry={entry}
+                  rank={i + 4}
+                  category={category}
+                  isYou={entry.address.toLowerCase() === (connectedAddress?.toLowerCase() ?? "")}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
