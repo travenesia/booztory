@@ -429,10 +429,9 @@ Confirmed on current Base Sepolia deploy:
 ### Testnet — Immediate
 - [x] Redeploy all 3 contracts to Base Sepolia ✅
 - [x] Add BooztoryRaffle as Chainlink VRF consumer ✅
-- [ ] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet
-- [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform (youtube, tiktok, twitter, vimeo, spotify, twitch)
-- [ ] Verify all 3 contracts on Basescan
-- [ ] End-to-end QA: mint → earn BOOZ → streak → raffle draw
+- [x] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet ✅
+- [x] Verify all 3 contracts on Basescan ✅
+- [x] End-to-end QA: mint → earn BOOZ → streak → raffle draw ✅
 
 ### Mainnet Launch
 - [ ] `lib/wagmi.ts` — change `APP_CHAIN = baseSepolia` → `APP_CHAIN = base`
@@ -450,6 +449,7 @@ Confirmed on current Base Sepolia deploy:
 - [ ] BOOZ Phase 2: `setSoulbound(false)` → `mintTreasury()` → seed Uniswap v3 BOOZ/USDC pool
 - [ ] Additional BOOZ burn sinks: slot boost, leaderboard badge, governance
 - [ ] NFT Pass collection: design, deploy, snapshot slot minters for allowlist
+- [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform — after NFT design is finalized
 - [ ] Add NFT mint path functions to `Booztory.sol` (`setNFTContract`, `mintSlotWithNFTDiscount`, `mintSlotFreeWithNFT`)
 - [ ] Frontend: NFT path options in submit content modal
 - [x] Leaderboard: deploy The Graph subgraph + `/api/leaderboard` + `/leaderboard` page (see §14) ✅

@@ -35,7 +35,7 @@ function thirtyDayQuery(since: number): string {
     slotMintEvents(first: 1000, where: { blockTimestamp_gte: "${since}" }) {
       creator blockTimestamp
     }
-    gmClaimEvents(first: 1000, where: { blockTimestamp_gte: "${since}" }) {
+    gmclaimEvents(first: 1000, where: { blockTimestamp_gte: "${since}" }) {
       user streakCount blockTimestamp
     }
     pointsEarnedEvents(first: 1000, where: { blockTimestamp_gte: "${since}" }) {
@@ -149,7 +149,7 @@ export async function GET() {
 
     const td = thirtyDay as {
       slotMintEvents: SlotEv[]
-      gmClaimEvents: GmEv[]
+      gmclaimEvents: GmEv[]
       pointsEarnedEvents: PtsEv[]
       donationEvents: DonEv[]
       winEvents: WinEv[]
@@ -160,7 +160,7 @@ export async function GET() {
         (td.slotMintEvents ?? []).map(e => e.creator.toLowerCase())
       ),
       streakers: aggregateMax(
-        (td.gmClaimEvents ?? []).map(e => ({ address: e.user.toLowerCase(), value: e.streakCount }))
+        (td.gmclaimEvents ?? []).map(e => ({ address: e.user.toLowerCase(), value: e.streakCount }))
       ),
       points: aggregateSum(
         (td.pointsEarnedEvents ?? []).map(e => ({ address: e.user.toLowerCase(), value: Number(e.amount) }))
@@ -185,7 +185,8 @@ export async function GET() {
       }
     )
   } catch (err) {
-    console.error("[leaderboard]", err)
-    return NextResponse.json({ error: "Failed to fetch leaderboard" }, { status: 500 })
+    const message = err instanceof Error ? err.message : String(err)
+    console.error("[leaderboard]", message)
+    return NextResponse.json({ error: "Failed to fetch leaderboard", detail: message }, { status: 500 })
   }
 }
