@@ -4,8 +4,9 @@ import { useAccount, useDisconnect } from "wagmi"
 import { useReadContract } from "wagmi"
 import { useSession, signOut } from "next-auth/react"
 import { useState, useEffect } from "react"
-import { Copy, Check, ExternalLink } from "lucide-react"
+import { Copy, Check, ExternalLink, Ticket } from "lucide-react"
 import { HiBolt, HiOutlinePower, HiCube, HiFire, HiStar, HiHeart, HiTrophy } from "react-icons/hi2"
+import { RiExchangeFundsLine } from "react-icons/ri"
 import Link from "next/link"
 import { FaCoins, FaRankingStar } from "react-icons/fa6"
 import { useWalletName } from "@/hooks/useWalletName"
@@ -35,12 +36,14 @@ function addressAvatar(addr: string): string {
 const basescanHost = (APP_CHAIN.id as number) === 8453 ? "basescan.org" : "sepolia.basescan.org"
 
 const TX_LABEL: Record<TxType, string> = {
-  mint:     "Minted Slot",
+  mint:     "Mint",
   gm:       "Daily GM",
   points:   "Points Earned",
   donated:  "Donated",
   received: "Donation Received",
   won:      "Won Raffle",
+  tickets:  "Tickets Converted",
+  entered:  "Entered Raffle",
 }
 
 const TX_COLORS: Record<TxType, string> = {
@@ -50,6 +53,8 @@ const TX_COLORS: Record<TxType, string> = {
   donated:  "text-pink-500",
   received: "text-purple-500",
   won:      "text-yellow-500",
+  tickets:  "text-indigo-500",
+  entered:  "text-teal-500",
 }
 
 const TX_ICONS: Record<TxType, React.ElementType> = {
@@ -59,6 +64,8 @@ const TX_ICONS: Record<TxType, React.ElementType> = {
   donated:  HiHeart,
   received: HiStar,
   won:      HiTrophy,
+  tickets:  RiExchangeFundsLine,
+  entered:  Ticket,
 }
 
 function timeAgo(ts: number): string {

@@ -62,3 +62,25 @@ type WinEvent @entity {
   txHash: String!
   blockTimestamp: BigInt!
 }
+
+type TicketsConvertedEvent @entity {
+  id: ID!
+  user: Bytes!
+  pointsBurned: BigInt!
+  ticketsMinted: BigInt!
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type RaffleEnteredEvent @entity {
+  id: ID!
+  user: Bytes!
+  raffleId: BigInt!
+  ticketAmount: BigInt!
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type DrawnRaffle @entity {
+  id: ID!   # raffleId as string
+}

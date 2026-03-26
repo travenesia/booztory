@@ -22,6 +22,7 @@ dataSources:
         - GMClaimEvent
         - PointsEarnedEvent
         - DonationEvent
+        - TicketsConvertedEvent
       abis:
         - name: Booztory
           file: Booztory\Booztory.json
@@ -38,6 +39,8 @@ dataSources:
           handler: handlePointsEarned
         - event: DonationReceived(indexed uint256,indexed address,uint256,uint256)
           handler: handleDonationReceived
+        - event: TicketsConverted(indexed address,uint256,uint256)
+          handler: handleTicketsConverted
       file: Booztory\Booztory.wasm
   - kind: ethereum
     name: BooztoryRaffle
@@ -53,10 +56,14 @@ dataSources:
       entities:
         - Wallet
         - WinEvent
+        - RaffleEnteredEvent
+        - DrawnRaffle
       abis:
         - name: BooztoryRaffle
           file: BooztoryRaffle\BooztoryRaffle.json
       eventHandlers:
         - event: DrawCompleted(indexed uint256,address[])
           handler: handleDrawCompleted
+        - event: RaffleEntered(indexed uint256,indexed address,uint256,uint256)
+          handler: handleRaffleEntered
       file: BooztoryRaffle\BooztoryRaffle.wasm

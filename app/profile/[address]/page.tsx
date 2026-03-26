@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { useAccount, useReadContract } from "wagmi"
-import { Copy, Check, ExternalLink } from "lucide-react"
-import { HiBolt, HiCube, HiFire, HiStar, HiHeart, HiTrophy } from "react-icons/hi2"
+import { Copy, Check, ExternalLink, Ticket } from "lucide-react"
+import { HiBolt, HiCube, HiFire, HiTrophy } from "react-icons/hi2"
+import { RiExchangeFundsLine } from "react-icons/ri"
+import { FaDonate } from "react-icons/fa"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -13,7 +15,7 @@ import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { useWalletName } from "@/hooks/useWalletName"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
-import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS } from "@/lib/contract"
+import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import type { ProfileData, TxItem, TxType } from "@/app/api/profile/[address]/route"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -50,7 +52,7 @@ function formatUsdcBigint(raw: bigint | undefined): string {
 }
 
 function formatUsdc(raw: string | undefined): string {
-  if (!raw) return "$0"
+  if (!raw) return "$0.00"
   const val = Number(BigInt(raw)) / 1_000_000
   return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
@@ -69,82 +71,196 @@ function timeAgo(ts: number): string {
 }
 
 // ── Tx type config ────────────────────────────────────────────────────────────
-const TX_CONFIG: Record<TxType, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  mint:     { label: "Minted Slot",       color: "text-blue-700",   bg: "bg-blue-50 border-blue-200",    icon: HiCube   },
-  gm:       { label: "Daily GM",          color: "text-orange-700", bg: "bg-orange-50 border-orange-200", icon: HiFire  },
-  points:   { label: "Points Earned",     color: "text-amber-700",  bg: "bg-amber-50 border-amber-200",  icon: HiBolt   },
-  donated:  { label: "Donated",           color: "text-pink-700",   bg: "bg-pink-50 border-pink-200",    icon: HiHeart  },
-  received: { label: "Donation Received", color: "text-purple-700", bg: "bg-purple-50 border-purple-200", icon: HiStar  },
-  won:      { label: "Won Raffle",        color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200", icon: HiTrophy },
+const MINT_TYPE_CONFIG: Record<string, { color: string; bg: string }> = {
+  free:     { color: "text-green-700", bg: "bg-green-50 border-green-200" },
+  discount: { color: "text-red-700",   bg: "bg-red-50 border-red-200"     },
 }
 
-function txDescription(tx: TxItem): string {
+const TX_CONFIG: Record<TxType, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+  mint:     { label: "Mint",       color: "text-blue-700",    bg: "bg-blue-50 border-blue-200",     icon: HiCube              },
+  gm:       { label: "Daily GM",          color: "text-orange-700",  bg: "bg-orange-50 border-orange-200",  icon: HiFire              },
+  points:   { label: "Points Earned",     color: "text-amber-700",   bg: "bg-amber-50 border-amber-200",    icon: HiBolt              },
+  donated:  { label: "Donated",           color: "text-red-700",     bg: "bg-red-50 border-red-200",        icon: FaDonate            },
+  received: { label: "Donation Received", color: "text-green-700",   bg: "bg-green-50 border-green-200",    icon: FaDonate            },
+  won:      { label: "Won Raffle",        color: "text-green-700",   bg: "bg-green-50 border-green-200",    icon: HiTrophy            },
+  tickets:  { label: "Tickets Converted", color: "text-indigo-700",  bg: "bg-indigo-50 border-indigo-200",  icon: RiExchangeFundsLine },
+  entered:  { label: "Entered Raffle",    color: "text-teal-700",    bg: "bg-teal-50 border-teal-200",      icon: Ticket              },
+}
+
+// ── Row description ───────────────────────────────────────────────────────────
+function txDescription(tx: TxItem): React.ReactNode {
+  const tokenStr = tx.tokenId && tx.tokenId !== "0" ? ` #${tx.tokenId}` : ""
+
   switch (tx.type) {
-    case "mint":
-      return tx.mintType === "free" ? "Free slot (BOOZ burn)" : tx.mintType === "discount" ? "Discount slot" : "Standard slot"
+    case "mint": {
+      if (tx.mintType === "discount") return `Discount Mint${tokenStr}`
+      if (tx.mintType === "free")     return `Free Mint${tokenStr}`
+      return `Normal Mint${tokenStr}`
+    }
     case "gm":
-      return `Streak day ${tx.streakCount}`
+      return `Day ${tx.streakCount}`
     case "points":
-      return `+${formatPoints(tx.pointsAmount)} pts`
+      return "Points earned"
     case "donated":
-      return `${formatUsdc(tx.usdcAmount)} → Token #${tx.tokenId && tx.tokenId !== "0" ? tx.tokenId : "—"}`
     case "received":
-      return `${formatUsdc(tx.usdcAmount)} from Token #${tx.tokenId && tx.tokenId !== "0" ? tx.tokenId : "—"}`
+      return null  // handled by DonationDesc in TxRow
     case "won":
       return `Raffle #${Number(tx.raffleId) + 1}`
+    case "tickets":
+      return "Points → Tickets"
+    case "entered": {
+      const raffleNum = tx.raffleId !== undefined ? `#${Number(tx.raffleId) + 1}` : ""
+      const tickets = tx.ticketAmount ?? "?"
+      const statusLabel = tx.wonAmount
+        ? <span className="ml-1.5 text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 rounded-full px-1.5 py-0.5">Won</span>
+        : tx.raffleDrawn
+        ? <span className="ml-1 text-xs font-semibold text-red-500">Lost</span>
+        : null
+      return (
+        <span className="flex items-center flex-wrap gap-0">
+          Raffle {raffleNum} · {tickets} ticket{Number(tickets) !== 1 ? "s" : ""}
+          {statusLabel}
+        </span>
+      )
+    }
   }
 }
 
-function txAmount(tx: TxItem): string | null {
+// ── Row amounts (multi-line, colored) ─────────────────────────────────────────
+interface AmountLine { text: string; positive: boolean | "live" }
+
+function txAmounts(tx: TxItem): AmountLine[] {
+  const lines: AmountLine[] = []
+  const pts = tx.pointsAmount
+
   switch (tx.type) {
-    case "mint":     return null
-    case "gm":       return tx.boozAmount ? `+${formatBooz(tx.boozAmount)} $BOOZ` : null
-    case "points":   return null
-    case "donated":  return formatUsdc(tx.usdcAmount)
-    case "received": return formatUsdc(tx.usdcAmount)
-    case "won":      return formatUsdc(tx.usdcAmount)
+    case "mint":
+      if (tx.mintType === "free") {
+        lines.push({ text: "-10,000 $BOOZ", positive: false })
+      } else if (tx.mintType === "discount") {
+        lines.push({ text: "-0.9 USDC", positive: false })
+        // net BOOZ = 0 (burn 1000, earn 1000) — omit
+      } else {
+        lines.push({ text: "-1 USDC", positive: false })
+        lines.push({ text: "+1,000 $BOOZ", positive: true })
+      }
+      if (pts) lines.push({ text: `+${formatPoints(pts)} pts`, positive: true })
+      break
+    case "gm":
+      if (tx.boozAmount) lines.push({ text: `+${formatBooz(tx.boozAmount)} $BOOZ`, positive: true })
+      if (pts) lines.push({ text: `+${formatPoints(pts)} pts`, positive: true })
+      break
+    case "points":
+      if (pts) lines.push({ text: `+${formatPoints(pts)} pts`, positive: true })
+      break
+    case "donated":
+      if (tx.usdcAmount) lines.push({ text: `-${formatUsdc(tx.usdcAmount)}`, positive: false })
+      if (pts) lines.push({ text: `+${formatPoints(pts)} pts`, positive: true })
+      break
+    case "received":
+      if (tx.usdcAmount) lines.push({ text: `+${formatUsdc(tx.usdcAmount)}`, positive: true })
+      break
+    case "won":
+      if (tx.usdcAmount) lines.push({ text: `+${formatUsdc(tx.usdcAmount)}`, positive: true })
+      break
+    case "tickets":
+      if (tx.pointsBurned) lines.push({ text: `-${formatPoints(tx.pointsBurned)} pts`, positive: false })
+      if (tx.ticketsMinted) lines.push({ text: `+${tx.ticketsMinted} tickets`, positive: true })
+      break
+    case "entered":
+      if (tx.wonAmount) {
+        lines.push({ text: `+${formatUsdc(tx.wonAmount)}`, positive: true })
+      } else if (tx.raffleDrawn) {
+        const t = tx.ticketAmount ?? "?"
+        lines.push({ text: `-${t} ticket${Number(t) !== 1 ? "s" : ""}`, positive: false })
+      } else {
+        const nowSec = Math.floor(Date.now() / 1000)
+        const isLive = tx.raffleEndTime !== undefined && tx.raffleEndTime > nowSec
+        lines.push(isLive
+          ? { text: "● Live", positive: "live" }
+          : { text: "Awaiting Draw", positive: "live" }
+        )
+      }
+      break
   }
+
+  return lines
 }
 
-// ── Tab type ──────────────────────────────────────────────────────────────────
-type Tab = "activity" | "content" | "donations"
+// ── Tab config ────────────────────────────────────────────────────────────────
+type Tab = "activity" | "content" | "donations" | "raffle"
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "activity",  label: "Activity"  },
-  { id: "content",   label: "Content"   },
-  { id: "donations", label: "Donations" },
+  { id: "content",   label: "Mint"      },
+  { id: "donations", label: "Donate"    },
+  { id: "raffle",    label: "Raffle"    },
 ]
 
 function filterTxs(txs: TxItem[], tab: Tab): TxItem[] {
-  if (tab === "activity")  return txs
-  if (tab === "content")   return txs.filter(t => t.type === "mint")
-  if (tab === "donations") return txs.filter(t => t.type === "donated" || t.type === "received")
-  return txs
+  switch (tab) {
+    case "activity":  return txs
+    case "content":   return txs.filter(t => t.type === "mint")
+    case "donations": return txs.filter(t => t.type === "donated" || t.type === "received")
+    case "raffle":    return txs.filter(t => t.type === "tickets" || t.type === "entered")
+  }
+}
+
+const EMPTY_MSG: Record<Tab, string> = {
+  activity:  "No transactions yet",
+  content:   "No slots minted yet",
+  donations: "No donations yet",
+  raffle:    "No raffle activity yet",
+}
+
+// ── Donation description (resolves counterparty address) ──────────────────────
+function DonationDesc({ tx, connectedAddress }: { tx: TxItem; connectedAddress?: string }) {
+  const resolved = useWalletName(tx.counterparty as `0x${string}` | undefined)
+  const isYou = !!(connectedAddress && tx.counterparty && connectedAddress.toLowerCase() === tx.counterparty.toLowerCase())
+  const short = tx.counterparty
+    ? `${tx.counterparty.slice(0, 6)}...${tx.counterparty.slice(-4)}`
+    : "—"
+  const display = isYou ? "you" : (resolved || short)
+  const prefix = tx.type === "donated" ? "to" : "from"
+  return (
+    <span className="text-xs text-gray-500 truncate">
+      {prefix} <span className={isYou ? "font-semibold text-blue-600" : "font-mono font-semibold"}>{display}</span>
+    </span>
+  )
 }
 
 // ── TxRow ─────────────────────────────────────────────────────────────────────
-function TxRow({ tx }: { tx: TxItem }) {
-  const cfg = TX_CONFIG[tx.type]
+function TxRow({ tx, connectedAddress }: { tx: TxItem; connectedAddress?: string }) {
+  const base = TX_CONFIG[tx.type]
+  const mintOverride = tx.type === "mint" && tx.mintType ? MINT_TYPE_CONFIG[tx.mintType] : undefined
+  const cfg = mintOverride ? { ...base, ...mintOverride } : base
   const Icon = cfg.icon
-  const amount = txAmount(tx)
+  const amounts = txAmounts(tx)
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-      {/* Type badge */}
-      <div className={cn("flex items-center justify-center w-8 h-8 rounded-full border flex-shrink-0", cfg.bg)}>
+    <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+      <div className={cn("flex items-center justify-center w-8 h-8 rounded-full border flex-shrink-0 mt-0.5", cfg.bg)}>
         <Icon size={14} className={cfg.color} />
       </div>
 
-      {/* Label + description */}
-      <div className="flex flex-col min-w-0 flex-1">
+      <div className="flex flex-col min-w-0 flex-1 gap-1">
         <span className={cn("text-sm font-semibold leading-tight", cfg.color)}>{cfg.label}</span>
-        <span className="text-xs text-gray-500 truncate">{txDescription(tx)}</span>
+        {(tx.type === "donated" || tx.type === "received")
+          ? <DonationDesc tx={tx} connectedAddress={connectedAddress} />
+          : <span className="text-xs text-gray-500 truncate">{txDescription(tx)}</span>
+        }
       </div>
 
-      {/* Amount + time + link */}
-      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-        {amount && <span className="text-sm font-bold text-gray-800">{amount}</span>}
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className="text-sm font-semibold leading-tight">
+          {amounts.map((a, i) => (
+            <span key={i}>
+              {i > 0 && <span className="text-gray-400 font-normal">, </span>}
+              <span className={a.positive === "live" ? "text-green-500" : a.positive ? "text-green-600" : "text-red-500"}>{a.text}</span>
+            </span>
+          ))}
+        </span>
+        <div className="flex items-center gap-1">
           <span className="text-[11px] text-gray-400">{timeAgo(tx.timestamp)}</span>
           <a
             href={`https://${basescanHost}/tx/${tx.txHash}`}
@@ -164,7 +280,7 @@ function TxRow({ tx }: { tx: TxItem }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const params = useParams()
-  const router = useRouter()
+  useRouter()
   const rawAddress = params.address as string
   const address = rawAddress?.toLowerCase() as `0x${string}` | undefined
 
@@ -190,6 +306,15 @@ export default function ProfilePage() {
     args: address ? [address] : undefined,
     chainId: APP_CHAIN.id,
     query: { enabled: !!address && TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" },
+  })
+
+  const { data: pointsOnChain } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "points",
+    args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: !!address },
   })
 
   const [copied, setCopied] = useState(false)
@@ -234,23 +359,22 @@ export default function ProfilePage() {
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
-    <main className="min-h-screen pt-12">
+    <main className="h-screen flex flex-col overflow-hidden">
       <PageTopbar title={isOwn ? "My Profile" : "Profile"} />
 
-      <section className="pt-4 pb-[80px] md:pb-[56px] px-4 max-w-[650px] mx-auto w-full">
+      <div className="flex-1 overflow-hidden flex justify-center pt-12">
+      <section className="flex flex-col w-full max-w-[650px] overflow-hidden pt-4 px-4">
 
         {/* ── Profile hero card ── */}
         <div
           className="relative rounded-2xl overflow-hidden text-white mb-4 shadow-sm"
           style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)" }}
         >
-          {/* Radial glow */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{ background: "radial-gradient(ellipse at 80% 0%, rgba(255,255,255,0.12) 0%, transparent 60%)" }}
           />
 
-          {/* You badge — top right */}
           {isOwn && (
             <span className="absolute top-3 right-3 text-[10px] font-bold text-blue-100 bg-white/15 border border-white/25 rounded-full px-2.5 py-1">
               You
@@ -258,19 +382,18 @@ export default function ProfilePage() {
           )}
 
           <div className="relative px-5 pt-5 pb-4">
-            {/* Avatar + name + balances row */}
             <div className="flex items-center gap-4">
               <img
                 src={address ? addressAvatar(address) : AVATARS[0]}
                 alt="avatar"
-                className="w-14 h-14 rounded-full border-2 border-white/30 shadow-md object-cover flex-shrink-0"
+                className="w-16 h-16 rounded-full border-2 border-white/30 shadow-md object-cover flex-shrink-0"
               />
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-base font-black text-white truncate leading-tight">
+                <span className="text-base md:text-lg font-black text-white truncate leading-tight">
                   {displayName || shortAddress}
                 </span>
                 <div className="flex items-center gap-1.5 mt-0.5 mb-2">
-                  <span className="text-xs text-blue-200 font-mono">{shortAddress}</span>
+                  <span className="text-xs md:text-sm text-blue-200 font-mono">{shortAddress}</span>
                   <button
                     onClick={handleCopy}
                     className="text-blue-300 hover:text-white transition-colors p-0.5 rounded"
@@ -279,71 +402,66 @@ export default function ProfilePage() {
                     {copied ? <Check className="w-3 h-3 text-green-300" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
-                {/* USDC + BOOZ balances */}
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 bg-white/10 border border-white/15 rounded-lg px-2 py-1">
                     <img src="/usdc.svg" alt="USDC" width={13} height={13} className="opacity-90" />
-                    <span className="text-[11px] font-bold text-white leading-none">{formatUsdcBigint(usdcBalance as bigint | undefined)}</span>
+                    <span className="text-[11px] md:text-sm font-bold text-white leading-none">{formatUsdcBigint(usdcBalance as bigint | undefined)}</span>
+                    <span className="text-[9px] md:text-xs font-semibold text-blue-200 leading-none">$USDC</span>
                   </div>
                   <div className="flex items-center gap-1 bg-white/10 border border-white/15 rounded-lg px-2 py-1">
                     <img src="/booz.svg" alt="BOOZ" width={13} height={13} className="opacity-90" />
-                    <span className="text-[11px] font-bold text-white leading-none">{formatBoozBigint(boozBalance as bigint | undefined)}</span>
+                    <span className="text-[11px] md:text-sm font-bold text-white leading-none">{formatBoozBigint(boozBalance as bigint | undefined)}</span>
+                    <span className="text-[9px] md:text-xs font-semibold text-blue-200 leading-none">$BOOZ</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-4 border-t border-white/15">
+          <div className="grid grid-cols-5 border-t border-white/15">
             {[
-              { label: "Slots",   value: loading ? null : String(wallet?.totalSlots ?? 0)         },
-              { label: "Streak",  value: loading ? null : String(wallet?.bestStreak ?? 0)          },
-              { label: "Points",  value: loading ? null : formatPoints(wallet?.totalPoints)        },
-              { label: "Donated", value: loading ? null : formatUsdc(wallet?.totalDonated ?? "0") },
+              { label: "Mints",    value: loading ? null : String(txs.filter(t => t.type === "mint").length) },
+              { label: "Streak",   value: loading ? null : String(wallet?.bestStreak ?? 0)                   },
+              { label: "Points",   value: pointsOnChain !== undefined ? formatPoints(String(pointsOnChain)) : loading ? null : "0" },
+              { label: "Donated",  value: loading ? null : formatUsdc(wallet?.totalDonated ?? "0")           },
+              { label: "Gift",     value: loading ? null : formatUsdc(wallet?.totalReceived ?? "0")          },
             ].map(({ label, value }, i) => (
               <div key={label} className={cn(
-                "flex flex-col items-center py-3",
-                i < 3 ? "border-r border-white/15" : ""
+                "flex flex-col items-center gap-1 py-3",
+                i < 4 ? "border-r border-white/15" : ""
               )}>
                 {value === null
                   ? <Skeleton className="h-5 w-10 mb-1 bg-white/20" />
-                  : <span className="text-sm font-black text-white">{value}</span>
+                  : <span className="text-xs md:text-sm font-black text-white">{value}</span>
                 }
-                <span className="text-[10px] text-blue-200 uppercase tracking-wide">{label}</span>
+                <span className="text-[9px] md:text-[11px] text-blue-200 uppercase tracking-wide">{label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Tabs — leaderboard dark style ── */}
-        <div className="flex gap-1.5 mb-3 rounded-lg p-1" style={{ background: "rgba(15,23,42,0.75)" }}>
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => { setTab(t.id); setPage(0) }}
-              className={cn(
-                "flex-1 py-2 rounded-[5px] text-xs font-semibold transition-all duration-200",
-                tab === t.id
-                  ? "text-white shadow-sm"
-                  : "text-white/50 hover:text-white/80"
+        {/* ── Tabs ── */}
+        <div className="flex bg-gray-100 rounded-xl p-1 mb-3">
+          {TABS.map((t, i) => (
+            <React.Fragment key={t.id}>
+              {i > 0 && tab !== t.id && tab !== TABS[i - 1].id && (
+                <div className="w-px my-1.5 bg-gray-300 flex-shrink-0" />
               )}
-              style={tab === t.id
-                ? { background: "linear-gradient(135deg, #3b82f6, #2563eb)", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }
-                : undefined
-              }
-            >
-              {t.label}
-              {t.id !== "activity" && data && (
-                <span className={cn("ml-1 text-[11px]", tab === t.id ? "text-blue-200" : "text-white/30")}>
-                  ({filterTxs(txs, t.id).length})
-                </span>
-              )}
-            </button>
+              <button
+                onClick={() => { setTab(t.id); setPage(0) }}
+                className={cn(
+                  "flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all",
+                  tab === t.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                {t.label}
+              </button>
+            </React.Fragment>
           ))}
         </div>
 
-        {/* ── Transaction list ── */}
+        {/* ── Transaction list (scrollable) ── */}
+        <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto pb-[80px] md:pb-[56px]" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           {loading ? (
             <div className="divide-y divide-gray-100">
@@ -365,25 +483,18 @@ export default function ProfilePage() {
             <div className="flex flex-col items-center py-12 text-center px-4">
               <span className="text-2xl mb-2">⚠️</span>
               <p className="text-gray-500 text-sm">{error}</p>
-              <button
-                onClick={fetchProfile}
-                className="mt-3 text-sm text-blue-600 hover:underline"
-              >
+              <button onClick={fetchProfile} className="mt-3 text-sm text-blue-600 hover:underline">
                 Retry
               </button>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-center px-4">
               <span className="text-3xl mb-2">📭</span>
-              <p className="text-gray-500 text-sm">
-                {tab === "activity" ? "No transactions yet" :
-                 tab === "content"  ? "No slots minted yet" :
-                                     "No donations yet"}
-              </p>
+              <p className="text-gray-500 text-sm">{EMPTY_MSG[tab]}</p>
             </div>
           ) : (
             <div>
-              {paginated.map(tx => <TxRow key={`${tx.type}-${tx.id}`} tx={tx} />)}
+              {paginated.map(tx => <TxRow key={`${tx.type}-${tx.id}`} tx={tx} connectedAddress={connectedAddress} />)}
             </div>
           )}
         </div>
@@ -411,14 +522,15 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Footer count when no pagination */}
         {!loading && wallet && filtered.length <= PAGE_SIZE && (
           <p className="text-center text-xs text-gray-400 mt-3">
             {txs.length} total transaction{txs.length !== 1 ? "s" : ""}
             {wallet.totalWins > 0 && ` · ${wallet.totalWins} raffle win${wallet.totalWins !== 1 ? "s" : ""}`}
           </p>
         )}
+        </div>{/* end scrollable */}
       </section>
+      </div>{/* end flex justify-center */}
 
       <div className="fixed bottom-12 md:bottom-0 left-0 right-0 h-20 pointer-events-none z-40">
         <div className="relative h-full">

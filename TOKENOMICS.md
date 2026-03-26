@@ -1,6 +1,6 @@
 # Booztory — Tokenomics & Roadmap
 
-Last updated: 2026-03-27
+Last updated: 2026-03-27 (session 2)
 
 ---
 
@@ -401,6 +401,15 @@ Confirmed on current Base Sepolia deploy:
 | Feature | Status |
 |---|---|
 | Non-dismissible transaction lock overlay during USDC approve → donate flow | ✅ Done |
+
+### UI / Frontend — History & Upcoming Pages
+| Feature | Status |
+|---|---|
+| Own-content carousel — horizontal snap scroll, separate from others' list | ✅ Done |
+| Slide indicators — clickable line bars below card (active `w-6`, inactive `w-3`, `h-1`) | ✅ Done |
+| Auto-slide every 5s, pauses on hover/touch | ✅ Done |
+| Separator between own carousel and others' list | ✅ Done |
+| Empty state — centered, bold heading, descriptive copy | ✅ Done |
 
 ### UI / Frontend — Navigation
 | Feature | Status |

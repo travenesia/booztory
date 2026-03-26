@@ -1,7 +1,7 @@
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts"
-import { DrawCompleted } from "../generated/BooztoryRaffle/BooztoryRaffle"
+import { DrawCompleted, RaffleEntered } from "../generated/BooztoryRaffle/BooztoryRaffle"
 import { BooztoryRaffle } from "../generated/BooztoryRaffle/BooztoryRaffle"
-import { Wallet, WinEvent } from "../generated/schema"
+import { Wallet, WinEvent, RaffleEnteredEvent, DrawnRaffle } from "../generated/schema"
 
 // USDC on Base Sepolia — set to Base Mainnet USDC at mainnet deploy
 const USDC_ADDRESS = Address.fromString("0x036CbD53842c5426634e7929541eC2318f3dCF7e")
@@ -22,9 +22,24 @@ function getOrCreateWallet(address: Bytes): Wallet {
   return wallet
 }
 
+export function handleRaffleEntered(event: RaffleEntered): void {
+  const id = event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
+  const ev = new RaffleEnteredEvent(id)
+  ev.user = event.params.user
+  ev.raffleId = event.params.raffleId
+  ev.ticketAmount = event.params.ticketAmount
+  ev.txHash = event.transaction.hash.toHexString()
+  ev.blockTimestamp = event.block.timestamp
+  ev.save()
+}
+
 export function handleDrawCompleted(event: DrawCompleted): void {
   const contract = BooztoryRaffle.bind(event.address)
   const raffleId = event.params.raffleId
+
+  // Mark this raffle as drawn
+  const drawn = new DrawnRaffle(raffleId.toString())
+  drawn.save()
 
   // Read prize tokens and amounts from the contract at draw time
   const raffleData = contract.getRaffle(raffleId)

@@ -6,6 +6,7 @@ import {
   GMClaimed,
   PointsEarned,
   DonationReceived,
+  TicketsConverted,
 } from "../generated/Booztory/Booztory"
 import {
   Wallet,
@@ -14,6 +15,7 @@ import {
   GMClaimEvent,
   PointsEarnedEvent,
   DonationEvent,
+  TicketsConvertedEvent,
 } from "../generated/schema"
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
@@ -119,6 +121,17 @@ export function handlePointsEarned(event: PointsEarned): void {
   const ev = new PointsEarnedEvent(eventId(event.transaction.hash, event.logIndex))
   ev.user = event.params.user
   ev.amount = event.params.amount
+  ev.txHash = event.transaction.hash.toHexString()
+  ev.blockTimestamp = event.block.timestamp
+  ev.save()
+}
+
+// ── Tickets converted ─────────────────────────────────────────────────────────
+export function handleTicketsConverted(event: TicketsConverted): void {
+  const ev = new TicketsConvertedEvent(eventId(event.transaction.hash, event.logIndex))
+  ev.user = event.params.user
+  ev.pointsBurned = event.params.pointsBurned
+  ev.ticketsMinted = event.params.ticketsMinted
   ev.txHash = event.transaction.hash.toHexString()
   ev.blockTimestamp = event.block.timestamp
   ev.save()

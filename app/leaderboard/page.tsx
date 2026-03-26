@@ -41,7 +41,7 @@ const CATEGORIES: { id: CategoryId; label: string; activeLabel: string; icon: Re
 // ── Value formatting ───────────────────────────────────────────────────────────
 function formatValue(value: number, category: CategoryId): string {
   switch (category) {
-    case "minters":   return `${value} slot${value !== 1 ? "s" : ""}`
+    case "minters":   return `${value} mint${value !== 1 ? "s" : ""}`
     case "streakers": return `${value} day${value !== 1 ? "s" : ""}`
     case "points":    return `${value.toLocaleString()} pts`
     case "creators":  return `$${value.toFixed(2)}`
