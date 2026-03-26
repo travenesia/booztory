@@ -16,10 +16,13 @@ type Slot @entity {
   creator: Bytes!
 }
 
-# ── Timestamped events — used for 30-day filtered queries ─────────────────────
+# ── Timestamped events — used for leaderboard (30-day) and profile tx history ──
 type SlotMintEvent @entity {
   id: ID!
   creator: Bytes!
+  tokenId: BigInt!
+  mintType: String!      # "standard" | "discount" | "free"
+  txHash: String!
   blockTimestamp: BigInt!
 }
 
@@ -27,6 +30,8 @@ type GMClaimEvent @entity {
   id: ID!
   user: Bytes!
   streakCount: Int!
+  boozAmount: BigInt!
+  txHash: String!
   blockTimestamp: BigInt!
 }
 
@@ -34,6 +39,7 @@ type PointsEarnedEvent @entity {
   id: ID!
   user: Bytes!
   amount: BigInt!
+  txHash: String!
   blockTimestamp: BigInt!
 }
 
@@ -41,8 +47,10 @@ type DonationEvent @entity {
   id: ID!
   donor: Bytes!
   creator: Bytes!
+  tokenId: BigInt!
   creatorAmount: BigInt!
   totalAmount: BigInt!   # creatorAmount + feeAmount
+  txHash: String!
   blockTimestamp: BigInt!
 }
 
@@ -51,5 +59,6 @@ type WinEvent @entity {
   winner: Bytes!
   raffleId: BigInt!
   usdcAmount: BigInt!   # USDC prize for this winner — 6-decimal
+  txHash: String!
   blockTimestamp: BigInt!
 }

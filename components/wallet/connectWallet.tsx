@@ -254,7 +254,7 @@ export function ConnectWalletButton() {
       {open && dropdownPos && typeof document !== "undefined" && createPortal(
         <div
           ref={dropdownRef}
-          className="w-72 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[60]"
+          className="w-80 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[60]"
           style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right }}
         >
           <WalletDropdownContent onClose={() => setOpen(false)} />

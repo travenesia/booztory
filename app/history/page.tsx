@@ -105,7 +105,7 @@ function HistoryPage() {
   return (
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="History" />
-      <section className="pt-6 pb-[136px] md:pb-[88px] px-6 max-w-[650px] mx-auto w-full">
+      <section className="pt-6 pb-[80px] md:pb-[56px] px-6 max-w-[650px] mx-auto w-full">
         {sortedItems.length === 0 && !isLoadingMore && !isLoading ? (
           <div className="text-center py-8">
             <div className="text-gray-500 mb-2">No content history available</div>

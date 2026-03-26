@@ -249,6 +249,45 @@ export class SlotMintEvent extends Entity {
     this.set("creator", Value.fromBytes(value));
   }
 
+  get tokenId(): BigInt {
+    let value = this.get("tokenId");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set tokenId(value: BigInt) {
+    this.set("tokenId", Value.fromBigInt(value));
+  }
+
+  get mintType(): string {
+    let value = this.get("mintType");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set mintType(value: string) {
+    this.set("mintType", Value.fromString(value));
+  }
+
+  get txHash(): string {
+    let value = this.get("txHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set txHash(value: string) {
+    this.set("txHash", Value.fromString(value));
+  }
+
   get blockTimestamp(): BigInt {
     let value = this.get("blockTimestamp");
     if (!value || value.kind == ValueKind.NULL) {
@@ -328,6 +367,32 @@ export class GMClaimEvent extends Entity {
 
   set streakCount(value: i32) {
     this.set("streakCount", Value.fromI32(value));
+  }
+
+  get boozAmount(): BigInt {
+    let value = this.get("boozAmount");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set boozAmount(value: BigInt) {
+    this.set("boozAmount", Value.fromBigInt(value));
+  }
+
+  get txHash(): string {
+    let value = this.get("txHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set txHash(value: string) {
+    this.set("txHash", Value.fromString(value));
   }
 
   get blockTimestamp(): BigInt {
@@ -413,6 +478,19 @@ export class PointsEarnedEvent extends Entity {
     this.set("amount", Value.fromBigInt(value));
   }
 
+  get txHash(): string {
+    let value = this.get("txHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set txHash(value: string) {
+    this.set("txHash", Value.fromString(value));
+  }
+
   get blockTimestamp(): BigInt {
     let value = this.get("blockTimestamp");
     if (!value || value.kind == ValueKind.NULL) {
@@ -494,6 +572,19 @@ export class DonationEvent extends Entity {
     this.set("creator", Value.fromBytes(value));
   }
 
+  get tokenId(): BigInt {
+    let value = this.get("tokenId");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set tokenId(value: BigInt) {
+    this.set("tokenId", Value.fromBigInt(value));
+  }
+
   get creatorAmount(): BigInt {
     let value = this.get("creatorAmount");
     if (!value || value.kind == ValueKind.NULL) {
@@ -518,6 +609,19 @@ export class DonationEvent extends Entity {
 
   set totalAmount(value: BigInt) {
     this.set("totalAmount", Value.fromBigInt(value));
+  }
+
+  get txHash(): string {
+    let value = this.get("txHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set txHash(value: string) {
+    this.set("txHash", Value.fromString(value));
   }
 
   get blockTimestamp(): BigInt {
@@ -610,6 +714,19 @@ export class WinEvent extends Entity {
 
   set usdcAmount(value: BigInt) {
     this.set("usdcAmount", Value.fromBigInt(value));
+  }
+
+  get txHash(): string {
+    let value = this.get("txHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set txHash(value: string) {
+    this.set("txHash", Value.fromString(value));
   }
 
   get blockTimestamp(): BigInt {

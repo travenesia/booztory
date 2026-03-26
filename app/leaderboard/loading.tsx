@@ -50,7 +50,7 @@ export default function Loading() {
 
         {/* Rows skeleton */}
         <div className="flex-1 overflow-hidden mt-0">
-          <div className="px-4 pb-24 mt-4 space-y-1.5">
+          <div className="px-4 pb-[80px] md:pb-[56px] mt-4 space-y-1.5">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/10">
                 <Skeleton className="w-9 h-5 rounded bg-white/20" />

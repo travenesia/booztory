@@ -968,7 +968,7 @@ export default function SponsorPage() {
         </div>
       )}
 
-      <section className="pt-6 pb-[136px] md:pb-[88px] px-6 max-w-[650px] mx-auto w-full space-y-4">
+      <section className="pt-6 pb-[80px] md:pb-[56px] px-6 max-w-[650px] mx-auto w-full space-y-4">
 
         {/* Hero — always visible */}
         <div

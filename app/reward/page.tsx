@@ -1004,7 +1004,7 @@ export default function RewardPage() {
         }
       />
 
-      <section className="pt-6 pb-[136px] md:pb-[88px] px-6 max-w-[650px] mx-auto w-full">
+      <section className="pt-6 pb-[80px] md:pb-[56px] px-6 max-w-[650px] mx-auto w-full">
 
         {/* Tab switcher */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-6">

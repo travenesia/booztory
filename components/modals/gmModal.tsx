@@ -117,7 +117,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   const isLoading = isWritePending || isConfirming
 
   return (
-    <div className="flex flex-col items-center w-full px-6 py-4 overflow-y-auto max-h-[85dvh]">
+    <div className="flex flex-col items-center w-full px-6 py-4">
       {/* Flame + title */}
       <div className="text-6xl mb-3 select-none leading-none">🔥</div>
       <h2 className="text-gray-800 font-black uppercase tracking-[0.12em] text-lg mb-1">
@@ -273,9 +273,22 @@ function useGMClaimable() {
 
 // ── Desktop: icon + Dialog ────────────────────────────────────────────────────
 
+const GM_NATURAL_H = 560
+
 export function GMButton() {
   const [open, setOpen] = useState(false)
   const claimable = useGMClaimable()
+  const [scale, setScale] = useState(1)
+
+  useEffect(() => {
+    const update = () => {
+      const available = window.innerHeight - 96
+      setScale(Math.min(1, available / GM_NATURAL_H))
+    }
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
+  }, [])
 
   return (
     <>
@@ -287,11 +300,19 @@ export function GMButton() {
         <HiBolt size={14} className={claimable ? "text-orange-500 animate-pulse" : "text-gray-900 hover:text-[#E63946]"} />
       </span>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="p-0 max-w-sm rounded-2xl overflow-hidden border border-gray-200" style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}>
+        <DialogContent
+          className="p-0 max-w-sm rounded-2xl overflow-hidden border border-gray-200"
+          style={{
+            background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)",
+            height: GM_NATURAL_H * scale,
+          }}
+        >
           <DialogHeader className="sr-only">
             <DialogTitle>Daily GM</DialogTitle>
           </DialogHeader>
-          <GMContent onClose={() => setOpen(false)} />
+          <div style={{ transform: `scale(${scale})`, transformOrigin: "top center", height: GM_NATURAL_H }}>
+            <GMContent onClose={() => setOpen(false)} />
+          </div>
         </DialogContent>
       </Dialog>
     </>
@@ -316,7 +337,7 @@ export function GMMobileButton() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none p-0"
+          className="rounded-tl-2xl rounded-tr-2xl border-t border-gray-200 outline-none p-0 overflow-y-auto max-h-[85dvh]"
           style={{ background: "linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #f5f7ff 100%)" }}
         >
           <SheetTitle className="sr-only">Daily GM</SheetTitle>

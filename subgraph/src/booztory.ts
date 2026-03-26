@@ -33,7 +33,7 @@ function getOrCreateWallet(address: Bytes): Wallet {
   return wallet
 }
 
-function mintEventId(hash: Bytes, logIndex: BigInt): string {
+function eventId(hash: Bytes, logIndex: BigInt): string {
   return hash.toHexString() + "-" + logIndex.toString()
 }
 
@@ -43,13 +43,15 @@ export function handleSlotMinted(event: SlotMinted): void {
   wallet.totalSlots = wallet.totalSlots.plus(BigInt.fromI32(1))
   wallet.save()
 
-  // Store slot for creator lookup when DonationReceived fires
   const slot = new Slot(event.params.tokenId.toString())
   slot.creator = event.params.creator
   slot.save()
 
-  const ev = new SlotMintEvent(mintEventId(event.transaction.hash, event.logIndex))
+  const ev = new SlotMintEvent(eventId(event.transaction.hash, event.logIndex))
   ev.creator = event.params.creator
+  ev.tokenId = event.params.tokenId
+  ev.mintType = "standard"
+  ev.txHash = event.transaction.hash.toHexString()
   ev.blockTimestamp = event.block.timestamp
   ev.save()
 }
@@ -63,8 +65,11 @@ export function handleFreeSlotMinted(event: FreeSlotMinted): void {
   slot.creator = event.params.creator
   slot.save()
 
-  const ev = new SlotMintEvent(mintEventId(event.transaction.hash, event.logIndex))
+  const ev = new SlotMintEvent(eventId(event.transaction.hash, event.logIndex))
   ev.creator = event.params.creator
+  ev.tokenId = event.params.tokenId
+  ev.mintType = "free"
+  ev.txHash = event.transaction.hash.toHexString()
   ev.blockTimestamp = event.block.timestamp
   ev.save()
 }
@@ -78,8 +83,11 @@ export function handleDiscountSlotMinted(event: DiscountSlotMinted): void {
   slot.creator = event.params.creator
   slot.save()
 
-  const ev = new SlotMintEvent(mintEventId(event.transaction.hash, event.logIndex))
+  const ev = new SlotMintEvent(eventId(event.transaction.hash, event.logIndex))
   ev.creator = event.params.creator
+  ev.tokenId = event.params.tokenId
+  ev.mintType = "discount"
+  ev.txHash = event.transaction.hash.toHexString()
   ev.blockTimestamp = event.block.timestamp
   ev.save()
 }
@@ -88,15 +96,16 @@ export function handleDiscountSlotMinted(event: DiscountSlotMinted): void {
 export function handleGMClaimed(event: GMClaimed): void {
   const wallet = getOrCreateWallet(event.params.user)
   const streak = event.params.streakCount as i32
-  // All-time: keep the highest streak ever reached
   if (streak > wallet.bestStreak) {
     wallet.bestStreak = streak
   }
   wallet.save()
 
-  const ev = new GMClaimEvent(mintEventId(event.transaction.hash, event.logIndex))
+  const ev = new GMClaimEvent(eventId(event.transaction.hash, event.logIndex))
   ev.user = event.params.user
   ev.streakCount = streak
+  ev.boozAmount = event.params.reward
+  ev.txHash = event.transaction.hash.toHexString()
   ev.blockTimestamp = event.block.timestamp
   ev.save()
 }
@@ -107,9 +116,10 @@ export function handlePointsEarned(event: PointsEarned): void {
   wallet.totalPoints = wallet.totalPoints.plus(event.params.amount)
   wallet.save()
 
-  const ev = new PointsEarnedEvent(mintEventId(event.transaction.hash, event.logIndex))
+  const ev = new PointsEarnedEvent(eventId(event.transaction.hash, event.logIndex))
   ev.user = event.params.user
   ev.amount = event.params.amount
+  ev.txHash = event.transaction.hash.toHexString()
   ev.blockTimestamp = event.block.timestamp
   ev.save()
 }
@@ -118,12 +128,10 @@ export function handlePointsEarned(event: PointsEarned): void {
 export function handleDonationReceived(event: DonationReceived): void {
   const total = event.params.creatorAmount.plus(event.params.feeAmount)
 
-  // Update donor totals
   const donor = getOrCreateWallet(event.params.donor)
   donor.totalDonated = donor.totalDonated.plus(total)
   donor.save()
 
-  // Look up creator from Slot entity stored at mint time
   const slot = Slot.load(event.params.tokenId.toString())
   if (!slot) return
 
@@ -131,11 +139,13 @@ export function handleDonationReceived(event: DonationReceived): void {
   creator.totalReceived = creator.totalReceived.plus(event.params.creatorAmount)
   creator.save()
 
-  const ev = new DonationEvent(mintEventId(event.transaction.hash, event.logIndex))
+  const ev = new DonationEvent(eventId(event.transaction.hash, event.logIndex))
   ev.donor = event.params.donor
   ev.creator = slot.creator
+  ev.tokenId = event.params.tokenId
   ev.creatorAmount = event.params.creatorAmount
   ev.totalAmount = total
+  ev.txHash = event.transaction.hash.toHexString()
   ev.blockTimestamp = event.block.timestamp
   ev.save()
 }

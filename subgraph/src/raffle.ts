@@ -61,6 +61,7 @@ export function handleDrawCompleted(event: DrawCompleted): void {
     ev.winner = winners[i]
     ev.raffleId = raffleId
     ev.usdcAmount = usdcAmount
+    ev.txHash = event.transaction.hash.toHexString()
     ev.blockTimestamp = event.block.timestamp
     ev.save()
   }

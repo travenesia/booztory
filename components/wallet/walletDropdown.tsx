@@ -3,15 +3,18 @@
 import { useAccount, useDisconnect } from "wagmi"
 import { useReadContract } from "wagmi"
 import { useSession, signOut } from "next-auth/react"
-import { useState } from "react"
-import { Copy, Check } from "lucide-react"
-import { HiBolt, HiOutlinePower } from "react-icons/hi2"
+import { useState, useEffect } from "react"
+import { Copy, Check, ExternalLink } from "lucide-react"
+import { HiBolt, HiOutlinePower, HiCube, HiFire, HiStar, HiHeart, HiTrophy } from "react-icons/hi2"
 import Link from "next/link"
 import { FaCoins, FaRankingStar } from "react-icons/fa6"
 import { useWalletName } from "@/hooks/useWalletName"
 import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cache } from "@/lib/cache"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
+import type { TxItem, TxType } from "@/app/api/profile/[address]/route"
 
 // ── Address-based avatar ──────────────────────────────────────────────────────
 const AVATARS = [
@@ -26,6 +29,44 @@ function addressAvatar(addr: string): string {
     hash = (addr.charCodeAt(i) + ((hash << 5) - hash)) | 0
   }
   return AVATARS[Math.abs(hash) % AVATARS.length]
+}
+
+// ── Transaction helpers ───────────────────────────────────────────────────────
+const basescanHost = (APP_CHAIN.id as number) === 8453 ? "basescan.org" : "sepolia.basescan.org"
+
+const TX_LABEL: Record<TxType, string> = {
+  mint:     "Minted Slot",
+  gm:       "Daily GM",
+  points:   "Points Earned",
+  donated:  "Donated",
+  received: "Donation Received",
+  won:      "Won Raffle",
+}
+
+const TX_COLORS: Record<TxType, string> = {
+  mint:     "text-blue-500",
+  gm:       "text-orange-500",
+  points:   "text-amber-400",
+  donated:  "text-pink-500",
+  received: "text-purple-500",
+  won:      "text-yellow-500",
+}
+
+const TX_ICONS: Record<TxType, React.ElementType> = {
+  mint:     HiCube,
+  gm:       HiFire,
+  points:   HiBolt,
+  donated:  HiHeart,
+  received: HiStar,
+  won:      HiTrophy,
+}
+
+function timeAgo(ts: number): string {
+  const diff = Math.floor(Date.now() / 1000) - ts
+  if (diff < 60)    return `${diff}s`
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
+  return `${Math.floor(diff / 86400)}d`
 }
 
 // ── Balance formatting helpers ────────────────────────────────────────────────
@@ -80,6 +121,22 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
     query: { enabled: !!address },
   })
 
+  // Recent transactions from subgraph
+  const [recentTxs, setRecentTxs] = useState<TxItem[]>([])
+  const [txsLoading, setTxsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!address) return
+    setTxsLoading(true)
+    fetch(`/api/profile/${address.toLowerCase()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { transactions?: TxItem[] } | null) => {
+        setRecentTxs(d?.transactions?.slice(0, 5) ?? [])
+      })
+      .catch(() => setRecentTxs([]))
+      .finally(() => setTxsLoading(false))
+  }, [address])
+
   const handleCopy = async () => {
     if (!address) return
     await navigator.clipboard.writeText(address)
@@ -118,40 +175,92 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div
-            className="flex items-center gap-1 cursor-default"
-            title={pointsBalance !== undefined ? `You have ${Number(pointsBalance).toLocaleString()} Points` : "Points"}
-          >
-            <FaCoins className="text-orange-500" size={14} />
-            <span className="text-sm font-bold text-gray-800">{pointsBalance !== undefined ? Number(pointsBalance).toLocaleString() : "—"}</span>
-          </div>
-          <Link href="/leaderboard" onClick={onClose} title="Leaderboard">
-            <FaRankingStar className="w-4 h-4 text-amber-500 hover:text-amber-600 transition-colors" />
-          </Link>
-        </div>
+        <Link href="/leaderboard" onClick={onClose} title="Leaderboard">
+          <FaRankingStar className="w-5 h-5 text-amber-500 hover:text-amber-600 transition-colors" />
+        </Link>
       </div>
 
       <div className="mx-4 border-t border-gray-200" />
 
       {/* ── Balances ── */}
-      <div className="grid grid-cols-2 gap-2 px-4 py-3">
+      <div className="grid grid-cols-3 gap-2 px-4 py-3">
         {/* USDC */}
-        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
-          <img src="/usdc.svg" alt="USDC" width={24} height={24} className="flex-shrink-0" />
-          <div className="flex flex-col">
+        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-2.5 py-3 md:py-2.5">
+          <img src="/usdc.svg" alt="USDC" width={22} height={22} className="flex-shrink-0 md:w-5 md:h-5" />
+          <div className="flex flex-col min-w-0">
             <span className="text-[9px] font-semibold text-blue-600 uppercase tracking-wide leading-none mb-0.5">$USDC</span>
-            <span className="text-sm font-black text-blue-900 leading-tight">{formatUsdc(usdcBalance as bigint | undefined)}</span>
+            <span className="text-sm md:text-xs font-black text-blue-900 leading-tight truncate">{formatUsdc(usdcBalance as bigint | undefined)}</span>
           </div>
         </div>
         {/* BOOZ */}
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-          <img src="/booz.svg" alt="BOOZ" width={24} height={24} className="flex-shrink-0" />
-          <div className="flex flex-col">
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-2.5 py-3 md:py-2.5">
+          <img src="/booz.svg" alt="BOOZ" width={22} height={22} className="flex-shrink-0 md:w-5 md:h-5" />
+          <div className="flex flex-col min-w-0">
             <span className="text-[9px] font-semibold text-[#E63946] uppercase tracking-wide leading-none mb-0.5">$BOOZ</span>
-            <span className="text-sm font-black text-red-900 leading-tight">{formatBooz(boozBalance as bigint | undefined)}</span>
+            <span className="text-sm md:text-xs font-black text-red-900 leading-tight truncate">{formatBooz(boozBalance as bigint | undefined)}</span>
           </div>
         </div>
+        {/* Points */}
+        <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-2.5 py-3 md:py-2.5">
+          <FaCoins className="text-orange-500 flex-shrink-0" size={20} />
+          <div className="flex flex-col min-w-0">
+            <span className="text-[9px] font-semibold text-orange-600 uppercase tracking-wide leading-none mb-0.5">Points</span>
+            <span className="text-sm md:text-xs font-black text-orange-900 leading-tight truncate">{pointsBalance !== undefined ? Number(pointsBalance).toLocaleString() : "—"}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-4 border-t border-gray-200" />
+
+      {/* ── Recent Transactions ── */}
+      <div className="px-4 pt-3 pb-2">
+        <span className="text-xs font-bold text-gray-700">Recent activity</span>
+
+        <div className="mt-2">
+          {txsLoading ? (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="w-6 h-6 rounded-full bg-gray-100 flex-shrink-0" />
+                  <Skeleton className="flex-1 h-3.5 bg-gray-100" />
+                  <Skeleton className="w-8 h-3 bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : recentTxs.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-2">No transactions yet</p>
+          ) : (
+            <div className="space-y-1">
+              {recentTxs.map(tx => {
+                const Icon = TX_ICONS[tx.type]
+                return (
+                  <div key={tx.id} className="flex items-center gap-2 py-1">
+                    <Icon size={12} className={cn("flex-shrink-0", TX_COLORS[tx.type])} />
+                    <span className="flex-1 text-xs text-gray-700 truncate">{TX_LABEL[tx.type]}</span>
+                    <span className="text-[10px] text-gray-400 flex-shrink-0">{timeAgo(tx.timestamp)}</span>
+                    <a
+                      href={`https://${basescanHost}/tx/${tx.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <ExternalLink size={10} />
+                    </a>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <Link
+          href={`/profile/${address?.toLowerCase()}`}
+          onClick={onClose}
+          className="block w-full text-center text-xs font-semibold text-blue-600 hover:text-blue-700 mt-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+        >
+          View All Transactions
+        </Link>
       </div>
 
       <div className="mx-4 border-t border-gray-200" />

@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
 import { Copy, Check } from "lucide-react"
-import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder } from "react-icons/hi2"
+import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder, HiUser } from "react-icons/hi2"
 import { HiBolt } from "react-icons/hi2"
 import { FaRankingStar } from "react-icons/fa6"
 import { RiCopperCoinFill } from "react-icons/ri"
@@ -194,6 +194,7 @@ export function Topbar() {
             {/* Page links */}
             <div className="flex flex-col px-3 py-3 gap-0.5">
               {[
+                { href: "/profile",    label: "Profile",     Icon: HiUser,            color: "text-teal-500"   },
                 { href: "/upcoming",    label: "Upcoming",    Icon: HiMiniForward,     color: "text-blue-500"   },
                 { href: "/history",    label: "History",     Icon: HiFolder,          color: "text-amber-500"  },
                 { href: "/reward",     label: "Reward",      Icon: RiCopperCoinFill,  color: "text-purple-500" },
