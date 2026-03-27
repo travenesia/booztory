@@ -5,7 +5,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Copy, Check } from "lucide-react"
 import { HiMiniBars3BottomLeft, HiMiniShieldCheck, HiMegaphone, HiMiniForward, HiFolder, HiUser } from "react-icons/hi2"
-import { HiBolt } from "react-icons/hi2"
+import { HiBolt, HiChartBar } from "react-icons/hi2"
 import { FaRankingStar } from "react-icons/fa6"
 import { RiCopperCoinFill } from "react-icons/ri"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
@@ -105,6 +105,15 @@ export function Topbar() {
 
         {/* Right: icons + wallet */}
         <div className="flex items-center gap-2">
+          {/* Stats icon — desktop only */}
+          <Link
+            href="/stats"
+            className="hidden md:flex items-center justify-center w-7 h-7 transition-colors text-gray-500 hover:text-gray-900"
+            aria-label="Platform Stats"
+          >
+            <HiChartBar size={18} />
+          </Link>
+
           {/* GM button — desktop only */}
           <GMButton />
 
@@ -200,6 +209,7 @@ export function Topbar() {
                 { href: "/reward",     label: "Reward",      Icon: RiCopperCoinFill,  color: "text-purple-500" },
                 { href: "/leaderboard",label: "Leaderboard", Icon: FaRankingStar,     color: "text-amber-500"  },
                 { href: "/sponsor",    label: "Sponsor",     Icon: HiMegaphone,       color: "text-indigo-500" },
+                { href: "/stats",      label: "Stats",       Icon: HiChartBar,        color: "text-cyan-500"   },
                 { href: "/faq",        label: "FAQ",         Icon: HiMiniShieldCheck, color: "text-gray-500"   },
               ].map(({ href, label, Icon, color }) => (
                 <Link
