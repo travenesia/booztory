@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
-import { useSession, signIn } from "next-auth/react"
+import { useSession, signIn, signOut } from "next-auth/react"
 import { useAccount, useSignMessage, useAccountEffect, useSwitchChain, useDisconnect } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { APP_CHAIN } from "@/lib/wagmi"
@@ -22,7 +22,7 @@ const USER_PROFILE_CACHE_KEY = "user_profile"
 
 export function ConnectWalletButton() {
   const { data: session, status } = useSession()
-  const { address, isConnected: isWalletConnected } = useAccount()
+  const { address, isConnected: isWalletConnected, status: walletStatus } = useAccount()
   const { signMessageAsync } = useSignMessage()
   const { switchChainAsync } = useSwitchChain()
   const { disconnect } = useDisconnect()
@@ -143,6 +143,29 @@ export function ConnectWalletButton() {
     [handleSignIn],
   )
 
+  // Clear stale session when wagmi is fully disconnected (not mid-reconnect)
+  useEffect(() => {
+    if (isAuthenticated && walletStatus === "disconnected") {
+      signOut({ redirect: false })
+    }
+  }, [isAuthenticated, walletStatus])
+
+  // Re-authenticate when the user switches wallet accounts while a session is active
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      address &&
+      session?.user?.walletAddress &&
+      address.toLowerCase() !== session.user.walletAddress.toLowerCase()
+    ) {
+      if (isMiniApp()) {
+        handleQuickAuth(address)
+      } else {
+        handleSignIn(address, APP_CHAIN.id)
+      }
+    }
+  }, [address, isAuthenticated, session?.user?.walletAddress, handleQuickAuth, handleSignIn])
+
   // isMiniApp() is synchronous — MiniAppInit sets the flag before calling connect(),
   // so by the time onConnect fires here, the flag is already correct.
   useAccountEffect({
@@ -154,6 +177,9 @@ export function ConnectWalletButton() {
           handleSignIn(address, chainId)
         }
       }
+    },
+    onDisconnect() {
+      signOut({ redirect: false })
     },
   })
 
