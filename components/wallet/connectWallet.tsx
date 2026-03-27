@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useSession, signIn, signOut } from "next-auth/react"
 import { useAccount, useSignMessage, useAccountEffect, useSwitchChain, useDisconnect } from "wagmi"
-import { useAppKit } from "@reown/appkit/react"
+import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { useWalletName } from "@/hooks/useWalletName"
 import { SiweMessage } from "siwe"
@@ -26,7 +26,7 @@ export function ConnectWalletButton() {
   const { signMessageAsync } = useSignMessage()
   const { switchChainAsync } = useSwitchChain()
   const { disconnect } = useDisconnect()
-  const { open: openConnectModal } = useAppKit()
+  const { openConnectModal } = useConnectModal()
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null)
@@ -178,7 +178,7 @@ export function ConnectWalletButton() {
 
   const handleConnect = () => {
     if (isMiniApp()) return // MiniAppInit handles wallet connect for Farcaster users
-    openConnectModal()
+    openConnectModal?.()
   }
 
   const buttonContent = () => {

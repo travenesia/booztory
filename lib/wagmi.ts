@@ -1,6 +1,4 @@
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi"
-import { createAppKit } from "@reown/appkit/react"
-import type { AppKitNetwork } from "@reown/appkit/networks"
+import { getDefaultConfig } from "@rainbow-me/rainbowkit"
 import { http, fallback } from "wagmi"
 import { base as baseChain, baseSepolia, mainnet } from "wagmi/chains"
 
@@ -19,14 +17,16 @@ const base = {
   },
 } as const
 
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!
 const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
 
-const networks = [APP_CHAIN, base, mainnet] as [AppKitNetwork, ...AppKitNetwork[]]
+// Base Builder Code: bc_qaqhzzqp
+// Appended to all transaction calldata for on-chain attribution
+const DATA_SUFFIX = "0x62635f716171687a7a71700b0080218021802180218021802180218021" as `0x${string}`
 
-export const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks,
+export const wagmiConfig = getDefaultConfig({
+  appName: "Booztory",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+  chains: [APP_CHAIN, base, mainnet],
   transports: {
     [baseSepolia.id]: fallback([
       http(`https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`),
@@ -39,20 +39,5 @@ export const wagmiAdapter = new WagmiAdapter({
     [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`),
   },
   ssr: true,
+  dataSuffix: DATA_SUFFIX,
 })
-
-createAppKit({
-  adapters: [wagmiAdapter],
-  networks,
-  projectId,
-  defaultNetwork: APP_CHAIN,
-  features: {
-    analytics: false,
-    email: false,
-    socials: [],
-    emailShowWallets: false,
-  },
-  themeMode: "light",
-})
-
-export const wagmiConfig = wagmiAdapter.wagmiConfig
