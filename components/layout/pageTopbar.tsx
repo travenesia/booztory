@@ -3,7 +3,7 @@
 import React from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { HiMiniArrowSmallLeft } from "react-icons/hi2"
+import { HiMiniArrowSmallLeft, HiChartBar } from "react-icons/hi2"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
@@ -76,6 +76,17 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
         <div className="flex items-center gap-2">
           {/* Extra slot — mobile only (e.g. shortcut icon on specific pages) */}
           {rightExtra && <div className="md:hidden">{rightExtra}</div>}
+          {/* Stats icon — desktop only */}
+          <Link
+            href="/stats"
+            className={cn(
+              "hidden md:flex items-center justify-center w-7 h-7 transition-colors",
+              pathname === "/stats" ? "text-[#E63946]" : "text-gray-500 hover:text-gray-900"
+            )}
+            aria-label="Platform Stats"
+          >
+            <HiChartBar size={18} />
+          </Link>
           {/* GM button — desktop */}
           <GMButton />
 

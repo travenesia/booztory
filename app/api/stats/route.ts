@@ -15,6 +15,12 @@ const QUERY = `{
     ticketsMinted
     pointsBurned
   }
+  donationEvents(first: 1000) {
+    id
+  }
+  drawnRaffles(first: 1000) {
+    id
+  }
 }`
 
 export async function GET() {
@@ -39,7 +45,7 @@ export async function GET() {
       throw new Error(json.errors[0]?.message ?? "Subgraph query error")
     }
 
-    const { wallets = [], gmclaimEvents = [], ticketsConvertedEvents = [] } = json.data ?? {}
+    const { wallets = [], gmclaimEvents = [], ticketsConvertedEvents = [], donationEvents = [], drawnRaffles = [] } = json.data ?? {}
 
     // Content
     const totalSlotsMinted = wallets.reduce((sum: number, w: { totalSlots: string }) => sum + Number(w.totalSlots), 0)
@@ -62,6 +68,12 @@ export async function GET() {
       (sum: number, e: { ticketsMinted: string }) => sum + Number(e.ticketsMinted),
       0
     )
+    const totalPointsBurned = ticketsConvertedEvents.reduce(
+      (sum: number, e: { pointsBurned: string }) => sum + Number(e.pointsBurned),
+      0
+    )
+    const totalDonationCount = donationEvents.length
+    const totalRafflesDrawn = drawnRaffles.length
     const totalPrizePoolPaid = parseFloat(
       (wallets.reduce((sum: number, w: { totalWinnings: string }) => sum + Number(w.totalWinnings), 0) / 1_000_000).toFixed(2)
     )
@@ -78,6 +90,9 @@ export async function GET() {
         totalBOOZEarned,
         totalPointsEarned,
         totalTicketsIssued,
+        totalPointsBurned,
+        totalDonationCount,
+        totalRafflesDrawn,
         totalPrizePoolPaid,
         totalUniqueWinners,
       },

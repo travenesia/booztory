@@ -143,13 +143,6 @@ export function ConnectWalletButton() {
     [handleSignIn],
   )
 
-  // Clear stale session when wagmi is fully disconnected (not mid-reconnect)
-  useEffect(() => {
-    if (isAuthenticated && walletStatus === "disconnected") {
-      signOut({ redirect: false })
-    }
-  }, [isAuthenticated, walletStatus])
-
   // Re-authenticate when the user switches wallet accounts while a session is active
   useEffect(() => {
     if (
@@ -208,8 +201,9 @@ export function ConnectWalletButton() {
 
   const isDisabled = isLoading || status === "loading"
 
-  // ── Unauthenticated — plain connect button ──────────────────────────────────
-  if (!isAuthenticated) {
+  // ── Unauthenticated or ghost session (session alive but wallet gone) ────────
+  // walletStatus "reconnecting" = wagmi is mid-reconnect on page load — don't flash Connect
+  if (!isAuthenticated || (!isWalletConnected && walletStatus !== "reconnecting")) {
     return (
       <div className="flex flex-col items-center">
         <Button
