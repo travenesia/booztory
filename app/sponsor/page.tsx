@@ -26,8 +26,26 @@ const AD_TYPES = [
 
 type AdTypeId = "image" | "embed" | "text"
 
-const RATIO_OPTIONS = ["1:1", "16:9", "9:16"] as const
+const RATIO_OPTIONS = ["1:1", "16:9", "9:16", "4:5"] as const
 type Ratio = typeof RATIO_OPTIONS[number]
+
+const RATIO_VALUES: Record<Ratio, number> = {
+  "1:1":  1,
+  "16:9": 16 / 9,
+  "9:16": 9 / 16,
+  "4:5":  4 / 5,
+}
+
+function closestRatio(w: number, h: number): Ratio {
+  const actual = w / h
+  let best: Ratio = "16:9"
+  let bestDiff = Infinity
+  for (const [r, val] of Object.entries(RATIO_VALUES) as [Ratio, number][]) {
+    const diff = Math.abs(actual - val)
+    if (diff < bestDiff) { bestDiff = diff; best = r as Ratio }
+  }
+  return best
+}
 
 const APP_STATUS_MAP = {
   0: { label: "Pending",  color: "text-amber-700 bg-amber-50 border-amber-200"  },
@@ -249,13 +267,14 @@ function AdPreview({
       return { width: "100%", height: "152px" }
     }
 
-    const isVertical = ratio === "9:16" || ct === "youtubeshorts" || ct === "tiktok"
+    const isVertical = ratio === "9:16" || ratio === "4:5" || ct === "youtubeshorts" || ct === "tiktok"
     const cw = containerWidth ?? 400
 
     if (isVertical) {
-      // Portrait: fix height, compute width from 9:16
+      // Portrait: fix height, derive width from the actual portrait ratio
       const h = PREVIEW_HEIGHT
-      const w = Math.min(h * (9 / 16), cw)
+      const portraitAspect = ratio === "4:5" ? (4 / 5) : (9 / 16)
+      const w = Math.min(h * portraitAspect, cw)
       return { width: `${w}px`, height: `${h}px`, margin: "0 auto" }
     } else {
       // Landscape: fill container width, compute height from 16:9 or 1:1
@@ -278,7 +297,7 @@ function AdPreview({
             <img
               src={imageUrl}
               alt="Ad preview"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
             />
           )}
@@ -739,6 +758,7 @@ export default function SponsorPage() {
   const [sponsorName,  setSponsorName]  = useState("")
   const [imageUrl,     setImageUrl]     = useState("")
   const [ratio,        setRatio]        = useState<Ratio>("16:9")
+  const [ratioAutoDetected, setRatioAutoDetected] = useState(false)
   const [embedUrl,     setEmbedUrl]     = useState("")
   const [adText,       setAdText]       = useState("")
   const [tagline,      setTagline]      = useState("")
@@ -748,6 +768,23 @@ export default function SponsorPage() {
   const [submitStep,   setSubmitStep]   = useState<1 | 2>(1)
   const [submitDone,   setSubmitDone]   = useState(false)
   const adTextRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-detect ratio from image URL dimensions (debounced 600ms)
+  useEffect(() => {
+    const url = imageUrl.trim()
+    if (!url) return
+    const timer = setTimeout(() => {
+      const img = new window.Image()
+      img.onload = () => {
+        if (img.naturalWidth && img.naturalHeight) {
+          setRatio(closestRatio(img.naturalWidth, img.naturalHeight))
+          setRatioAutoDetected(true)
+        }
+      }
+      img.src = url
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [imageUrl])
 
   const applyFormat = useCallback((marker: string) => {
     const el = adTextRef.current
@@ -1175,14 +1212,21 @@ export default function SponsorPage() {
                   )}
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                      Aspect Ratio
-                    </label>
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Aspect Ratio
+                      </label>
+                      {ratioAutoDetected && (
+                        <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5">
+                          auto
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       {RATIO_OPTIONS.map(r => (
                         <button
                           key={r}
-                          onClick={() => setRatio(r)}
+                          onClick={() => { setRatio(r); setRatioAutoDetected(false) }}
                           className={cn(
                             "px-4 py-2 rounded-lg border text-sm font-semibold transition-all",
                             ratio === r

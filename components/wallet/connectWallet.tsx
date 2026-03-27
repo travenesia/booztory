@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useSession, signIn, signOut } from "next-auth/react"
 import { useAccount, useSignMessage, useAccountEffect, useSwitchChain, useDisconnect } from "wagmi"
-import { useConnectModal } from "@rainbow-me/rainbowkit"
+import { useAppKit } from "@reown/appkit/react"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { useWalletName } from "@/hooks/useWalletName"
 import { SiweMessage } from "siwe"
@@ -26,7 +26,7 @@ export function ConnectWalletButton() {
   const { signMessageAsync } = useSignMessage()
   const { switchChainAsync } = useSwitchChain()
   const { disconnect } = useDisconnect()
-  const { openConnectModal } = useConnectModal()
+  const { open: openConnectModal } = useAppKit()
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null)
@@ -178,10 +178,18 @@ export function ConnectWalletButton() {
 
   const handleConnect = () => {
     if (isMiniApp()) return // MiniAppInit handles wallet connect for Farcaster users
-    if (openConnectModal) openConnectModal()
+    openConnectModal()
   }
 
   const buttonContent = () => {
+    if (walletStatus === "reconnecting" || walletStatus === "connecting") {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Connecting...</span>
+        </>
+      )
+    }
     if (isLoading || status === "loading") {
       return (
         <>
@@ -199,7 +207,7 @@ export function ConnectWalletButton() {
     return <span>Connect</span>
   }
 
-  const isDisabled = isLoading || status === "loading"
+  const isDisabled = isLoading || status === "loading" || walletStatus === "reconnecting" || walletStatus === "connecting"
 
   // ── Unauthenticated or ghost session (session alive but wallet gone) ────────
   // walletStatus "reconnecting" = wagmi is mid-reconnect on page load — don't flash Connect

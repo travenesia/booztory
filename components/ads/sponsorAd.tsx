@@ -254,6 +254,11 @@ function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; f
         if (cw > w) { cw = w; ch = cw / (9 / 16) }
         return { width: `${Math.max(60, cw)}px`, height: `${Math.max(100, ch)}px`, margin: "0 auto" }
       }
+      if (ad.ratio === "4:5") {
+        let ch = h, cw = ch * (4 / 5)
+        if (cw > w) { cw = w; ch = cw / (4 / 5) }
+        return { width: `${Math.max(60, cw)}px`, height: `${Math.max(100, ch)}px`, margin: "0 auto" }
+      }
       let cw = w, ch = cw / (16 / 9)
       if (ch > h) { ch = h; cw = ch * (16 / 9) }
       return { width: `${Math.max(100, cw)}px`, height: `${Math.max(60, ch)}px`, margin: "0 auto" }
@@ -271,7 +276,7 @@ function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; f
           <img
             src={ad.imageUrl}
             alt={ad.sponsorName || "Sponsor"}
-            className="rounded-lg object-cover"
+            className="rounded-lg object-contain"
             style={fittedStyle}
           />
         )}
@@ -311,9 +316,9 @@ function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; f
         <img
           src={ad.imageUrl}
           alt={ad.sponsorName || "Sponsor"}
-          className={cn("w-full object-cover", !flush && "rounded-lg")}
+          className={cn("w-full object-contain", !flush && "rounded-lg")}
           style={{
-            aspectRatio: ad.ratio === "9:16" ? "9/16" : ad.ratio === "1:1" ? "1/1" : "16/9",
+            aspectRatio: ad.ratio === "9:16" ? "9/16" : ad.ratio === "4:5" ? "4/5" : ad.ratio === "1:1" ? "1/1" : "16/9",
             ...(flush ? {} : { maxHeight: "260px" }),
           }}
         />
@@ -366,7 +371,7 @@ function AdPanelFooter({ ad, small }: { ad: ActiveAd; small?: boolean }) {
       {/* Left: tagline */}
       <div className="min-w-0 flex-1">
         {ad.tagline && (
-          <span className={cn("text-gray-500 italic truncate", small ? "text-[10px]" : "text-xs")}>
+          <span className={cn("text-gray-500 truncate", small ? "text-[10px]" : "text-xs")}>
             {ad.tagline}
           </span>
         )}
@@ -423,7 +428,7 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
       let vw = availW, vh = availH
 
       if (ad.adType === "image") {
-        const [rw, rh] = ad.ratio === "9:16" ? [9, 16] : ad.ratio === "1:1" ? [1, 1] : [16, 9]
+        const [rw, rh] = ad.ratio === "9:16" ? [9, 16] : ad.ratio === "4:5" ? [4, 5] : ad.ratio === "1:1" ? [1, 1] : [16, 9]
         const maxW = (ad.ratio === "16:9" || ad.ratio === "1:1") ? Math.min(availW, 560) : availW
         vw = maxW; vh = Math.round(vw * rh / rw)
         if (vh > availH) { vh = availH; vw = Math.round(vh * rw / rh) }
@@ -473,7 +478,7 @@ export function SponsorAdDesktopPopover({ className }: { className?: string }) {
           {ad.sponsorName}
         </span>
         {ad.tagline && (
-          <span className="text-gray-400 italic truncate hidden sm:inline">· {ad.tagline}</span>
+          <span className="text-gray-400 truncate hidden sm:inline">· {ad.tagline}</span>
         )}
         <span className="ml-auto text-gray-400 font-mono tabular-nums flex-shrink-0">{countdown}</span>
         <span className="text-gray-300 group-hover:text-gray-400 transition-colors flex-shrink-0 ml-1">
@@ -619,7 +624,7 @@ export function SponsorAdFloatingBar() {
       let vw = availW, vh = availH
 
       if (ad.adType === "image") {
-        const [rw, rh] = ad.ratio === "9:16" ? [9, 16] : ad.ratio === "1:1" ? [1, 1] : [16, 9]
+        const [rw, rh] = ad.ratio === "9:16" ? [9, 16] : ad.ratio === "4:5" ? [4, 5] : ad.ratio === "1:1" ? [1, 1] : [16, 9]
         const maxW = (ad.ratio === "16:9" || ad.ratio === "1:1") ? Math.min(availW, 560) : availW
         vw = maxW; vh = Math.round(vw * rh / rw)
         if (vh > availH) { vh = availH; vw = Math.round(vh * rw / rh) }
@@ -674,7 +679,7 @@ export function SponsorAdFloatingBar() {
               <span className="text-sky-800 group-hover:text-sky-900 transition-colors font-semibold">{ad.sponsorName}</span>
             </span>
             {ad.tagline && (
-              <span className="text-sky-500 italic truncate hidden sm:inline">· {ad.tagline}</span>
+              <span className="text-sky-500 truncate hidden sm:inline">· {ad.tagline}</span>
             )}
             <span className="text-sky-600 font-mono tabular-nums flex-shrink-0">{countdown}</span>
             <HiMiniArrowRight className="text-sky-400 group-hover:text-sky-600 transition-colors flex-shrink-0 w-3.5 h-3.5" />

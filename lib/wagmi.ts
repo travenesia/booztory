@@ -1,9 +1,8 @@
-import { getDefaultConfig } from "@rainbow-me/rainbowkit"
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi"
+import { createAppKit } from "@reown/appkit/react"
+import type { AppKitNetwork } from "@reown/appkit/networks"
 import { http, fallback } from "wagmi"
 import { base as baseChain, baseSepolia, mainnet } from "wagmi/chains"
-import { Attribution } from "ox/erc8021"
-
-const DATA_SUFFIX = Attribution.toDataSuffix({ codes: ["bc_qaqhzzqp"] })
 
 // Toggle this to switch between testnet and mainnet.
 // Change to `APP_CHAIN = base` when deploying to production.
@@ -20,12 +19,14 @@ const base = {
   },
 } as const
 
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!
 const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
 
-export const wagmiConfig = getDefaultConfig({
-  appName: "Booztory",
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-  chains: [APP_CHAIN, base, mainnet],
+const networks = [APP_CHAIN, base, mainnet] as [AppKitNetwork, ...AppKitNetwork[]]
+
+export const wagmiAdapter = new WagmiAdapter({
+  projectId,
+  networks,
   transports: {
     [baseSepolia.id]: fallback([
       http(`https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`),
@@ -38,5 +39,20 @@ export const wagmiConfig = getDefaultConfig({
     [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`),
   },
   ssr: true,
-  dataSuffix: DATA_SUFFIX,
 })
+
+createAppKit({
+  adapters: [wagmiAdapter],
+  networks,
+  projectId,
+  defaultNetwork: APP_CHAIN,
+  features: {
+    analytics: false,
+    email: false,
+    socials: [],
+    emailShowWallets: false,
+  },
+  themeMode: "light",
+})
+
+export const wagmiConfig = wagmiAdapter.wagmiConfig

@@ -4,7 +4,7 @@ import { useAccount, useDisconnect } from "wagmi"
 import { useReadContract } from "wagmi"
 import { useSession, signOut } from "next-auth/react"
 import { useState, useEffect } from "react"
-import { Copy, Check, ExternalLink, Ticket } from "lucide-react"
+import { Copy, Check, ExternalLink, Ticket, Loader2 } from "lucide-react"
 import { HiBolt, HiOutlinePower, HiCube, HiFire, HiStar, HiHeart, HiTrophy } from "react-icons/hi2"
 import { RiExchangeFundsLine } from "react-icons/ri"
 import Link from "next/link"
@@ -93,7 +93,7 @@ function formatBooz(raw: bigint | undefined): string {
 
 export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
   const { address } = useAccount()
-  const { disconnect } = useDisconnect()
+  const { disconnect, isPending: isDisconnecting } = useDisconnect()
   const { data: session } = useSession()
   const [copied, setCopied] = useState(false)
 
@@ -276,10 +276,13 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
       <div className="px-4 py-3">
         <button
           onClick={handleDisconnect}
-          className="w-full flex items-center justify-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg px-3 py-2 transition-colors"
+          disabled={isDisconnecting}
+          className="w-full flex items-center justify-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <HiOutlinePower className="w-4 h-4" />
-          Disconnect
+          {isDisconnecting
+            ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Disconnecting...</span></>
+            : <><HiOutlinePower className="w-4 h-4" /><span>Disconnect</span></>
+          }
         </button>
       </div>
     </div>

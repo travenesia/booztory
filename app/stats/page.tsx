@@ -4,6 +4,7 @@ import React, { useState, useEffect, Fragment } from "react"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { cn } from "@/lib/utils"
 import { HiChartBar } from "react-icons/hi2"
 
@@ -122,7 +123,6 @@ export default function StatsPage() {
   return (
     <main className="min-h-screen pt-12 pb-20">
       <PageTopbar title="Stats" />
-      <Navbar />
 
       <section className="pt-6 pb-[80px] md:pb-[56px] px-6 max-w-[650px] mx-auto w-full">
 
@@ -262,6 +262,13 @@ export default function StatsPage() {
         )}
 
       </section>
+
+      <div className="fixed bottom-12 md:bottom-0 left-0 right-0 h-20 pointer-events-none z-40">
+        <div className="relative h-full">
+          <ProgressiveBlur height="100%" position="bottom" />
+        </div>
+      </div>
+      <Navbar />
     </main>
   )
 }
