@@ -1,6 +1,9 @@
 import mdx from '@next/mdx'
+import bundleAnalyzer from '@next/bundle-analyzer'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
+
+const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === 'true' })
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -55,6 +58,7 @@ const nextConfig = {
       'react-tweet',
       'lucide-react',
       'iconoir-react',
+      'react-icons',
       '@radix-ui/react-dialog',
       '@radix-ui/react-toast',
       '@radix-ui/react-label',
@@ -155,4 +159,4 @@ const nextConfig = {
   trailingSlash: false,
 }
 
-export default withMDX(nextConfig)
+export default withBundleAnalyzer(withMDX(nextConfig))

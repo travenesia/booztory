@@ -11,8 +11,7 @@ import { WagmiClientWrapper } from "@/providers/wagmi-client-wrapper"
 import { MiniAppInit } from "@/components/miniapp-init"
 import { FlickeringGrid } from "@/components/ui/flickering-grid"
 import { SubmitDrawerProvider } from "@/providers/submit-drawer-provider"
-import { ContentSubmissionDrawer } from "@/components/modals/submitContent"
-import { SponsorAdSidebar } from "@/components/ads/sponsorAd"
+import { ContentSubmissionDrawer, SponsorAdSidebar } from "@/providers/lazy-ui"
 
 const nunito = Nunito({
   subsets: ["latin"],
