@@ -72,14 +72,14 @@ Booztory is exclusively deployed on Base. There is no multi-chain deployment —
 
 **11. Do you already have a token?**
 
-Yes. **BOOZ** (`BooztoryToken.sol`) is an ERC-20 reward token deployed on Base Sepolia. It is earned by minting slots and completing daily GM streaks, and spent to get discounted or free slots. Currently soulbound (Phase 1, no trading). Designed as a SuperchainERC20 for future cross-chain expansion. Contract address: `0x02A2830552Da5caA0173a0fcbbc005FC70339855` (testnet).
+Yes. **BOOZ** (`BooztoryToken.sol`) is an ERC-20 reward token deployed on Base Sepolia. It is earned by minting slots and completing daily GM streaks, and spent to get discounted or free slots. Currently soulbound (Phase 1, no trading). Designed as a SuperchainERC20 for future cross-chain expansion. Contract address: `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1` (testnet).
 
 **12. Contract addresses** *(if applicable)*
 
 Base Sepolia (testnet):
-- Booztory (ERC-721): `0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68`
-- BooztoryToken (BOOZ): `0x02A2830552Da5caA0173a0fcbbc005FC70339855`
-- BooztoryRaffle: `0xd7f8AC77392f6C1D21eA6B5fb57861e759e250B5`
+- Booztory (ERC-721): `0xf8d6064a173A4a3EA83a07309067939AD45E87cC`
+- BooztoryToken (BOOZ): `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1`
+- BooztoryRaffle: `0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2`
 
 Base Mainnet: _pending deployment_
 
@@ -192,9 +192,9 @@ Pre-revenue. Protocol is designed to generate revenue through:
 **24. Dune dashboards / public contract addresses**
 
 Smart contracts (Base Sepolia testnet):
-- Booztory: `0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68`
-- BooztoryToken (BOOZ): `0x02A2830552Da5caA0173a0fcbbc005FC70339855`
-- BooztoryRaffle: `0xd7f8AC77392f6C1D21eA6B5fb57861e759e250B5`
+- Booztory: `0xf8d6064a173A4a3EA83a07309067939AD45E87cC`
+- BooztoryToken (BOOZ): `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1`
+- BooztoryRaffle: `0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2`
 
 Dune dashboard: `[TODO: Set up after mainnet launch]`
 

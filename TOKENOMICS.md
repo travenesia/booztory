@@ -329,7 +329,7 @@ Always verify at https://docs.chain.link/vrf/v2-5/supported-networks before depl
 ### Base Sepolia (Testnet — current as of 2026-03-27)
 | Contract | Address | Status |
 |---|---|---|
-| Booztory | `0x28C5A076d234975FC72a8Ca79b4E1a510b904418` | ✅ Current (unchanged) |
+| Booztory | `0xf8d6064a173A4a3EA83a07309067939AD45E87cC` | ✅ Redeployed (GM try/catch fix) |
 | BooztoryToken (BOOZ) | `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1` | ✅ Redeployed (MAX_SUPPLY + tranche treasury) |
 | BooztoryRaffle | `0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2` | ✅ Redeployed (new token address) |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | — |
@@ -461,9 +461,9 @@ Confirmed on current Base Sepolia deploy:
 - [ ] Set up Dune analytics dashboard
 
 ### Post-Launch
-- [ ] Rate limiting on API endpoints
+- [x] Rate limiting on API endpoints (Upstash Redis) ✅
 - [ ] Creator analytics dashboard
-- [ ] Instagram embed + custom video upload
+- [ ] ~~Instagram embed + custom video upload~~ (cancelled)
 - [ ] BOOZ Phase 2: `setSoulbound(false)` → `mintTreasury()` tranche → seed Aerodrome/Uniswap v3 BOOZ/USDC pool
 - [ ] Additional BOOZ burn sinks: slot boost, leaderboard badge, governance
 - [ ] NFT Pass collection: design, deploy, snapshot slot minters for allowlist
@@ -628,7 +628,7 @@ graph init --from-contract <BOOZTORY_ADDRESS> --network base-sepolia
 ```
 
 ### Status
-- [x] Subgraph v0.0.3 deployed (Base Sepolia, startBlock 39218660) ✅
+- [x] Subgraph v0.0.6 deployed (Base Sepolia, Booztory startBlock 39430960, Raffle startBlock 39429911) ✅
 - [x] `/api/leaderboard` route — queries subgraph, 30 min cache ✅
 - [x] `/leaderboard` page — 6 tabs, 30d/All Time, connected wallet row, mock fallback ✅
 - [ ] Update subgraph to Base mainnet at launch (change network + addresses + USDC address in raffle.ts)

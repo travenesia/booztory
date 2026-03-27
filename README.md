@@ -69,8 +69,8 @@ Everything core to the product:
 | Spotify | ✅ Live |
 | Vimeo | ✅ Live |
 | Twitch | ✅ Live |
-| Instagram | 🔜 Coming soon |
-| Custom uploads | 🔜 Coming soon |
+| Instagram | — |
+| Custom uploads | — |
 
 ---
 
@@ -156,6 +156,13 @@ VRF_SUBSCRIPTION_ID=
 
 # Basescan API key — https://basescan.org/apis
 BASESCAN_API_KEY=
+
+# Upstash Redis — rate limiting on API endpoints (https://upstash.com)
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# The Graph subgraph endpoint
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.6
 ```
 
 ### 3. Run the dev server
@@ -280,9 +287,9 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 
 | Contract | Address |
 |---|---|
-| Booztory | `0x28C5A076d234975FC72a8Ca79b4E1a510b904418` |
-| BooztoryToken (BOOZ) | `0x02A2830552Da5caA0173a0fcbbc005FC70339855` |
-| BooztoryRaffle | `0xc94ee6bA5a38961C7B1456C015cE1D24a4A099aF` |
+| Booztory | `0xf8d6064a173A4a3EA83a07309067939AD45E87cC` |
+| BooztoryToken (BOOZ) | `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1` |
+| BooztoryRaffle | `0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2` |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
 ### Base Mainnet
@@ -412,7 +419,8 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] Skeleton loading states across all pages
 - [x] Mobile drawer (Vaul) for GM streak — safe-area safe on all devices
 - [x] Base Sepolia deployment (Booztory + BooztoryToken)
-- [ ] BooztoryRaffle redeployment to Base Sepolia (weeklyPrizes snapshot fix)
+- [x] BooztoryRaffle redeployment to Base Sepolia
+- [x] Rate limiting on API endpoints (Upstash Redis)
 - [ ] Set content type images on-chain (`setContentTypeImage`)
 - [ ] Verify all 3 contracts on Basescan
 - [ ] Base Mainnet deployment
@@ -420,8 +428,6 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [ ] World Chain deployment (World Mini App)
 - [ ] Superchain expansion (OP Mainnet, etc.)
 - [ ] Creator analytics dashboard
-- [ ] Rate limiting on API endpoints
-- [ ] Instagram and custom upload support
 
 ---
 

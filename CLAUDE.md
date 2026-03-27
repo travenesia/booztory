@@ -135,6 +135,7 @@ Both are composed in `app/layout.tsx`. Also includes `MiniappInit` component for
 | `lib/spotifyMetadata.ts` | Spotify oEmbed API for tracks/albums/playlists/artists |
 | `lib/vimeoMetadata.ts` | Vimeo oEmbed API |
 | `lib/utils.ts` | `cn()` Tailwind class merging utility |
+| `lib/ratelimit.ts` | Upstash Redis rate limiters — `externalApiLimiter` (20/min), `dataLimiter` (60/min), `getIp()` helper |
 
 ---
 
@@ -232,8 +233,6 @@ donations  (uint256, cumulative total donated before fee split, 6-decimal units)
 ## Known Issues & TODOs
 
 - [ ] TikTok short URL resolution may fail on CDN-cached HEAD responses
-- [ ] No rate limiting on API endpoints (spam prevention relies solely on slot cost)
-- [ ] **More platforms**: Instagram, custom uploads — mentioned in FAQ, not implemented
 - [ ] **Optimism Superchain expansion** — planned but not started
 - [ ] **Creator dashboard** — no analytics or revenue history
 - [ ] Set content type images on-chain via `setContentTypeImage()` (owner, post-deploy)
@@ -263,5 +262,5 @@ donations  (uint256, cumulative total donated before fee split, 6-decimal units)
 | BooztoryRaffle redeployment (Base Sepolia) | Done ✅ |
 | Add BooztoryRaffle as VRF consumer (Base Sepolia) | Done ✅ |
 | Base Mainnet deployment | Pending |
-| Rate limiting | Not implemented |
+| Rate limiting | Done ✅ — Upstash Redis (`lib/ratelimit.ts`), applied to getTweetData, resolveTiktok, leaderboard, stats |
 | Creator dashboard | Not implemented |
