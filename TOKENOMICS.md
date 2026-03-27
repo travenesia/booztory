@@ -1,6 +1,6 @@
 # Booztory — Tokenomics & Roadmap
 
-Last updated: 2026-03-27 (session 2)
+Last updated: 2026-03-27 (session 3)
 
 ---
 
@@ -9,9 +9,9 @@ Last updated: 2026-03-27 (session 2)
 ### Token Model
 - **Inflationary + Burns** — supply grows with real engagement, burns with utility spend
 - Tokens mint from paid platform actions only — no free claim, no sybil farming
-- No hard cap in Phase 1 — a 250M total-minted cap will be added before DEX listing (see §12)
+- **Hard cap: 100,000,000 BOOZ** (`MAX_SUPPLY`) — enforced on-chain in `mintReward`, `mintTreasury`, `crosschainMint`
 - **Phase 1: Soulbound** — no trading, no farming incentive; mint and burn always allowed
-- **Phase 2:** `setSoulbound(false)` → transfers enabled; seed Uniswap v3 BOOZ/USDC pool from one-time `mintTreasury()`
+- **Phase 2:** `setSoulbound(false)` → transfers enabled; seed LP from `mintTreasury()` tranches
 
 ### Reward Structure
 | Action | Reward |
@@ -53,9 +53,17 @@ Free slot does NOT earn BOOZ — burn path is a dead end.
 - Journey completes at day 90 — no further claims possible
 
 ### Treasury Mint
-- `mintTreasury(address, uint256)` — owner-only, **one-time** call
-- Use case: mint BOOZ to seed Uniswap v3 BOOZ/USDC pool before Phase 2
-- After first call, `treasuryMinted = true` — second call reverts with `TreasuryAlreadyMinted`
+- `mintTreasury(address, uint256)` — owner-only, **tranche-based** (can be called multiple times)
+- Cumulative cap: **10,000,000 BOOZ** (`TREASURY_CAP`) — `treasuryMinted` tracks running total
+- Use cases: LP seeding, investor allocations (via `VestingWallet`), operational reserve
+- Reverts `ExceedsTreasuryCap` if cumulative total would exceed 10M
+- Reverts `ExceedsMaxSupply` if total supply would exceed 100M hard cap
+
+### Investor Allocation (optional)
+- If investors acquired: deploy OpenZeppelin `VestingWallet` per investor, call `mintTreasury(vestingWalletAddress, amount)`
+- Supports 1 investor, 10 investors, or no investors — same `mintTreasury()` call, different recipients
+- Treasury 10M budget: e.g. 1M LP seed now, 2M investor tranche later, remainder reserved
+- No investor in early phase: seed LP directly with small amount (e.g. 500k BOOZ + $500–1,000 USDC)
 
 ### Contract Architecture
 - `mintReward(address, uint256)` — called by Booztory after paid mint / GM claim
@@ -318,12 +326,12 @@ Always verify at https://docs.chain.link/vrf/v2-5/supported-networks before depl
 
 ## 8. Deployed Addresses
 
-### Base Sepolia (Testnet — current)
+### Base Sepolia (Testnet — current as of 2026-03-27)
 | Contract | Address | Status |
 |---|---|---|
-| Booztory | `0xF94E370201E9C3FaDDA1d61Ee7797E7592964b68` | ✅ Current |
-| BooztoryToken (BOOZ) | `0x02A2830552Da5caA0173a0fcbbc005FC70339855` | ✅ Current |
-| BooztoryRaffle | `0xd7f8AC77392f6C1D21eA6B5fb57861e759e250B5` | ✅ Current |
+| Booztory | `0x28C5A076d234975FC72a8Ca79b4E1a510b904418` | ✅ Current (unchanged) |
+| BooztoryToken (BOOZ) | `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1` | ✅ Redeployed (MAX_SUPPLY + tranche treasury) |
+| BooztoryRaffle | `0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2` | ✅ Redeployed (new token address) |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | — |
 
 ### Base Mainnet
@@ -337,7 +345,7 @@ Always verify at https://docs.chain.link/vrf/v2-5/supported-networks before depl
 Confirmed on current Base Sepolia deploy:
 - `setAuthorizedMinter(booztory, true)` + `setAuthorizedMinter(raffle, true)` on BooztoryToken ✅
 - `setRewardToken()` and `setRaffle()` called on Booztory ✅
-- BooztoryRaffle added as Chainlink VRF consumer ✅
+- BooztoryRaffle added as Chainlink VRF consumer ⚠️ (old raffle must be removed, new one added)
 - `acceptedAt` field in `SponsorApplication` struct ✅
 - ETH prize support (`receive()`, `address(0)` sentinel, ETH branch in `withdraw()`) ✅
 
@@ -437,9 +445,10 @@ Confirmed on current Base Sepolia deploy:
 
 ### Testnet — Immediate
 - [x] Redeploy all 3 contracts to Base Sepolia ✅
-- [x] Add BooztoryRaffle as Chainlink VRF consumer ✅
+- [x] Redeploy BooztoryToken (MAX_SUPPLY + tranche treasury) + BooztoryRaffle (new token) ✅
+- [x] Verify all contracts on Basescan ✅
+- [ ] Remove old BooztoryRaffle from Chainlink VRF subscription, add new one
 - [x] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet ✅
-- [x] Verify all 3 contracts on Basescan ✅
 - [x] End-to-end QA: mint → earn BOOZ → streak → raffle draw ✅
 
 ### Mainnet Launch
@@ -455,7 +464,7 @@ Confirmed on current Base Sepolia deploy:
 - [ ] Rate limiting on API endpoints
 - [ ] Creator analytics dashboard
 - [ ] Instagram embed + custom video upload
-- [ ] BOOZ Phase 2: `setSoulbound(false)` → `mintTreasury()` → seed Uniswap v3 BOOZ/USDC pool
+- [ ] BOOZ Phase 2: `setSoulbound(false)` → `mintTreasury()` tranche → seed Aerodrome/Uniswap v3 BOOZ/USDC pool
 - [ ] Additional BOOZ burn sinks: slot boost, leaderboard badge, governance
 - [ ] NFT Pass collection: design, deploy, snapshot slot minters for allowlist
 - [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform — after NFT design is finalized
@@ -493,7 +502,14 @@ Confirmed on current Base Sepolia deploy:
 
 ---
 
-## 12. Future Token Plan
+## 12. Token Supply Plan
+
+### Supply Breakdown
+| Bucket | Amount | Source |
+|---|---|---|
+| User rewards (mint, GM, donate, raffle) | Up to ~90M | `mintReward` via Booztory + Raffle |
+| Treasury (LP + investors) | Up to 10M | `mintTreasury` owner-only, tranche-based |
+| **Hard cap** | **100,000,000 BOOZ** | On-chain `MAX_SUPPLY` constant |
 
 ### Projected Emission (current activity baseline)
 | Source | BOOZ/year |
@@ -502,22 +518,24 @@ Confirmed on current Base Sepolia deploy:
 | GM streaks (10k users, avg 1–3/day) | ~3,650,000–10,950,000 |
 | Raffle rewards (100k BOOZ/week) | ~5,200,000 |
 | Donations (est. 100 donors/day × 1,000 BOOZ) | ~36,500,000 |
-| **Total (approx)** | **~80–87M BOOZ/year** |
+| **Total rewards/year (approx)** | **~80–87M BOOZ** |
 
-### Total Minted Cap — Option B
-- **Hard cap: 250,000,000 BOOZ** total ever minted
-- Cap tracks gross mints only — burns do not refill the budget
-- After cap: `mintReward()` reverts — platform shifts to burn-only economy
-- Cap can be raised via `setMaxSupply(newCap)` — no migration, no redeployment
+100M cap is a credibility ceiling — natural burn rate (10k BOOZ free slots) makes it practically deflationary at scale.
 
-**Projected timeline:**
-- Year 1: ~60M minted (50M rewards + 10M treasury)
-- Year 5: ~250M cap reached at current growth rate
+### LP Seeding Strategy
+| Scenario | BOOZ minted | USDC paired | Implied price |
+|---|---|---|---|
+| No investor (bootstrap) | 500k–1M BOOZ | $500–1,000 | ~$0.001/BOOZ |
+| 1 investor ($10k) | 2M BOOZ (vested) | $10,000 | ~$0.005/BOOZ |
+| Multiple investors | Up to 10M BOOZ total | per deal | — |
+
+Remaining treasury budget stays reserved — no obligation to mint it all upfront.
 
 ### Implementation Status
-- [x] Treasury cap (10M, one-time) — in `BooztoryToken.sol` ✅
-- [ ] Total minted cap (250M) — to be added before DEX listing
-- [ ] `setMaxSupply()` owner function
+- [x] Treasury cap (10M, tranche-based) — in `BooztoryToken.sol` ✅
+- [x] Hard cap (100M `MAX_SUPPLY`) — in `BooztoryToken.sol` ✅
+- [x] `ExceedsMaxSupply` error on `mintReward`, `mintTreasury`, `crosschainMint` ✅
+- [ ] Investor vesting script (`scripts/createVesting.ts`) — when needed
 
 ---
 

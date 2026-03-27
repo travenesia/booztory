@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { dataLimiter, getIp } from "@/lib/ratelimit"
 
 const QUERY = `{
   wallets(first: 1000) {
@@ -23,7 +24,10 @@ const QUERY = `{
   }
 }`
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { success } = await dataLimiter.limit(getIp(request))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
   const subgraphUrl = process.env.SUBGRAPH_URL
   if (!subgraphUrl) {
     return NextResponse.json({ error: "SUBGRAPH_URL not configured" }, { status: 503 })

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
+import { externalApiLimiter, getIp } from "@/lib/ratelimit"
 
 export async function GET(request: Request) {
+  const { success } = await externalApiLimiter.limit(getIp(request))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   const { searchParams } = new URL(request.url)
   const shortUrl = searchParams.get("shortUrl")
 

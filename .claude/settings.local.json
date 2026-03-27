@@ -20,7 +20,8 @@
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(npx graph:*)",
       "Bash(pnpm remove:*)",
-      "Bash(ls d:/Projects/Blockchain/Superchain/Booztory/.next/static/chunks/*.js)"
+      "Bash(ls d:/Projects/Blockchain/Superchain/Booztory/.next/static/chunks/*.js)",
+      "Bash(npx hardhat:*)"
     ],
     "additionalDirectories": [
       "d:\\Projects\\Blockchain\\Superchain\\Booztory\\app\\profile"

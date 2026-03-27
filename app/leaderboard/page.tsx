@@ -149,9 +149,52 @@ function PodiumCard({ entry, rank, category }: { entry: LeaderEntry; rank: numbe
   )
 }
 
-function PodiumTop3({ entries, category }: { entries: LeaderEntry[]; category: CategoryId }) {
-  if (entries.length === 0) return null
+function PodiumEmpty({ rank }: { rank: 1 | 2 | 3 }) {
+  const isFirst = rank === 1
+  const cfg = PODIUM_CONFIG[rank]
 
+  return (
+    <div className="flex flex-col items-center w-full">
+      {isFirst
+        ? <span className="text-2xl leading-none mb-1.5 opacity-30">👑</span>
+        : <div className="h-8" />
+      }
+      <div className="relative z-10 w-full aspect-square" style={{ marginBottom: "-100%" }}>
+        <div
+          className="rounded-full p-[5px] shadow-xl w-full h-full"
+          style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.55) 0%, rgba(15,23,42,0.35) 100%)" }}
+        >
+          <div className="rounded-full w-full h-full flex items-center justify-center bg-white/10">
+            <span className="text-white/30 font-bold" style={{ fontSize: isFirst ? "2rem" : "1.5rem" }}>?</span>
+          </div>
+        </div>
+        <div
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white/40 border-2 border-white/20 shadow"
+          style={{ background: "rgba(15,23,42,0.5)" }}
+        >
+          {rank}
+        </div>
+      </div>
+      <div
+        className={cn("relative flex flex-col items-center w-full", cfg.cardPb)}
+        style={{
+          paddingTop: "calc(100% + 14px)",
+          borderRadius: "9999px 9999px 40px 40px",
+          background: "linear-gradient(180deg, rgba(15,23,42,0.55) 0%, rgba(15,23,42,0.35) 100%)",
+        }}
+      >
+        <span className={cn("font-semibold text-white/40 text-center w-full truncate px-2", isFirst ? "text-sm" : "text-xs")}>
+          {isFirst ? "Be the first!" : "No winner yet"}
+        </span>
+        <span className={cn("text-white/25 mt-1 font-black", isFirst ? "text-lg" : "text-sm")}>
+          —
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function PodiumTop3({ entries, category }: { entries: LeaderEntry[]; category: CategoryId }) {
   const slots = [
     { entry: entries[1], rank: 2 as const },
     { entry: entries[0], rank: 1 as const },
@@ -168,19 +211,7 @@ function PodiumTop3({ entries, category }: { entries: LeaderEntry[]; category: C
             <div key={rank} className="flex-1 flex flex-col items-center" style={{ maxWidth: maxW }}>
               {entry
                 ? <PodiumCard entry={entry} rank={rank} category={category} />
-                : (
-                  <div className="flex flex-col items-center w-full">
-                    <div className="h-8" />
-                    <div
-                      className={cn("w-full", cfg.cardPb)}
-                      style={{
-                        paddingTop: "calc(100% + 14px)",
-                        borderRadius: "9999px 9999px 40px 40px",
-                        background: "linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.55) 100%)",
-                      }}
-                    />
-                  </div>
-                )
+                : <PodiumEmpty rank={rank} />
               }
             </div>
           )

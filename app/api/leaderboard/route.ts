@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { dataLimiter, getIp } from "@/lib/ratelimit"
 
 // ── Config ────────────────────────────────────────────────────────────────────
 // Set SUBGRAPH_URL in .env.local after deploying to Subgraph Studio:
@@ -145,7 +146,10 @@ async function querySubgraph(query: string): Promise<Record<string, unknown>> {
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
-export async function GET() {
+export async function GET(request: Request) {
+  const { success } = await dataLimiter.limit(getIp(request))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
   if (!SUBGRAPH_URL) {
     return NextResponse.json(
       { error: "SUBGRAPH_URL not configured" },

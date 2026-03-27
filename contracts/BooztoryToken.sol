@@ -41,12 +41,15 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     /// @notice Addresses allowed to call mintReward and burnFrom (Booztory + Raffle).
     mapping(address => bool) public authorizedMinters;
 
-    /// @notice Whether the one-time treasury mint has been used.
-    bool public treasuryMinted;
+    /// @notice Cumulative amount minted via mintTreasury. Capped at TREASURY_CAP.
+    uint256 public treasuryMinted;
 
     // -------------------------------------------------------------------------
     // Constants
     // -------------------------------------------------------------------------
+
+    /// @notice Hard cap on total BOOZ supply ever minted.
+    uint256 public constant MAX_SUPPLY = 100_000_000 ether; // 100 million BOOZ
 
     /// @notice Superchain bridge predeploy — sole address allowed to crosschain mint/burn.
     address public constant SUPERCHAIN_BRIDGE = 0x4200000000000000000000000000000000000028;
@@ -67,8 +70,8 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     error NotAuthorized();
     error OnlySuperchainBridge();
     error ZeroAddress();
-    error TreasuryAlreadyMinted();
     error ExceedsTreasuryCap();
+    error ExceedsMaxSupply();
 
     // -------------------------------------------------------------------------
     // Modifiers
@@ -133,16 +136,16 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     uint256 public constant TREASURY_CAP = 10_000_000 ether; // 10 million BOOZ
 
     /**
-     * @notice Mint a one-time treasury allocation (e.g. for LP seeding).
-     *         Can only be called once. Capped at TREASURY_CAP.
-     * @param to      Recipient (treasury wallet or owner).
-     * @param amount  Token amount (18 decimals, max 10,000,000 BOOZ).
+     * @notice Mint a treasury allocation in tranches (e.g. LP seeding, investor allocations).
+     *         Can be called multiple times as long as cumulative total stays within TREASURY_CAP.
+     * @param to      Recipient (treasury wallet, owner, or VestingWallet).
+     * @param amount  Token amount (18 decimals). Cumulative max 10,000,000 BOOZ.
      */
     function mintTreasury(address to, uint256 amount) external onlyOwner {
-        if (treasuryMinted) revert TreasuryAlreadyMinted();
         if (to == address(0)) revert ZeroAddress();
-        if (amount > TREASURY_CAP) revert ExceedsTreasuryCap();
-        treasuryMinted = true;
+        if (treasuryMinted + amount > TREASURY_CAP) revert ExceedsTreasuryCap();
+        if (totalSupply() + amount > MAX_SUPPLY) revert ExceedsMaxSupply();
+        treasuryMinted += amount;
         _mint(to, amount);
         emit TreasuryMinted(to, amount);
     }
@@ -158,6 +161,7 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
      * @param amount  Token amount (18 decimals).
      */
     function mintReward(address to, uint256 amount) external onlyAuthorized {
+        if (totalSupply() + amount > MAX_SUPPLY) revert ExceedsMaxSupply();
         _mint(to, amount);
     }
 
@@ -199,6 +203,7 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
      * @param amount  Token amount (18 decimals).
      */
     function crosschainMint(address to, uint256 amount) external onlySuperchainBridge {
+        if (totalSupply() + amount > MAX_SUPPLY) revert ExceedsMaxSupply();
         _mint(to, amount);
     }
 

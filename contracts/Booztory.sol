@@ -543,7 +543,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
             reward = gmFlatDailyReward;
         }
         if (reward > 0) {
-            IBooztoryToken(rewardToken).mintReward(msg.sender, reward);
+            try IBooztoryToken(rewardToken).mintReward(msg.sender, reward) {} catch {}
             emit GMClaimed(msg.sender, newCount, reward);
         }
 
@@ -559,7 +559,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
                     if (streak.claimedMilestones & bit == 0) {
                         streak.claimedMilestones |= bit;
                         uint256 bonus = gmMilestoneRewards[i];
-                        IBooztoryToken(rewardToken).mintReward(msg.sender, bonus);
+                        try IBooztoryToken(rewardToken).mintReward(msg.sender, bonus) {} catch {}
                         emit GMMilestoneReached(msg.sender, gmMilestoneDays[i], bonus);
                     }
 
