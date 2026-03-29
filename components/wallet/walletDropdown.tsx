@@ -9,7 +9,7 @@ import { HiBolt, HiOutlinePower, HiCube, HiFire, HiStar, HiHeart, HiTrophy } fro
 import { RiExchangeFundsLine } from "react-icons/ri"
 import Link from "next/link"
 import { FaCoins, FaRankingStar } from "react-icons/fa6"
-import { useWalletName } from "@/hooks/useWalletName"
+import { useIdentity } from "@/hooks/useIdentity"
 import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cache } from "@/lib/cache"
@@ -97,8 +97,8 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
   const { data: session } = useSession()
   const [copied, setCopied] = useState(false)
 
-  const resolvedName = useWalletName(address)
-  const displayName = resolvedName || session?.user?.username || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "")
+  const { avatarUrl, displayName: identityName } = useIdentity(address)
+  const displayName = identityName || session?.user?.username || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "")
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ""
 
   const { data: usdcBalance } = useReadContract({
@@ -165,7 +165,7 @@ export function WalletDropdownContent({ onClose }: { onClose?: () => void }) {
       {/* ── Profile ── */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <img
-          src={addressAvatar(address)}
+          src={avatarUrl || addressAvatar(address)}
           alt="avatar"
           className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
         />

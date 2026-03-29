@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from "react"
 import { useAccount } from "wagmi"
+import { useIdentity } from "@/hooks/useIdentity"
 import { cn } from "@/lib/utils"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { Navbar } from "@/components/layout/navbar"
-import { useWalletName } from "@/hooks/useWalletName"
 import { HiCube, HiFire, HiBolt, HiStar, HiHeart, HiTrophy } from "react-icons/hi2"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SparklesText } from "@/components/ui/sparkles-text"
@@ -64,10 +64,10 @@ function addressAvatar(address: string): string {
   return AVATARS[Math.abs(hash) % AVATARS.length]
 }
 
-function Identicon({ address }: { address: string }) {
+function Identicon({ address, pfpUrl }: { address: string; pfpUrl?: string | null }) {
   return (
     <img
-      src={addressAvatar(address)}
+      src={pfpUrl || addressAvatar(address)}
       alt="avatar"
       className="w-9 h-9 rounded-full flex-shrink-0 object-cover shadow-sm"
     />
@@ -83,8 +83,8 @@ const PODIUM_CONFIG: Record<1 | 2 | 3, { avatarSize: number; cardPb: string; bad
 }
 
 function PodiumCard({ entry, rank, category }: { entry: LeaderEntry; rank: number; category: CategoryId }) {
-  const name = useWalletName(entry.address)
-  const display = name || `${entry.address.slice(0, 6)}...${entry.address.slice(-4)}`
+  const identity = useIdentity(entry.address)
+  const display = identity.displayName
   const isFirst = rank === 1
   const cfg = PODIUM_CONFIG[rank as 1 | 2 | 3]
 
@@ -104,7 +104,7 @@ function PodiumCard({ entry, rank, category }: { entry: LeaderEntry; rank: numbe
           style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.55) 100%)" }}
         >
           <img
-            src={addressAvatar(entry.address)}
+            src={identity.avatarUrl || addressAvatar(entry.address)}
             alt="avatar"
             className="rounded-full w-full h-full object-cover"
           />
@@ -256,7 +256,7 @@ function RankDisplay({ rank, isYou }: { rank: number | null; isYou?: boolean }) 
   )
 }
 
-// ── LeaderRow — separate component so useWalletName hook is called per row ─────
+// ── LeaderRow — separate component so useIdentity hook is called per row ───────
 function LeaderRow({
   entry, rank, category, isYou,
 }: {
@@ -265,8 +265,8 @@ function LeaderRow({
   category: CategoryId
   isYou: boolean
 }) {
-  const name = useWalletName(entry.address)
-  const display = name || `${entry.address.slice(0, 6)}...${entry.address.slice(-4)}`
+  const identity = useIdentity(entry.address)
+  const display = identity.displayName
 
   return (
     <div
@@ -274,7 +274,7 @@ function LeaderRow({
       style={rowGradient(rank, isYou)}
     >
       <RankDisplay rank={rank} isYou={isYou} />
-      <Identicon address={entry.address} />
+      <Identicon address={entry.address} pfpUrl={identity.avatarUrl} />
       <div className="flex-1 min-w-0">
         <span className={cn(
           "text-sm font-bold truncate block",
@@ -311,13 +311,13 @@ function LeaderRow({
 
 // ── YourRow — sticky bottom row when you're outside top 10 ────────────────────
 function YourRow({ address, category }: { address: string; category: CategoryId }) {
-  const name = useWalletName(address)
-  const display = name || `${address.slice(0, 6)}...${address.slice(-4)}`
+  const identity = useIdentity(address)
+  const display = identity.displayName
 
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-indigo-50 border-indigo-200">
       <RankDisplay rank={null} isYou />
-      <Identicon address={address} />
+      <Identicon address={address} pfpUrl={identity.avatarUrl} />
       <div className="flex-1 min-w-0">
         <span className="text-sm font-semibold truncate block text-indigo-700">
           {display}

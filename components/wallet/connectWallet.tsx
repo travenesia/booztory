@@ -8,7 +8,7 @@ import { useSession, signIn, signOut } from "next-auth/react"
 import { useAccount, useSignMessage, useAccountEffect, useSwitchChain, useDisconnect } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { APP_CHAIN } from "@/lib/wagmi"
-import { useWalletName } from "@/hooks/useWalletName"
+import { useIdentity } from "@/hooks/useIdentity"
 import { SiweMessage } from "siwe"
 import { useToast } from "@/hooks/use-toast"
 import { cache, CACHE_DURATIONS } from "@/lib/cache"
@@ -38,9 +38,8 @@ export function ConnectWalletButton() {
 
   const isAuthenticated = status === "authenticated"
 
-  const resolvedName = useWalletName(address)
-  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
-  const displayName = resolvedName || session?.user?.username || shortAddress
+  const { avatarUrl, displayName: identityName } = useIdentity(address)
+  const displayName = identityName || session?.user?.username || null
 
   // Close desktop dropdown on outside click
   useEffect(() => {
@@ -183,7 +182,16 @@ export function ConnectWalletButton() {
       )
     }
     if (isAuthenticated) {
-      return <span className="truncate max-w-[140px]" title={displayName ?? undefined}>{displayName || "Connected"}</span>
+      return (
+        <>
+          {avatarUrl && (
+            <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+          )}
+          <span className="truncate max-w-[120px]" title={displayName ?? undefined}>
+            {displayName || "Connected"}
+          </span>
+        </>
+      )
     }
     if (isWalletConnected) {
       return <span>Sign in</span>
@@ -223,15 +231,21 @@ export function ConnectWalletButton() {
   if (isMobile) {
     return (
       <>
-        <div className="flex flex-col items-center">
-          <Button
-            variant="noShadow"
-            className="h-9 px-4 text-xs font-semibold flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
-            onClick={() => setOpen(true)}
-          >
-            {buttonContent()}
-          </Button>
-        </div>
+        {avatarUrl ? (
+          <button onClick={() => setOpen(true)} className="w-8 h-8 p-0 rounded-full overflow-hidden focus:outline-none">
+            <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+          </button>
+        ) : (
+          <div className="flex flex-col items-center">
+            <Button
+              variant="noShadow"
+              className="h-9 px-4 text-xs font-semibold flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
+              onClick={() => setOpen(true)}
+            >
+              {buttonContent()}
+            </Button>
+          </div>
+        )}
         <Drawer.Root open={open} onOpenChange={setOpen}>
           <Drawer.Portal>
             <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
@@ -247,21 +261,29 @@ export function ConnectWalletButton() {
   }
 
   // ── Desktop — click-outside dropdown (portalled to body to escape topbar stacking context) ──
+  const toggleDesktop = () => {
+    if (!open && buttonWrapperRef.current) {
+      const rect = buttonWrapperRef.current.getBoundingClientRect()
+      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+    }
+    setOpen((v) => !v)
+  }
+
   return (
-    <div className="relative flex flex-col items-center" ref={buttonWrapperRef}>
-      <Button
-        variant="noShadow"
-        className="h-9 px-4 text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
-        onClick={() => {
-          if (!open && buttonWrapperRef.current) {
-            const rect = buttonWrapperRef.current.getBoundingClientRect()
-            setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
-          }
-          setOpen((v) => !v)
-        }}
-      >
-        {buttonContent()}
-      </Button>
+    <div className="relative flex items-center" ref={buttonWrapperRef}>
+      {avatarUrl ? (
+        <button onClick={toggleDesktop} className="w-8 h-8 p-0 rounded-full overflow-hidden focus:outline-none">
+          <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+        </button>
+      ) : (
+        <Button
+          variant="noShadow"
+          className="h-9 px-4 text-xs flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
+          onClick={toggleDesktop}
+        >
+          {buttonContent()}
+        </Button>
+      )}
 
       {open && dropdownPos && typeof document !== "undefined" && createPortal(
         <div

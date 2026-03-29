@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { useAccount } from "wagmi"
 import { useDonation } from "@/hooks/useDonation"
-import { useWalletName } from "@/hooks/useWalletName"
+import { useIdentity } from "@/hooks/useIdentity"
 
 interface DonationModalProps {
   open: boolean
@@ -29,11 +29,10 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
   const [keyboardOffset, setKeyboardOffset] = useState(0)
   const { toast } = useToast()
 
-  const resolvedCreatorName = useWalletName(creatorAddress)
-  const resolvedDonorName = useWalletName(address)
-  const displayCreatorName = username.startsWith("@") ? username.slice(1) : (resolvedCreatorName || username)
-  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
-  const donorUsername = resolvedDonorName || shortAddress || "Anonymous"
+  const creatorIdentity = useIdentity(creatorAddress)
+  const donorIdentity = useIdentity(address)
+  const displayCreatorName = username.startsWith("@") ? username.slice(1) : (creatorIdentity.displayName || username)
+  const donorUsername = donorIdentity.displayName || "Anonymous"
 
   useEffect(() => {
     if (!open) {

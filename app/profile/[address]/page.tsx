@@ -12,6 +12,7 @@ import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
+import { useIdentity } from "@/hooks/useIdentity"
 import { useWalletName } from "@/hooks/useWalletName"
 import { APP_CHAIN } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
@@ -287,7 +288,8 @@ export default function ProfilePage() {
   const { address: connectedAddress } = useAccount()
   const isOwn = !!(connectedAddress && address && connectedAddress.toLowerCase() === address)
 
-  const displayName = useWalletName(address)
+  const identity = useIdentity(address)
+  const displayName = identity.walletName  // basename/ens only — no Farcaster on profile
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ""
 
   const { data: usdcBalance } = useReadContract({
@@ -384,7 +386,7 @@ export default function ProfilePage() {
           <div className="relative px-5 pt-5 pb-4">
             <div className="flex items-center gap-4">
               <img
-                src={address ? addressAvatar(address) : AVATARS[0]}
+                src={identity.avatarUrl || (address ? addressAvatar(address) : AVATARS[0])}
                 alt="avatar"
                 className="w-16 h-16 rounded-full border-2 border-white/30 shadow-md object-cover flex-shrink-0"
               />

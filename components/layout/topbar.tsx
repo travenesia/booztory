@@ -12,7 +12,7 @@ import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { GMButton, GMContent } from "@/components/modals/gmModal"
 import { usePathname } from "next/navigation"
 import { useAccount } from "wagmi"
-import { useWalletName } from "@/hooks/useWalletName"
+import { useIdentity } from "@/hooks/useIdentity"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { Drawer } from "vaul"
@@ -47,8 +47,8 @@ export function Topbar() {
   const [copied, setCopied] = useState(false)
   const { address } = useAccount()
   const { data: session } = useSession()
-  const resolvedName = useWalletName(address)
-  const displayName = resolvedName || session?.user?.username || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null)
+  const { avatarUrl, displayName: identityName } = useIdentity(address)
+  const displayName = identityName || session?.user?.username || null
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
 
   const handleCopyAddress = async () => {
@@ -148,7 +148,7 @@ export function Topbar() {
               {address ? (
                 <div className="flex items-center gap-3">
                   <img
-                    src={addressAvatar(address)}
+                    src={avatarUrl || addressAvatar(address)}
                     alt="avatar"
                     className="w-12 h-12 rounded-full flex-shrink-0 object-cover"
                   />
