@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient } from "wagmi"
+import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient, useChainId, useSwitchChain } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/lib/wagmi"
 import { formatUnits, parseAbiItem } from "viem"
@@ -136,6 +136,11 @@ function ActiveRaffleCard({
   const [isCancelling, setIsCancelling] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const chainId = useChainId()
+  const { switchChainAsync } = useSwitchChain()
+  async function ensureChain() {
+    if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
+  }
 
   const { data: raffleRaw, refetch: refetchRaffle } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -322,6 +327,7 @@ function ActiveRaffleCard({
     if (!amount || amount < 1 || !userAddress) return
     setIsEntering(true)
     try {
+      await ensureChain()
       const tx = await writeContractAsync({
         address: RAFFLE_ADDRESS,
         abi: RAFFLE_ABI,
@@ -351,6 +357,7 @@ function ActiveRaffleCard({
   async function handleDraw() {
     setIsDrawing(true)
     try {
+      await ensureChain()
       const tx = await writeContractAsync({
         address: RAFFLE_ADDRESS,
         abi: RAFFLE_ABI,
@@ -379,6 +386,7 @@ function ActiveRaffleCard({
   async function handleReset() {
     setIsResetting(true)
     try {
+      await ensureChain()
       const tx = await writeContractAsync({
         address: RAFFLE_ADDRESS,
         abi: RAFFLE_ABI,
@@ -401,6 +409,7 @@ function ActiveRaffleCard({
   async function handleCancel() {
     setIsCancelling(true)
     try {
+      await ensureChain()
       const tx = await writeContractAsync({
         address: RAFFLE_ADDRESS,
         abi: RAFFLE_ABI,
@@ -756,6 +765,11 @@ export default function RewardPage() {
   const [isConverting, setIsConverting] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const rewardChainId = useChainId()
+  const { switchChainAsync: rewardSwitchChain } = useSwitchChain()
+  async function ensureRewardChain() {
+    if (rewardChainId !== APP_CHAIN.id) await rewardSwitchChain({ chainId: APP_CHAIN.id })
+  }
 
   // ── User balances ──────────────────────────────────────────────────────────
   const { data: boozBalanceRaw } = useReadContract({
@@ -972,6 +986,7 @@ export default function RewardPage() {
     if (!amount || amount < 1 || amount > maxConvertible || !address) return
     setIsConverting(true)
     try {
+      await ensureRewardChain()
       const tx = await writeContractAsync({
         address: BOOZTORY_ADDRESS,
         abi: BOOZTORY_ABI,

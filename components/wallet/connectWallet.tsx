@@ -143,22 +143,6 @@ export function ConnectWalletButton() {
     [handleSignIn],
   )
 
-  // Re-authenticate when the user switches wallet accounts while a session is active
-  useEffect(() => {
-    if (
-      isAuthenticated &&
-      address &&
-      session?.user?.walletAddress &&
-      address.toLowerCase() !== session.user.walletAddress.toLowerCase()
-    ) {
-      if (isMiniApp()) {
-        handleQuickAuth(address)
-      } else {
-        handleSignIn(address, APP_CHAIN.id)
-      }
-    }
-  }, [address, isAuthenticated, session?.user?.walletAddress, handleQuickAuth, handleSignIn])
-
   // isMiniApp() is synchronous — MiniAppInit sets the flag before calling connect(),
   // so by the time onConnect fires here, the flag is already correct.
   useAccountEffect({

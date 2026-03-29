@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
+import { useAccount } from "wagmi"
 import { useDonation } from "@/hooks/useDonation"
 import { useWalletName } from "@/hooks/useWalletName"
 
@@ -23,14 +24,16 @@ interface DonationModalProps {
 
 export function DonationModal({ open, onOpenChange, username, creatorAddress, tokenId }: DonationModalProps) {
   const { data: session } = useSession()
+  const { address } = useAccount()
   const [amount, setAmount] = useState<number>(1)
   const [keyboardOffset, setKeyboardOffset] = useState(0)
   const { toast } = useToast()
 
   const resolvedCreatorName = useWalletName(creatorAddress)
-  const resolvedDonorName = useWalletName(session?.user?.id)
+  const resolvedDonorName = useWalletName(address)
   const displayCreatorName = username.startsWith("@") ? username.slice(1) : (resolvedCreatorName || username)
-  const donorUsername = resolvedDonorName || session?.user?.username || "Anonymous"
+  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
+  const donorUsername = resolvedDonorName || shortAddress || "Anonymous"
 
   useEffect(() => {
     if (!open) {

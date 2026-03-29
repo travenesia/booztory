@@ -21,7 +21,9 @@
       "Bash(npx graph:*)",
       "Bash(pnpm remove:*)",
       "Bash(ls d:/Projects/Blockchain/Superchain/Booztory/.next/static/chunks/*.js)",
-      "Bash(npx hardhat:*)"
+      "Bash(npx hardhat:*)",
+      "Bash(grep -rn \"signIn\\\\|openUrl\\\\|openMiniApp\\\\|viewToken\\\\|viewProfile\\\\|swapToken\\\\|sendToken\\\\|createSiweMessage\\\\|generateSiweNonce\\\\|sdk\\\\.\" d:/Projects/Blockchain/Superchain/Booztory/components d:/Projects/Blockchain/Superchain/Booztory/app --include=*.ts --include=*.tsx)",
+      "Bash(npx tsc:*)"
     ],
     "additionalDirectories": [
       "d:\\Projects\\Blockchain\\Superchain\\Booztory\\app\\profile"
