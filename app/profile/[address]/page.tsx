@@ -289,7 +289,7 @@ export default function ProfilePage() {
   const isOwn = !!(connectedAddress && address && connectedAddress.toLowerCase() === address)
 
   const identity = useIdentity(address)
-  const displayName = identity.walletName  // basename/ens only — no Farcaster on profile
+  const displayName = identity.displayName
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ""
 
   const { data: usdcBalance } = useReadContract({

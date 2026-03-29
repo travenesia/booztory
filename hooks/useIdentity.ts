@@ -106,8 +106,12 @@ export function useIdentity(address?: string): Identity {
   const shortAddr = addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : ""
   const strippedBase = strip(baseName, ".base.eth")
   const strippedEns = strip(ensName ?? null, ".eth")
-  const farcasterUsername = farcasterCtx?.user?.username ?? null
-  const farcasterPfp = farcasterCtx?.user?.pfpUrl ?? null
+  // Guard: only use cached Farcaster data for the connected address.
+  // The query key ["farcaster-ctx"] is global — React Query returns cached data
+  // even when the query is disabled, which would leak the connected user's
+  // identity to every other address (e.g. leaderboard rows).
+  const farcasterUsername = isOwn ? (farcasterCtx?.user?.username ?? null) : null
+  const farcasterPfp = isOwn ? (farcasterCtx?.user?.pfpUrl ?? null) : null
 
   return {
     displayName: farcasterUsername || strippedBase || strippedEns || shortAddr,
