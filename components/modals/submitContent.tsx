@@ -23,7 +23,8 @@ import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
 import { getTwitchMetadata, extractTwitchInfo } from "@/lib/twitchMetadata"
 import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
 import { TOKEN_ADDRESS, ERC20_ABI, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { APP_CHAIN, NFT_CHAIN_ID } from "@/lib/wagmi"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type PaymentMethod = "standard" | "discount" | "free" | "nft-discount" | "nft-free"
 type InputMode = "url" | "text"
@@ -74,6 +75,7 @@ export function ContentSubmissionDrawer() {
   // ── NFT state ─────────────────────────────────────────────────────────────────
   const [nftSelectedContract, setNftSelectedContract] = useState<string>("")
   const [nftTokenIdInput, setNftTokenIdInput] = useState<string>("")
+  const [nftSelectedTokenId, setNftSelectedTokenId] = useState<string>("")
 
   const slotPriceDisplay = (Number(slotPrice) / 1_000_000).toFixed(2)
   const discountedPriceDisplay = ((Number(slotPrice) - Number(discountAmount)) / 1_000_000).toFixed(2)
@@ -140,6 +142,7 @@ export function ContentSubmissionDrawer() {
   const canFree = tokenEnabled && boozBalance >= Number(formatUnits(freeSlotCost, 18))
 
   // ── NFT reads ─────────────────────────────────────────────────────────────────
+  const isNFTPath = paymentMethod === "nft-discount" || paymentMethod === "nft-free"
   const { data: approvedNFTsRaw } = useReadContract({
     address: BOOZTORY_ADDRESS,
     abi: BOOZTORY_ABI,
@@ -155,7 +158,7 @@ export function ContentSubmissionDrawer() {
       abi: [{ name: "balanceOf", type: "function", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" }] as const,
       functionName: "balanceOf" as const,
       args: [address!] as const,
-      chainId: APP_CHAIN.id,
+      chainId: NFT_CHAIN_ID,
     })),
     query: { enabled: !!address && approvedNFTs.length > 0 },
   })
@@ -169,8 +172,56 @@ export function ContentSubmissionDrawer() {
 
   // Auto-select first held NFT contract when switching to NFT path
   const nftContractForMint = (nftSelectedContract || heldNFTs[0] || "") as `0x${string}`
-  const nftTokenId = nftTokenIdInput ? BigInt(nftTokenIdInput) : 0n
-  const canNFTMint = hasNFT && nftContractForMint !== "" && nftTokenIdInput !== "" && !isNaN(Number(nftTokenIdInput)) && Number(nftTokenIdInput) >= 0
+
+  // Enumerate owned token IDs via Alchemy NFT API (works on any ERC-721, no Enumerable needed)
+  const [ownedTokenIds, setOwnedTokenIds] = useState<string[]>([])
+  const [isEnumerating, setIsEnumerating] = useState(false)
+
+  const { data: nftCollectionNameRaw } = useReadContract({
+    address: nftContractForMint || undefined,
+    abi: [{ name: "name", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] }] as const,
+    functionName: "name",
+    chainId: NFT_CHAIN_ID,
+    query: { enabled: isNFTPath && !!nftContractForMint },
+  })
+  const nftCollectionName = (nftCollectionNameRaw as string | undefined) ?? ""
+
+  useEffect(() => {
+    if (!isNFTPath || !address || !nftContractForMint || nftContractForMint === "") {
+      setOwnedTokenIds([])
+      return
+    }
+    const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+    if (!alchemyKey) return
+    let cancelled = false
+    setIsEnumerating(true)
+    setOwnedTokenIds([])
+    fetch(
+      `https://base-mainnet.g.alchemy.com/nft/v3/${alchemyKey}/getNFTsForOwner?owner=${address}&contractAddresses[]=${nftContractForMint}&withMetadata=false&pageSize=50`
+    )
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return
+        const ids: string[] = (data?.ownedNfts ?? []).map((n: { tokenId: string }) => n.tokenId)
+        setOwnedTokenIds(ids)
+      })
+      .catch(() => { if (!cancelled) setOwnedTokenIds([]) })
+      .finally(() => { if (!cancelled) setIsEnumerating(false) })
+    return () => { cancelled = true }
+  }, [isNFTPath, address, nftContractForMint])
+
+  const canEnumerate = ownedTokenIds.length > 0
+
+  // Active token ID — from dropdown when enumerable, from manual input as fallback
+  const activeTokenIdStr = canEnumerate ? nftSelectedTokenId : nftTokenIdInput
+  const nftTokenId = activeTokenIdStr ? BigInt(activeTokenIdStr) : 0n
+  const canNFTMint = hasNFT && nftContractForMint !== "" && activeTokenIdStr !== "" && !isNaN(Number(activeTokenIdStr)) && Number(activeTokenIdStr) >= 0
+
+  // Reset selected token ID when the NFT contract changes
+  useEffect(() => {
+    setNftSelectedTokenId("")
+    setNftTokenIdInput("")
+  }, [nftContractForMint])
 
   // Reset state when sheet closes
   useEffect(() => {
@@ -193,6 +244,7 @@ export function ContentSubmissionDrawer() {
       setTextLinkError(false)
       setNftSelectedContract("")
       setNftTokenIdInput("")
+      setNftSelectedTokenId("")
       isProcessingRef.current = false
       resetPaymentState()
     } else {
@@ -756,7 +808,6 @@ export function ContentSubmissionDrawer() {
 
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
-  const isNFTPath = paymentMethod === "nft-discount" || paymentMethod === "nft-free"
 
   return (
     <>
@@ -951,8 +1002,36 @@ export function ContentSubmissionDrawer() {
         {/* Payment method selector — pinned above button, only when authenticated + token enabled */}
         {session?.user?.id && tokenEnabled && (
           <div className="flex-shrink-0 px-4 pt-3 pb-0 bg-white space-y-2">
+            {/* Label row */}
             <div className="flex items-center justify-between">
-              <label className="text-gray-900 font-medium text-xs">Payment Method</label>
+              {hasNFT ? (
+                <div className="bg-gray-100 rounded-md p-0.5 flex">
+                  <button
+                    type="button"
+                    disabled={isAnyOperationInProgress}
+                    onClick={() => setPaymentMethod("standard")}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded text-[11px] font-medium transition-all",
+                      !isNFTPath ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    Payment
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isAnyOperationInProgress}
+                    onClick={() => setPaymentMethod("nft-discount")}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded text-[11px] font-medium transition-all",
+                      isNFTPath ? "bg-white shadow-sm text-amber-700" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    NFT Pass
+                  </button>
+                </div>
+              ) : (
+                <label className="text-gray-900 font-medium text-xs">Payment Method</label>
+              )}
               {(paymentMethod === "discount" || paymentMethod === "free") && (
                 <span className="flex items-center gap-1 text-xs text-gray-500">
                   Balance: <span className="font-semibold text-gray-800">{boozFormatted}</span>
@@ -961,103 +1040,136 @@ export function ContentSubmissionDrawer() {
                 </span>
               )}
             </div>
-            <div className={cn("grid gap-2", hasNFT ? "grid-cols-5" : "grid-cols-3")}>
-              {/* Standard */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("standard")}
-                disabled={isAnyOperationInProgress}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                  paymentMethod === "standard"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300 bg-white"
-                )}
-              >
-                <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
-                <span className="text-[10px] text-gray-500">Standard</span>
-              </button>
 
-              {/* Discount */}
-              <button
-                type="button"
-                onClick={() => canDiscount && setPaymentMethod("discount")}
-                disabled={isAnyOperationInProgress || !canDiscount}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                  paymentMethod === "discount"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300 bg-white",
-                  !canDiscount && "opacity-40 cursor-not-allowed"
-                )}
-              >
-                <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
-                <div className="flex items-center gap-0.5">
-                  <HiBolt className="text-yellow-500" size={10} />
-                  <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
-                </div>
-              </button>
-
-              {/* Free */}
-              <button
-                type="button"
-                onClick={() => canFree && setPaymentMethod("free")}
-                disabled={isAnyOperationInProgress || !canFree}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                  paymentMethod === "free"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300 bg-white",
-                  !canFree && "opacity-40 cursor-not-allowed"
-                )}
-              >
-                <span className="text-xs font-bold text-gray-900">Free</span>
-                <div className="flex items-center gap-0.5">
-                  <HiBolt className="text-yellow-500" size={10} />
-                  <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
-                </div>
-              </button>
-
-              {/* NFT Discount — only if user holds an approved NFT */}
-              {hasNFT && (
+            {/* Standard payment buttons — hidden when NFT Pass is active */}
+            {!isNFTPath && (
+              <div className="grid grid-cols-3 gap-2">
+                {/* Standard */}
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("nft-discount")}
+                  onClick={() => setPaymentMethod("standard")}
                   disabled={isAnyOperationInProgress}
                   className={cn(
                     "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "nft-discount"
-                      ? "border-amber-500 bg-amber-50"
-                      : "border-amber-200 hover:border-amber-300 bg-white"
+                    paymentMethod === "standard"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
                   )}
                 >
-                  <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
-                  <span className="text-[10px] text-amber-600">NFT -50%</span>
+                  <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
+                  <span className="text-[10px] text-gray-500">Standard</span>
                 </button>
-              )}
 
-              {/* NFT Free — only if user holds an approved NFT */}
-              {hasNFT && (
+                {/* Discount */}
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("nft-free")}
-                  disabled={isAnyOperationInProgress}
+                  onClick={() => canDiscount && setPaymentMethod("discount")}
+                  disabled={isAnyOperationInProgress || !canDiscount}
                   className={cn(
                     "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "nft-free"
-                      ? "border-amber-500 bg-amber-50"
-                      : "border-amber-200 hover:border-amber-300 bg-white"
+                    paymentMethod === "discount"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white",
+                    !canDiscount && "opacity-40 cursor-not-allowed"
+                  )}
+                >
+                  <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
+                  <div className="flex items-center gap-0.5">
+                    <HiBolt className="text-yellow-500" size={10} />
+                    <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
+                  </div>
+                </button>
+
+                {/* Free */}
+                <button
+                  type="button"
+                  onClick={() => canFree && setPaymentMethod("free")}
+                  disabled={isAnyOperationInProgress || !canFree}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                    paymentMethod === "free"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white",
+                    !canFree && "opacity-40 cursor-not-allowed"
                   )}
                 >
                   <span className="text-xs font-bold text-gray-900">Free</span>
-                  <span className="text-[10px] text-amber-600">NFT Pass</span>
+                  <div className="flex items-center gap-0.5">
+                    <HiBolt className="text-yellow-500" size={10} />
+                    <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                  </div>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* NFT contract + token ID selector — shown only on NFT paths */}
+            {/* NFT Pass options — shown when NFT Pass tab is active */}
             {isNFTPath && (
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-3 gap-2 items-stretch">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("nft-discount")}
+                    disabled={isAnyOperationInProgress}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                      paymentMethod === "nft-discount"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
+                    <span className="text-[10px] text-gray-500">-50% Discount</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("nft-free")}
+                    disabled={isAnyOperationInProgress}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                      paymentMethod === "nft-free"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-gray-900">Free</span>
+                    <span className="text-[10px] text-gray-500">30d cooldown</span>
+                  </button>
+                  {isEnumerating ? (
+                    <div className="flex flex-col items-center justify-center gap-0.5 border border-gray-200 rounded-lg px-2.5 text-xs text-gray-400 bg-white">
+                      <Loader2 size={11} className="animate-spin" />
+                      <span>Loading…</span>
+                    </div>
+                  ) : canEnumerate ? (
+                    <Select
+                      value={nftSelectedTokenId}
+                      onValueChange={setNftSelectedTokenId}
+                      disabled={isAnyOperationInProgress}
+                    >
+                      <SelectTrigger className="h-full text-xs font-bold bg-white border-gray-200 text-gray-900 rounded-lg px-2.5 focus:ring-0 focus:ring-offset-0 [&>svg]:text-gray-400 hover:border-gray-300">
+                        <SelectValue placeholder="Select NFT" />
+                      </SelectTrigger>
+                      <SelectContent className="min-w-[var(--radix-select-trigger-width)]">
+                        <SelectGroup>
+                          {ownedTokenIds.map(id => (
+                            <SelectItem key={id} value={id} className="text-xs font-medium">
+                              {nftCollectionName ? `${nftCollectionName} #${id}` : `#${id}`}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Token ID"
+                      value={nftTokenIdInput}
+                      onChange={e => setNftTokenIdInput(e.target.value)}
+                      disabled={isAnyOperationInProgress}
+                      className="border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
+                    />
+                  )}
+                </div>
                 {heldNFTs.length > 1 && (
                   <select
                     value={nftSelectedContract}
@@ -1070,15 +1182,6 @@ export function ContentSubmissionDrawer() {
                     ))}
                   </select>
                 )}
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="Your NFT token ID"
-                  value={nftTokenIdInput}
-                  onChange={e => setNftTokenIdInput(e.target.value)}
-                  disabled={isAnyOperationInProgress}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
                 <p className="text-[10px] text-muted-foreground">No BOOZ earned · 1 raffle ticket · 24h cooldown (discount) / 30d cooldown (free)</p>
               </div>
             )}

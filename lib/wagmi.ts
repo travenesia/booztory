@@ -6,6 +6,10 @@ import { base, baseSepolia, mainnet } from "wagmi/chains"
 // Change to `APP_CHAIN = base` when deploying to production.
 export const APP_CHAIN = baseSepolia
 
+// NFT Pass collections are always read from Base Mainnet regardless of APP_CHAIN.
+// At mainnet deployment this will equal APP_CHAIN.id automatically.
+export const NFT_CHAIN_ID = base.id
+
 
 const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
 

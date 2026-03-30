@@ -1,14 +1,42 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useReadContract, useWriteContract } from "wagmi"
+import { useState, useEffect, useCallback } from "react"
+import { useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, NFT_CHAIN_ID } from "@/lib/wagmi"
 import { isAddress } from "viem"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { BadgeCheck, Ban } from "lucide-react"
+import { BadgeCheck, Ban, Copy, Check } from "lucide-react"
+
+const ERC721_META_ABI = [
+  { name: "name",        type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+  { name: "symbol",      type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+  { name: "totalSupply", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+] as const
+
+function CopyAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }, [address])
+  return (
+    <button
+      onClick={copy}
+      className="flex items-center gap-1 font-mono text-gray-400 hover:text-gray-700 transition-colors group p-0"
+      title={address}
+    >
+      <span>{address.slice(0, 6)}…{address.slice(-4)}</span>
+      {copied
+        ? <Check size={11} className="text-emerald-500 shrink-0" />
+        : <Copy size={11} className="opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
+      }
+    </button>
+  )
+}
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -22,7 +50,7 @@ function Section({ title, description, children }: { title: string; description?
   )
 }
 
-// ── Check row — reads approvedNFTContracts for a single address ────────────────
+// ── Single-address approval check (used by the "Check" panel) ─────────────────
 
 function ApprovalStatus({ address: nftAddress, onRevoke, revoking }: {
   address: string
@@ -48,18 +76,20 @@ function ApprovalStatus({ address: nftAddress, onRevoke, revoking }: {
         }
         <span className="text-xs font-mono text-gray-700 truncate">{nftAddress}</span>
       </div>
-      <span className={cn("text-[11px] font-semibold ml-3 shrink-0", approved ? "text-emerald-600" : "text-gray-400")}>
-        {approved ? "Approved" : "Revoked"}
-      </span>
-      {approved && (
-        <button
-          onClick={onRevoke}
-          disabled={revoking}
-          className="ml-3 text-[11px] text-red-500 hover:text-red-700 font-semibold disabled:opacity-50 shrink-0"
-        >
-          {revoking ? "Revoking…" : "Revoke"}
-        </button>
-      )}
+      <div className="flex items-center gap-3 shrink-0 ml-3">
+        <span className={cn("text-[11px] font-semibold", approved ? "text-emerald-600" : "text-gray-400")}>
+          {approved ? "Approved" : "Revoked"}
+        </span>
+        {approved && (
+          <button
+            onClick={onRevoke}
+            disabled={revoking}
+            className="text-[11px] text-red-500 hover:text-red-700 font-semibold disabled:opacity-50"
+          >
+            {revoking ? "Revoking…" : "Revoke"}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -70,12 +100,12 @@ export default function AdminNFTPage() {
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
 
-  const [approveInput, setApproveInput]     = useState("")
-  const [isApproving, setIsApproving]       = useState(false)
-  const [approvedList, setApprovedList]     = useState<string[]>([])
-  const [revokingAddr, setRevokingAddr]     = useState<string | null>(null)
-  const [checkInput, setCheckInput]         = useState("")
-  const [checkedAddr, setCheckedAddr]       = useState<string | null>(null)
+  const [approveInput, setApproveInput] = useState("")
+  const [isApproving, setIsApproving]   = useState(false)
+  const [approvedList, setApprovedList] = useState<string[]>([])
+  const [revokingAddr, setRevokingAddr] = useState<string | null>(null)
+  const [checkInput, setCheckInput]     = useState("")
+  const [checkedAddr, setCheckedAddr]   = useState<string | null>(null)
 
   const { data: onChainList, refetch: refetchList } = useReadContract({
     address: BOOZTORY_ADDRESS,
@@ -87,6 +117,30 @@ export default function AdminNFTPage() {
   useEffect(() => {
     if (onChainList) setApprovedList((onChainList as string[]).map(a => a.toLowerCase()))
   }, [onChainList])
+
+  // Batch-fetch name + symbol + totalSupply for every approved collection
+  const metaContracts = approvedList.flatMap(addr => [
+    { address: addr as `0x${string}`, abi: ERC721_META_ABI, functionName: "name"        as const, chainId: NFT_CHAIN_ID },
+    { address: addr as `0x${string}`, abi: ERC721_META_ABI, functionName: "symbol"      as const, chainId: NFT_CHAIN_ID },
+    { address: addr as `0x${string}`, abi: ERC721_META_ABI, functionName: "totalSupply" as const, chainId: NFT_CHAIN_ID },
+  ])
+
+  const { data: metaResults, isLoading: metaLoading } = useReadContracts({
+    contracts: metaContracts,
+    allowFailure: true,
+    query: { enabled: approvedList.length > 0 },
+  })
+
+  // metaResults is flat: [name0, sym0, supply0, name1, sym1, supply1, ...]
+  function getMeta(index: number) {
+    if (!metaResults) return { name: undefined, symbol: undefined, totalSupply: undefined }
+    const base = index * 3
+    return {
+      name:        metaResults[base]?.result     as string | undefined,
+      symbol:      metaResults[base + 1]?.result as string | undefined,
+      totalSupply: metaResults[base + 2]?.result as bigint | undefined,
+    }
+  }
 
   const approveInputValid = isAddress(approveInput)
 
@@ -215,23 +269,66 @@ export default function AdminNFTPage() {
 
       </div>
 
-      {/* Approved contracts — loaded from chain */}
+      {/* Approved collections table */}
       <Section
         title="Approved Collections"
-        description={approvedList.length === 0 ? "No collections approved yet." : `${approvedList.length} collection${approvedList.length === 1 ? "" : "s"} currently approved on-chain.`}
+        description={
+          approvedList.length === 0
+            ? "No collections approved yet."
+            : `${approvedList.length} collection${approvedList.length === 1 ? "" : "s"} currently approved on-chain.`
+        }
       >
         {approvedList.length === 0 ? (
           <p className="text-xs text-muted-foreground">Approve a collection above to see it here.</p>
         ) : (
-          <div className="space-y-2">
-            {approvedList.map(addr => (
-              <ApprovalStatus
-                key={addr}
-                address={addr}
-                onRevoke={() => handleRevoke(addr)}
-                revoking={revokingAddr === addr}
-              />
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left font-semibold text-gray-500 pb-2 pr-4">Collection</th>
+                  <th className="text-left font-semibold text-gray-500 pb-2 pr-4">Symbol</th>
+                  <th className="text-left font-semibold text-gray-500 pb-2 pr-4">Contract</th>
+                  <th className="text-right font-semibold text-gray-500 pb-2 pr-4">Supply</th>
+                  <th className="text-right font-semibold text-gray-500 pb-2">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {approvedList.map((addr, i) => {
+                  const { name, symbol, totalSupply } = getMeta(i)
+                  const isRevoking = revokingAddr === addr
+                  return (
+                    <tr key={addr} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-2.5 pr-4">
+                        <div className="flex items-center gap-1.5">
+                          <BadgeCheck size={13} className="text-emerald-500 shrink-0" />
+                          <span className="font-medium text-gray-800">
+                            {metaLoading ? "—" : (name ?? <span className="text-gray-400 italic">Unknown</span>)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-4 text-gray-500 font-mono">
+                        {metaLoading ? "—" : (symbol ? `$${symbol}` : "—")}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        <CopyAddress address={addr} />
+                      </td>
+                      <td className="py-2.5 pr-4 text-right text-gray-600">
+                        {metaLoading ? "—" : (totalSupply !== undefined ? Number(totalSupply).toLocaleString() : "—")}
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <button
+                          onClick={() => handleRevoke(addr)}
+                          disabled={isRevoking}
+                          className="text-[11px] text-red-500 hover:text-red-700 font-semibold disabled:opacity-50"
+                        >
+                          {isRevoking ? "Revoking…" : "Revoke"}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </Section>
