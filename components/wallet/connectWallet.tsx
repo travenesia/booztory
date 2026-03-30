@@ -29,6 +29,7 @@ export function ConnectWalletButton() {
   const { openConnectModal } = useConnectModal()
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [reconnectTimedOut, setReconnectTimedOut] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonWrapperRef = useRef<HTMLDivElement>(null)
@@ -40,6 +41,16 @@ export function ConnectWalletButton() {
 
   const { avatarUrl, displayName: identityName } = useIdentity(address)
   const displayName = identityName || session?.user?.username || null
+
+  // If wagmi is still "reconnecting" after 5s the wallet is locked — stop blocking UI
+  useEffect(() => {
+    if (walletStatus !== "reconnecting") {
+      setReconnectTimedOut(false)
+      return
+    }
+    const timer = setTimeout(() => setReconnectTimedOut(true), 5000)
+    return () => clearTimeout(timer)
+  }, [walletStatus])
 
   // Close desktop dropdown on outside click
   useEffect(() => {
@@ -159,13 +170,35 @@ export function ConnectWalletButton() {
     },
   })
 
+  // Race condition fix: wagmi can reconnect before NextAuth finishes loading the session.
+  // onConnect sees status="loading" and skips SIWE. This effect catches the transition
+  // "loading" → "unauthenticated" while the wallet is already connected and triggers sign-in.
+  const prevStatusRef = useRef(status)
+  useEffect(() => {
+    const prev = prevStatusRef.current
+    prevStatusRef.current = status
+    if (
+      prev === "loading" &&
+      status === "unauthenticated" &&
+      isWalletConnected &&
+      address &&
+      !isSigningInRef.current
+    ) {
+      if (isMiniApp()) {
+        handleQuickAuth(address)
+      } else {
+        handleSignIn(address, APP_CHAIN.id)
+      }
+    }
+  }, [status, isWalletConnected, address, handleQuickAuth, handleSignIn])
+
   const handleConnect = () => {
     if (isMiniApp()) return // MiniAppInit handles wallet connect for Farcaster users
     openConnectModal?.()
   }
 
   const buttonContent = () => {
-    if (walletStatus === "reconnecting" || walletStatus === "connecting") {
+    if ((walletStatus === "reconnecting" && !reconnectTimedOut) || walletStatus === "connecting") {
       return (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -199,11 +232,12 @@ export function ConnectWalletButton() {
     return <span>Connect</span>
   }
 
-  const isDisabled = isLoading || status === "loading" || walletStatus === "reconnecting" || walletStatus === "connecting"
+  const isReconnecting = walletStatus === "reconnecting" && !reconnectTimedOut
+  const isDisabled = isLoading || status === "loading" || isReconnecting || walletStatus === "connecting"
 
   // ── Unauthenticated or ghost session (session alive but wallet gone) ────────
-  // walletStatus "reconnecting" = wagmi is mid-reconnect on page load — don't flash Connect
-  if (!isAuthenticated || (!isWalletConnected && walletStatus !== "reconnecting")) {
+  // isReconnecting = wagmi is mid-reconnect on page load — don't flash Connect (unless timed out)
+  if (!isAuthenticated || (!isWalletConnected && !isReconnecting)) {
     return (
       <div className="flex flex-col items-center">
         <Button

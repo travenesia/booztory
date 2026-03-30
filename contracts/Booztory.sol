@@ -2,8 +2,10 @@
 pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
@@ -31,7 +33,7 @@ interface IRaffle {
  *         Rewards:     paid mints earn BOOZ tokens; burn BOOZ for free slots.
  *         Admin-only:  slot price, slot duration, payment token, donation fee bps, withdraw.
  */
-contract Booztory is ERC721, Ownable, ReentrancyGuard {
+contract Booztory is ERC721, Ownable, Pausable, ReentrancyGuard {
     using Strings for uint256;
 
     // -------------------------------------------------------------------------
@@ -98,6 +100,23 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
     ///         e.g. contentTypeImage["youtube"] = "https://booztory.com/nft/youtube.png"
     mapping(string => string) public contentTypeImage;
 
+    // ---- NFT Pass ----
+
+    /// @notice Approved NFT collections whose holders get platform perks.
+    ///         Any approved ERC-721 collection qualifies — contract does not need to exist at deploy time.
+    mapping(address => bool) public approvedNFTContracts;
+
+    /// @notice Ordered list of all currently-approved NFT contract addresses (for enumeration).
+    address[] public approvedNFTList;
+
+    /// @notice Last timestamp a given NFT token ID used the 50% discount mint (per collection).
+    ///         Cooldown: 24 hours. Inherited by new owner on transfer.
+    mapping(address => mapping(uint256 => uint256)) public nftLastDiscountMint;
+
+    /// @notice Last timestamp a given NFT token ID used the free mint (per collection).
+    ///         Cooldown: 30 days. Inherited by new owner on transfer.
+    mapping(address => mapping(uint256 => uint256)) public nftLastFreeMint;
+
     // ---- GM Streak ----
 
     struct GMStreak {
@@ -131,7 +150,8 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
     ];
 
     uint256 public nextTokenId;
-    uint256 public queueEndTime; // end timestamp of the last queued slot
+    uint256 public queueEndTime;   // end timestamp of the last queued slot
+    uint256 private _slotCursor;   // first tokenId that may still be live or upcoming
 
     struct Slot {
         string  contentUrl;
@@ -189,8 +209,15 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
     event PointsEarned(address indexed user, uint256 amount, string reason);
     event TicketsConverted(address indexed user, uint256 pointsBurned, uint256 ticketsMinted);
     event DonateBoozRewardChanged(uint256 newAmount);
+    event NFTContractApproved(address indexed nftContract, bool approved);
+    event NFTDiscountSlotMinted(uint256 indexed tokenId, address indexed creator, address indexed nftContract, uint256 nftTokenId);
+    event NFTFreeSlotMinted(uint256 indexed tokenId, address indexed creator, address indexed nftContract, uint256 nftTokenId);
 
     error QueueFull();
+    error NFTContractNotApproved();
+    error NFTNotOwned();
+    error NFTDiscountCooldown();
+    error NFTFreeCooldown();
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -291,6 +318,11 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
 
         _mint(msg.sender, tokenId);
 
+        // Advance cursor past any expired slots so getCurrentSlot() stays O(1)
+        while (_slotCursor < tokenId && slots[_slotCursor].endTime < block.timestamp) {
+            _slotCursor++;
+        }
+
         emit SlotMinted(tokenId, msg.sender, start, end);
     }
 
@@ -310,7 +342,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         string calldata title,
         string calldata authorName,
         string calldata imageUrl
-    ) external payable nonReentrant {
+    ) external payable nonReentrant whenNotPaused {
         _collectPayment(slotPrice);
         _createSlot(contentUrl, contentType, aspectRatio, title, authorName, imageUrl);
 
@@ -346,7 +378,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         string calldata title,
         string calldata authorName,
         string calldata imageUrl
-    ) external nonReentrant {
+    ) external nonReentrant whenNotPaused {
         require(rewardToken != address(0), "Reward token not set");
 
         IBooztoryToken(rewardToken).burnFrom(msg.sender, freeSlotCost);
@@ -378,7 +410,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         string calldata title,
         string calldata authorName,
         string calldata imageUrl
-    ) external payable nonReentrant {
+    ) external payable nonReentrant whenNotPaused {
         require(rewardToken != address(0), "Reward token not set");
         require(discountAmount < slotPrice, "Discount exceeds slot price");
 
@@ -404,6 +436,81 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         if (raffle != address(0)) {
             try IRaffle(raffle).addEntry(msg.sender) {} catch {}
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Mint — NFT pass discount (50% off, no BOOZ, no points, 1 raffle ticket)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @notice Holders of an approved NFT collection can mint at 50% off (slotPrice / 2).
+     *         No BOOZ reward, no points — just the slot + 1 raffle ticket.
+     *         Cooldown: once per 24 hours per NFT token ID. Cooldown stays with token ID on transfer.
+     * @param nftContract  Approved ERC-721 collection address.
+     * @param nftTokenId   Token ID the caller owns from that collection.
+     */
+    function mintSlotWithNFTDiscount(
+        address nftContract,
+        uint256 nftTokenId,
+        string calldata contentUrl,
+        string calldata contentType,
+        string calldata aspectRatio,
+        string calldata title,
+        string calldata authorName,
+        string calldata imageUrl
+    ) external payable nonReentrant whenNotPaused {
+        if (!approvedNFTContracts[nftContract])                                   revert NFTContractNotApproved();
+        if (IERC721(nftContract).ownerOf(nftTokenId) != msg.sender)               revert NFTNotOwned();
+        if (block.timestamp < nftLastDiscountMint[nftContract][nftTokenId] + 1 days) revert NFTDiscountCooldown();
+
+        nftLastDiscountMint[nftContract][nftTokenId] = block.timestamp;
+
+        _collectPayment(slotPrice / 2);
+        uint256 tokenId = _createSlot(contentUrl, contentType, aspectRatio, title, authorName, imageUrl);
+
+        // Credit 1 raffle ticket directly (non-blocking)
+        if (raffle != address(0)) {
+            try IRaffle(raffle).creditTickets(msg.sender, 1) {} catch {}
+        }
+
+        emit NFTDiscountSlotMinted(tokenId, msg.sender, nftContract, nftTokenId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Mint — NFT pass free (no cost, no BOOZ, no points, 1 raffle ticket)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @notice Holders of an approved NFT collection can mint one free slot per 30 days per token ID.
+     *         No BOOZ reward, no points — just the slot + 1 raffle ticket.
+     *         Cooldown: once per 30 days per NFT token ID. Cooldown stays with token ID on transfer.
+     * @param nftContract  Approved ERC-721 collection address.
+     * @param nftTokenId   Token ID the caller owns from that collection.
+     */
+    function mintSlotFreeWithNFT(
+        address nftContract,
+        uint256 nftTokenId,
+        string calldata contentUrl,
+        string calldata contentType,
+        string calldata aspectRatio,
+        string calldata title,
+        string calldata authorName,
+        string calldata imageUrl
+    ) external nonReentrant whenNotPaused {
+        if (!approvedNFTContracts[nftContract])                                  revert NFTContractNotApproved();
+        if (IERC721(nftContract).ownerOf(nftTokenId) != msg.sender)              revert NFTNotOwned();
+        if (block.timestamp < nftLastFreeMint[nftContract][nftTokenId] + 30 days) revert NFTFreeCooldown();
+
+        nftLastFreeMint[nftContract][nftTokenId] = block.timestamp;
+
+        uint256 tokenId = _createSlot(contentUrl, contentType, aspectRatio, title, authorName, imageUrl);
+
+        // Credit 1 raffle ticket directly (non-blocking)
+        if (raffle != address(0)) {
+            try IRaffle(raffle).creditTickets(msg.sender, 1) {} catch {}
+        }
+
+        emit NFTFreeSlotMinted(tokenId, msg.sender, nftContract, nftTokenId);
     }
 
     // -------------------------------------------------------------------------
@@ -440,7 +547,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
      *                 95% is forwarded to the creator; 5% fee stays in the contract.
      *         ETH:    send `amount` as msg.value; excess is refunded.
      */
-    function donate(uint256 tokenId, uint256 amount) external payable nonReentrant {
+    function donate(uint256 tokenId, uint256 amount) external payable nonReentrant whenNotPaused {
         require(tokenId < nextTokenId, "Token does not exist");
         require(amount > 0, "Amount must be > 0");
 
@@ -507,7 +614,7 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
      *         Streak escalates: day 1 = 5, day 2 = 10, ... day 7 = 35 + 50 bonus.
      *         Missing a day resets the streak. After day 7, streak resets.
      */
-    function claimDailyGM() external {
+    function claimDailyGM() external whenNotPaused {
         require(rewardToken != address(0), "Reward token not set");
 
         uint256 today = block.timestamp / 1 days;
@@ -665,6 +772,16 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         emit SlotPriceChanged(_price);
     }
 
+    /// @notice Pause all user-facing actions (mint, donate, GM claim). Emergency use only.
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// @notice Resume normal operations after a pause.
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     /**
      * @notice Set the featured slot duration in seconds.
      *         e.g. 15 minutes = 900, 1 hour = 3600.
@@ -773,6 +890,35 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         emit RaffleChanged(_raffle);
     }
 
+    /**
+     * @notice Approve or revoke an NFT collection for platform perks.
+     *         The NFT contract does not need to exist at the time of approval.
+     *         Call with approved=true when the NFT drop is ready.
+     */
+    function setNFTContract(address nftContract, bool approved) external onlyOwner {
+        require(nftContract != address(0), "Invalid address");
+        bool wasApproved = approvedNFTContracts[nftContract];
+        approvedNFTContracts[nftContract] = approved;
+        if (approved && !wasApproved) {
+            approvedNFTList.push(nftContract);
+        } else if (!approved && wasApproved) {
+            uint256 len = approvedNFTList.length;
+            for (uint256 i = 0; i < len; i++) {
+                if (approvedNFTList[i] == nftContract) {
+                    approvedNFTList[i] = approvedNFTList[len - 1];
+                    approvedNFTList.pop();
+                    break;
+                }
+            }
+        }
+        emit NFTContractApproved(nftContract, approved);
+    }
+
+    /// @notice Returns all currently-approved NFT contract addresses.
+    function getApprovedNFTContracts() external view returns (address[] memory) {
+        return approvedNFTList;
+    }
+
     /// @notice Set points awarded per slot mint (all paths).
     function setMintPointReward(uint256 _amount) external onlyOwner {
         mintPointReward = _amount;
@@ -853,14 +999,20 @@ contract Booztory is ERC721, Ownable, ReentrancyGuard {
         view
         returns (uint256 tokenId, Slot memory slot, bool found)
     {
-        for (uint256 i = nextTokenId; i > 0; i--) {
-            uint256 id = i - 1;
-            Slot storage s = slots[id];
-            if (block.timestamp >= s.scheduledTime && block.timestamp <= s.endTime) {
-                return (id, s, true);
-            }
+        for (uint256 i = _slotCursor; i < nextTokenId; i++) {
+            Slot storage s = slots[i];
+            if (block.timestamp < s.scheduledTime) break; // all remaining slots are future
+            if (block.timestamp <= s.endTime) return (i, s, true);
         }
         return (0, slots[0], false);
+    }
+
+    /// @notice Advance the slot cursor past expired slots.
+    ///         Anyone can call this — useful during idle periods with no new mints.
+    function advanceCursor() external {
+        while (_slotCursor < nextTokenId && slots[_slotCursor].endTime < block.timestamp) {
+            _slotCursor++;
+        }
     }
 
     function getUpcomingSlots()

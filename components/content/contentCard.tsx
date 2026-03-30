@@ -218,10 +218,29 @@ export function ContentCard({
                 {isPlaceholder ? (
                   <>
                     <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
-                    <div className="text-center p-4">
-                      <h1 className="text-xl font-medium mb-2 text-gray-900">Welcome to Booztory</h1>
-                      <p className="text-sm text-gray-700">Submit your content to get featured here!</p>
-                      <p className="text-xs text-gray-500 mt-2">You can support the platform by donating.</p>
+                    <div className="text-center p-4 space-y-2">
+                      <h1 className="text-xl font-black text-gray-900">Welcome to Booztory</h1>
+                      <p className="text-sm text-gray-600 italic">The on-chain content spotlight on Base.</p>
+                      <p className="text-sm text-gray-700">
+                        Pay <span className="font-bold">1 USDC</span> to feature your content for{" "}
+                        <span className="font-bold">15 minutes</span>.
+                      </p>
+                      <div className="flex items-center justify-center gap-3 py-1">
+                        {[
+                          { src: "/social/youtube.svg",       alt: "YouTube"        },
+                          { src: "/social/youtubeshorts.svg", alt: "YouTube Shorts" },
+                          { src: "/social/x.svg",             alt: "X"              },
+                          { src: "/social/tiktok.svg",        alt: "TikTok"         },
+                          { src: "/social/spotify.svg",       alt: "Spotify"        },
+                          { src: "/social/vimeo.svg",         alt: "Vimeo"          },
+                          { src: "/social/twitch.svg",        alt: "Twitch"         },
+                        ].map(({ src, alt }) => (
+                          <img key={alt} src={src} alt={alt} title={alt} className="w-5 h-5 object-contain" />
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 italic">
+                        No queue? Your content goes live <span className="font-semibold not-italic">instantly</span>.
+                      </p>
                     </div>
                   </>
                 ) : (

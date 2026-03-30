@@ -21,6 +21,7 @@ import {
   Settings,
   LogOut,
   ExternalLink,
+  BadgeCheck,
 } from "lucide-react"
 import Image from "next/image"
 import { useDisconnect } from "wagmi"
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { label: "Overview",  href: "/admin",           icon: LayoutDashboard },
   { label: "Raffle",    href: "/admin/raffle",     icon: Ticket         },
   { label: "Sponsors",  href: "/admin/sponsors",   icon: Megaphone      },
+  { label: "NFT Pass",  href: "/admin/nft",        icon: BadgeCheck     },
   { label: "Contract",  href: "/admin/contract",   icon: Settings       },
 ]
 

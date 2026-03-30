@@ -347,8 +347,17 @@ function ApplicationRow({
   onAction: () => void
 }) {
   const [isRefunding, setIsRefunding] = useState(false)
+  const [refundCountdown, setRefundCountdown] = useState("")
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+
+  const { data: refundTimeoutRaw } = useReadContract({
+    address: RAFFLE_ADDRESS,
+    abi: RAFFLE_ABI,
+    functionName: "refundTimeout",
+    chainId: APP_CHAIN.id,
+  })
+  const refundTimeout = Number(refundTimeoutRaw ?? 30 * 86400)
 
   const { data: appRaw, refetch: refetchAppData } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -371,7 +380,24 @@ function ApplicationRow({
   const submittedAt = app?.[7] ?? 0n
   const status      = (app?.[9] ?? 0) as AppStatus
 
-  const isOwnApp    = !!address && !!sponsor && address.toLowerCase() === sponsor.toLowerCase()
+  const isOwnApp       = !!address && !!sponsor && address.toLowerCase() === sponsor.toLowerCase()
+  const refundUnlockAt = Number(submittedAt) + refundTimeout
+  const refundReady    = Date.now() / 1000 >= refundUnlockAt
+
+  useEffect(() => {
+    if (!isOwnApp || status !== 0 || refundReady) { setRefundCountdown(""); return }
+    const update = () => {
+      const diff = Math.max(0, refundUnlockAt - Math.floor(Date.now() / 1000))
+      if (diff === 0) { setRefundCountdown(""); return }
+      const d = Math.floor(diff / 86400)
+      const h = Math.floor((diff % 86400) / 3600)
+      const m = Math.floor((diff % 3600) / 60)
+      setRefundCountdown(d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`)
+    }
+    update()
+    const id = setInterval(update, 60_000)
+    return () => clearInterval(id)
+  }, [isOwnApp, status, refundReady, refundUnlockAt])
 
   if (!app) return null
   if (!isOwnApp) return null
@@ -507,11 +533,17 @@ function ApplicationRow({
         </p>
       )}
 
-      {isOwnApp && status === 0 && Date.now() / 1000 >= Number(submittedAt) + 3 * 86400 && (
-        <button onClick={handleClaimRefund} disabled={isRefunding}
-          className="w-full border border-gray-200 text-gray-700 text-xs font-bold py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
-          {isRefunding ? "Claiming…" : "Claim Refund"}
-        </button>
+      {isOwnApp && status === 0 && (
+        refundReady ? (
+          <button onClick={handleClaimRefund} disabled={isRefunding}
+            className="w-full border border-gray-200 text-gray-700 text-xs font-bold py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            {isRefunding ? "Claiming…" : "Claim Refund"}
+          </button>
+        ) : refundCountdown ? (
+          <p className="text-xs text-gray-400 text-center pt-1">
+            Refund available in {refundCountdown}
+          </p>
+        ) : null
       )}
     </div>
   )

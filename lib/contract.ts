@@ -174,6 +174,26 @@ export const BOOZTORY_ABI = [
   { anonymous: false, inputs: [{ internalType: "uint256[5]", name: "newRewards", type: "uint256[5]" }], name: "GMMilestoneRewardsChanged", type: "event" },
   { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newAmount", type: "uint256" }], name: "GMFlatDailyRewardChanged", type: "event" },
   { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newAmount", type: "uint256" }], name: "DonateBoozRewardChanged", type: "event" },
+
+  // Pause / unpause
+  { inputs: [], name: "pause", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "unpause", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "paused", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+
+  // Cursor
+  { inputs: [], name: "advanceCursor", outputs: [], stateMutability: "nonpayable", type: "function" },
+
+  // NFT Pass
+  { inputs: [{ internalType: "address", name: "nftContract", type: "address" }, { internalType: "bool", name: "approved", type: "bool" }], name: "setNFTContract", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "getApprovedNFTContracts", outputs: [{ internalType: "address[]", name: "", type: "address[]" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }], name: "approvedNFTContracts", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }, { internalType: "uint256", name: "", type: "uint256" }], name: "nftLastDiscountMint", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }, { internalType: "uint256", name: "", type: "uint256" }], name: "nftLastFreeMint", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "nftContract", type: "address" }, { internalType: "uint256", name: "nftTokenId", type: "uint256" }, { internalType: "string", name: "contentUrl", type: "string" }, { internalType: "string", name: "contentType", type: "string" }, { internalType: "string", name: "aspectRatio", type: "string" }, { internalType: "string", name: "title", type: "string" }, { internalType: "string", name: "authorName", type: "string" }, { internalType: "string", name: "imageUrl", type: "string" }], name: "mintSlotWithNFTDiscount", outputs: [], stateMutability: "payable", type: "function" },
+  { inputs: [{ internalType: "address", name: "nftContract", type: "address" }, { internalType: "uint256", name: "nftTokenId", type: "uint256" }, { internalType: "string", name: "contentUrl", type: "string" }, { internalType: "string", name: "contentType", type: "string" }, { internalType: "string", name: "aspectRatio", type: "string" }, { internalType: "string", name: "title", type: "string" }, { internalType: "string", name: "authorName", type: "string" }, { internalType: "string", name: "imageUrl", type: "string" }], name: "mintSlotFreeWithNFT", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "nftContract", type: "address" }, { indexed: false, internalType: "bool", name: "approved", type: "bool" }], name: "NFTContractApproved", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "tokenId", type: "uint256" }, { indexed: true, internalType: "address", name: "creator", type: "address" }, { indexed: true, internalType: "address", name: "nftContract", type: "address" }, { indexed: false, internalType: "uint256", name: "nftTokenId", type: "uint256" }], name: "NFTDiscountSlotMinted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "tokenId", type: "uint256" }, { indexed: true, internalType: "address", name: "creator", type: "address" }, { indexed: true, internalType: "address", name: "nftContract", type: "address" }, { indexed: false, internalType: "uint256", name: "nftTokenId", type: "uint256" }], name: "NFTFreeSlotMinted", type: "event" },
 ] as const
 
 // ─── Raffle ABI ───────────────────────────────────────────────────────────────
@@ -193,6 +213,8 @@ export const RAFFLE_ABI = [
   { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "duration", type: "uint256" }, { indexed: false, internalType: "uint256", name: "minPrize", type: "uint256" }, { indexed: false, internalType: "uint256", name: "fee", type: "uint256" }], name: "PriceTierSet", type: "event" },
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "newBooztory", type: "address" }], name: "BooztoryChanged", type: "event" },
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "token", type: "address" }, { indexed: true, internalType: "address", name: "to", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "Withdrawn", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "winner", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "EthTransferFailed", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "winner", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "BOOZMintFailed", type: "event" },
 
   // State vars (public getters)
   { inputs: [], name: "booztory", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
@@ -243,6 +265,11 @@ export const RAFFLE_ABI = [
   { inputs: [{ internalType: "uint256", name: "_subscriptionId", type: "uint256" }, { internalType: "bytes32", name: "_keyHash", type: "bytes32" }, { internalType: "uint32", name: "_callbackGasLimit", type: "uint32" }, { internalType: "uint16", name: "_requestConfirmations", type: "uint16" }], name: "setVrfConfig", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [], name: "renounceOwnership", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ internalType: "address", name: "newOwner", type: "address" }], name: "transferOwnership", outputs: [], stateMutability: "nonpayable", type: "function" },
+
+  // Pause / unpause
+  { inputs: [], name: "pause", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "unpause", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "paused", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
 ] as const
 
 // ERC-20 minimal ABI (approve + transfer)

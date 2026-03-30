@@ -5,6 +5,7 @@ import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFCo
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /// @notice Minimal interface for minting BOOZ directly to raffle winners.
 interface IBooztoryToken {
@@ -35,7 +36,7 @@ interface IBooztoryToken {
  *                         e.g. prizeAmounts[0] = USDC amounts per winner
  *                              prizeAmounts[1] = BOOZ amounts per winner
  */
-contract BooztoryRaffle is VRFConsumerBaseV2Plus {
+contract BooztoryRaffle is VRFConsumerBaseV2Plus, Pausable {
     using SafeERC20 for IERC20;
 
     receive() external payable {}
@@ -157,6 +158,7 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
     event BooztoryChanged(address indexed newBooztory);
     event Withdrawn(address indexed token, address indexed to, uint256 amount);
     event EthTransferFailed(address indexed winner, uint256 amount);
+    event BOOZMintFailed(address indexed winner, uint256 amount);
 
     // -------------------------------------------------------------------------
     // Errors
@@ -255,7 +257,7 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
      * @param raffleId     Raffle to enter.
      * @param ticketAmount Number of tickets to commit.
      */
-    function enterRaffle(uint256 raffleId, uint256 ticketAmount) external {
+    function enterRaffle(uint256 raffleId, uint256 ticketAmount) external whenNotPaused {
         if (raffleId >= nextRaffleId) revert InvalidRaffle();
         Raffle storage r = _raffles[raffleId];
         if (r.status != RaffleStatus.Active) revert RaffleNotActive();
@@ -451,7 +453,9 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
                 address token = r.prizeTokens[t];
                 if (token == boozToken) {
                     // Mint BOOZ directly — raffle is an authorized minter
-                    try IBooztoryToken(boozToken).mintReward(winner, amount) {} catch {}
+                    try IBooztoryToken(boozToken).mintReward(winner, amount) {} catch {
+                        emit BOOZMintFailed(winner, amount);
+                    }
                 } else if (token == address(0)) {
                     // Native ETH — use call so a reverting winner doesn't block others
                     (bool ok,) = winner.call{value: amount}("");
@@ -502,7 +506,7 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
         string calldata adContent,
         string calldata adLink,
         uint256 duration
-    ) external {
+    ) external whenNotPaused {
         PriceTier memory tier = priceTiers[duration];
         if (tier.minPrize == 0) revert PriceTierNotFound();
         uint256 total = tier.minPrize + tier.fee;
@@ -676,6 +680,16 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus {
 
     function setRefundTimeout(uint256 _timeout) external onlyOwner {
         refundTimeout = _timeout;
+    }
+
+    /// @notice Pause user-facing actions (enterRaffle, submitApplication). Emergency use only.
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// @notice Resume normal operations after a pause.
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     function setVrfConfig(

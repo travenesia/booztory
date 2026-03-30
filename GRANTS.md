@@ -156,11 +156,14 @@ Booztory is a solo-founder project. There are no co-founders.
 - Reward page (`/reward`) — raffle entries, weekly draw status, BOOZ stats
 - Weekly raffle with Chainlink VRF — configurable prizes, automatic on-chain payouts
 - YouTube, TikTok, X, Vimeo, Spotify, Twitch embeds working
-- ENS + Basename display for creators and donors
-- Farcaster Mini App support (works inside Warpcast)
+- Full identity resolution: Farcaster pfp/username (mini app) → Basename → ENS → address — shown on connect button, wallet dropdown, leaderboard, profile, and donation modal
+- Leaderboard — 6 categories (Minters, Streakers, Points, Creators, Donors, Winners), 30d/All Time toggle, podium, connected wallet row
+- Sponsor advertising system — application form, admin accept/reject, ad countdown, ad display (sidebar + floating bar)
+- Per-wallet profile page — avatar, identity, on-chain activity feed
+- Platform stats page
 - FAQ page, mobile-responsive UI with bottom navigation
 - Mobile-native drawer (Vaul) for GM streak, no safe-area gaps on any device
-- Skeleton loading states across all data-driven pages (Home, History, Upcoming, Reward, FAQ)
+- Skeleton loading states across all data-driven pages
 
 **19. How long have you been working on this?**
 

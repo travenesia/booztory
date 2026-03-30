@@ -65,9 +65,9 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   const streakCount   = Number(streakData?.[1] ?? 0)
   const claimedMask   = Number(streakData?.[2] ?? 0)
 
-  const claimedToday    = lastClaimDay === today
-  const journeyComplete = streakCount >= 90
-  const isConsecutive   = lastClaimDay === today - 1n && streakCount > 0 && streakCount < 90
+  const claimedToday  = lastClaimDay === today
+  const isVeteran     = streakCount >= 90
+  const isConsecutive = lastClaimDay === today - 1n && streakCount > 0
 
   // What day will next claim land on
   const nextCount = claimedToday ? streakCount : isConsecutive ? streakCount + 1 : 1
@@ -77,6 +77,9 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   const nextMilestone = MILESTONES.find(
     m => m.day === nextCount && !(claimedMask & (1 << m.bit))
   )
+
+  // Veteran: +3 pts bonus every 30 days after day 90
+  const nextVeteranBonus = isVeteran && !claimedToday && ((nextCount - 90) % 30 === 0)
 
   // Progress bar 0–100%
   const progressPct = Math.min((streakCount / 90) * 100, 100)
@@ -117,15 +120,15 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   const isLoading = isWritePending || isConfirming
 
   return (
-    <div className="flex flex-col items-center w-full px-6 py-4">
+    <div className="flex flex-col items-center w-full px-6 py-6">
       {/* Flame + title */}
       <div className="text-6xl mb-3 select-none leading-none">🔥</div>
       <h2 className="text-gray-800 font-black uppercase tracking-[0.12em] text-lg mb-1">
-        {journeyComplete ? "Journey Complete!" : "Your Daily Streak"}
+        {isVeteran ? "Veteran Mode 🔱" : "Your Daily Streak"}
       </h2>
       <p className="text-gray-500 text-sm mb-5">
-        {journeyComplete
-          ? "You've reached Mythic rank"
+        {isVeteran
+          ? <>Day <span className="font-bold text-gray-800">{streakCount}</span> · Legendary</>
           : streakCount > 0
             ? <>Day <span className="font-bold text-gray-800">{streakCount}</span> / 90</>
             : "Start your 90-day journey"
@@ -163,34 +166,31 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
 
       </div>
 
-      {/* Journey complete banner OR reward card */}
-      {journeyComplete ? (
-        <div className="w-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl flex flex-col items-center py-6 mb-5 shadow-sm">
-          <span className="text-4xl mb-2">🔱</span>
-          <p className="text-white font-black text-lg uppercase tracking-wide">Mythic Achieved</p>
-          <p className="text-white/80 text-sm mt-1">Your 90-day journey is complete</p>
+      {/* Reward card */}
+      <div className="w-full bg-white/70 border border-gray-200 rounded-2xl flex flex-col items-center py-5 mb-5 shadow-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/booz.svg" alt="BOOZ" width={64} height={64} className="mb-4 animate-bounce-slow" />
+        <div className="flex items-baseline gap-1.5 mb-1">
+          <span className="text-gray-900 font-bold text-2xl leading-none">
+            {claimedToday ? getDailyReward(streakCount) : displayReward} $BOOZ
+          </span>
         </div>
-      ) : (
-        <div className="w-full bg-white/70 border border-gray-200 rounded-2xl flex flex-col items-center py-5 mb-5 shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/booz.svg" alt="BOOZ" width={64} height={64} className="mb-4 animate-bounce-slow" />
-          <div className="flex items-baseline gap-1.5 mb-1">
-            <span className="text-gray-900 font-bold text-2xl leading-none">
-              {claimedToday ? getDailyReward(streakCount) : displayReward} $BOOZ
-            </span>
-          </div>
-          {nextMilestone && !claimedToday && (
-            <span className="text-emerald-600 font-semibold text-sm">
-              +{nextMilestone.bonus} {nextMilestone.emoji} {nextMilestone.label} bonus!
-            </span>
-          )}
-          <span className="text-gray-400 text-xs mt-1">Daily Streak Reward</span>
-        </div>
-      )}
+        {nextMilestone && !claimedToday && (
+          <span className="text-emerald-600 font-semibold text-sm">
+            +{nextMilestone.bonus} {nextMilestone.emoji} {nextMilestone.label} bonus!
+          </span>
+        )}
+        {nextVeteranBonus && (
+          <span className="text-purple-600 font-semibold text-sm">
+            +3 pts 🔱 Veteran bonus!
+          </span>
+        )}
+        <span className="text-gray-400 text-xs mt-1">Daily Streak Reward</span>
+      </div>
 
       {/* Status text */}
       <div className="mb-5 text-center min-h-[36px]">
-        {journeyComplete ? null : claimedToday ? (
+        {claimedToday ? (
           <>
             <p className="text-gray-700 text-sm font-semibold">
               Come back tomorrow for day <span className="font-black">{streakCount + 1}</span>
@@ -207,14 +207,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Claim button */}
-      {journeyComplete ? (
-        <button
-          disabled
-          className="w-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white font-black uppercase tracking-widest py-4 rounded-2xl text-sm opacity-80 cursor-not-allowed"
-        >
-          Journey Complete 🔱
-        </button>
-      ) : !address ? (
+      {!address ? (
         <button
           disabled
           className="w-full bg-gray-200 text-gray-400 font-black uppercase tracking-widest py-4 rounded-2xl text-sm cursor-not-allowed"

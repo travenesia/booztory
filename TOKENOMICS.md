@@ -1,6 +1,6 @@
 # Booztory — Tokenomics & Roadmap
 
-Last updated: 2026-03-27 (session 3)
+Last updated: 2026-03-30 (session 4)
 
 ---
 
@@ -78,10 +78,11 @@ Free slot does NOT earn BOOZ — burn path is a dead end.
 | `mintSlot()` | 1 USDC | 1,000 | 0 | ✅ |
 | `mintSlotWithDiscount()` | 0.9 USDC | 1,000 | 1,000 | ✅ |
 | `mintSlotWithTokens()` | None | 0 | 10,000 | ✗ |
-| `mintSlotWithNFTDiscount()` | 0.5 USDC | 1,000 | 0 | ✅ |
+| `mintSlotWithNFTDiscount()` | 0.5 USDC | 0 | 0 | ✅ |
 | `mintSlotFreeWithNFT()` | None | 0 | 0 | ✅ |
 
 NFT paths are exclusive — cannot be combined with BOOZ discount/free paths.
+NFT paths earn **no BOOZ and no points** — only the 1 raffle ticket. Holders choosing the standard mint path instead receive all normal perks.
 
 ### Admin Setters
 - `setSlotMintReward`, `setFreeSlotCost`, `setDiscountBurnCost`, `setDiscountAmount`
@@ -98,7 +99,7 @@ Users earn points through platform activity. Points are tracked on-chain per wal
 
 | Action | Points | Notes |
 |---|---|---|
-| Mint slot | 15 pts | Per mint (all 3 paths) |
+| Mint slot | 15 pts | Standard, discount, free-token paths only — **NFT paths earn 0 pts** |
 | GM daily | 1 pt | Per day, requires active streak |
 | GM Day 7 bonus | +1 pt | One-time per cycle |
 | GM Day 14 bonus | +1 pt | One-time per cycle |
@@ -137,7 +138,10 @@ Users earn points through platform activity. Points are tracked on-chain per wal
 Owner creates and configures each raffle independently. Multiple raffles can run concurrently.
 
 **Prize Setup:**
-- One or more ERC-20 token types per raffle (USDC, BOOZ, or sponsor ERC-20)
+- Supported prize tokens: **USDC**, **BOOZ**, **ETH** (native), or **any ERC-20**
+- ETH flow: `sendTransaction` ETH to raffle contract (tx 1) → `createRaffle(address(0))` (tx 2) — `address(0)` is the ETH sentinel
+- USDC / custom ERC-20 flow: `approve` → `createRaffle` → `depositPrize` (3 txs)
+- BOOZ flow: `createRaffle` only (1 tx) — minted directly to winners at draw time
 - If draw threshold not met → draw cancelled, sponsor tokens refunded
 
 **Winner Distribution:**
@@ -217,27 +221,42 @@ A separate ERC-721 collection (not the slot token) granting permanent platform p
 - **Cooldown travels with NFT** — if sold, buyer inherits used/unused cooldown state; prevents borrow-use-return exploit
 - **Multiple collections** — `approvedNFTContracts[address] = bool`; any approved ERC-721 contract grants perks
 - **Exclusive paths** — NFT discount/free do not stack with BOOZ discount/free paths
+- **No BOOZ, no points** — NFT paths yield only the mint + 1 raffle ticket; holder consciously trades rewards for cost savings
+- **Holder choice** — NFT holders can always ignore the NFT path and mint normally to receive full BOOZ + points rewards
+
+### Frontend UX (Submit Modal)
+- Payment method section shows an **NFT toggle** (same pill-style as URL/Text switcher) only when the connected wallet holds ≥1 token from an approved NFT collection
+- Toggle options: **Standard** (1 USDC, full perks) | **NFT Discount** (0.5 USDC, 1 ticket) | **NFT Free** (0 USDC, 1 ticket, 30d cooldown)
+- NFT-path options show the NFT contract + token ID selector if the wallet holds multiple approved NFTs
+- No BOOZ balance shown on NFT paths (no BOOZ involved)
+- Cooldown state shown per token ID — grey out the option if cooldown is active
 
 ### Allowlist for NFT Drop
 - Who qualifies: any wallet where `getSlotsByCreator(address).length > 0` (has ever minted a slot)
 - Snapshot can be taken at any block, or checked live at NFT mint time
 - No contract changes needed — slot history is permanently on-chain
 
-### Contract Changes Required (Booztory.sol)
+### Contract Changes (Booztory.sol) — Implemented ✅
 ```solidity
 mapping(address => bool) public approvedNFTContracts;
+address[] public approvedNFTList;                                            // enumerable — for admin UI
 mapping(address => mapping(uint256 => uint256)) public nftLastDiscountMint; // nftContract => tokenId => timestamp
 mapping(address => mapping(uint256 => uint256)) public nftLastFreeMint;     // nftContract => tokenId => timestamp
 
-function setNFTContract(address nft, bool approved) external onlyOwner
+function setNFTContract(address nft, bool approved) external onlyOwner      // push/swap-and-pop on approvedNFTList
+function getApprovedNFTContracts() external view returns (address[] memory)
 function mintSlotWithNFTDiscount(address nftContract, uint256 nftTokenId, ...) external
 function mintSlotFreeWithNFT(address nftContract, uint256 nftTokenId, ...) external
 ```
 
 ### Implementation Status
 - [ ] NFT Pass collection designed and deployed
-- [ ] `setNFTContract(address, bool)` added to Booztory.sol
-- [ ] `mintSlotWithNFTDiscount()` + `mintSlotFreeWithNFT()` added
+- [x] `setNFTContract(address, bool)` added to Booztory.sol ✅
+- [x] `approvedNFTList` array + `getApprovedNFTContracts()` view ✅
+- [x] `mintSlotWithNFTDiscount()` + `mintSlotFreeWithNFT()` added ✅
+- [x] Admin UI: `app/admin/nft/page.tsx` — approve, revoke, persistent on-chain list ✅
+- [x] ABI updated in `lib/contract.ts` ✅
+- [ ] Redeployment on Base Sepolia (pending — awaiting full redeploy run)
 - [ ] Frontend: new mint path options in submit content modal
 
 ---
@@ -399,6 +418,13 @@ Confirmed on current Base Sepolia deploy:
 | AdScheduleCard — platform icon, social links, clickable ad type (embed→link, image/text→popup) | ✅ Done |
 | "Read before you apply" accordion (FAQ style, collapsed by default) | ✅ Done |
 
+### UI / Frontend — Auth & Session
+| Feature | Status |
+|---|---|
+| Session persistence across browser restarts (`maxAge: 30d` in NextAuth) | ✅ Done |
+| Locked wallet shows "Connect" after 5s instead of spinning (`reconnectTimedOut`) | ✅ Done |
+| Race condition fix: `prevStatusRef` triggers SIWE when wagmi reconnects before session resolves | ✅ Done |
+
 ### UI / Frontend — Submit Content Modal
 | Feature | Status |
 |---|---|
@@ -433,9 +459,9 @@ Confirmed on current Base Sepolia deploy:
 ### Smart Contracts
 | Contract | Status |
 |---|---|
-| `Booztory.sol` — 3 mint paths, GM streak, points, donations | Deployed on Base Sepolia ✅ |
+| `Booztory.sol` — 3 mint paths, GM streak, points, donations | Deployed on Base Sepolia ✅ — **pending redeploy** (Pausable + slotCursor fix) |
 | `BooztoryToken.sol` (BOOZ) | Deployed on Base Sepolia ✅ |
-| `BooztoryRaffle.sol` — VRF v2.5, concurrent raffles, sponsor applications, ETH prize support, 30d refund timeout | Deployed on Base Sepolia ✅ |
+| `BooztoryRaffle.sol` — VRF v2.5, concurrent raffles, sponsor applications, ETH prize support, 30d refund timeout | Deployed on Base Sepolia ✅ — **pending redeploy** (BOOZMintFailed event + Pausable) |
 | Base Sepolia wiring | Done ✅ |
 | Base Mainnet deployment | Pending |
 
@@ -451,12 +477,32 @@ Confirmed on current Base Sepolia deploy:
 - [x] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet ✅
 - [x] End-to-end QA: mint → earn BOOZ → streak → raffle draw ✅
 
+### After Redeployment (Booztory + BooztoryRaffle)
+**Booztory.sol changes:** `Pausable` (pause/unpause), `_slotCursor` fix for `getCurrentSlot()` O(1), `advanceCursor()`, full NFT Pass infrastructure
+**BooztoryRaffle.sol changes:** `BOOZMintFailed` event in VRF callback catch, `Pausable` (pause/unpause)
+
+```bash
+VRF_SUBSCRIPTION_ID=<id> npx hardhat run scripts/redeploy.ts --network base-sepolia
+```
+
+- [ ] Run `scripts/redeploy.ts` on Base Sepolia (deploys both Booztory + BooztoryRaffle)
+- [ ] Verify both contracts on Basescan
+- [ ] Remove old BooztoryRaffle from Chainlink VRF subscription
+- [ ] Add new BooztoryRaffle as Chainlink VRF consumer
+- [ ] Call `setAuthorizedMinter(newRaffle, true)` on BooztoryToken
+- [ ] Call `setRewardToken(tokenAddress)` on new Booztory
+- [ ] Call `setRaffle(newRaffleAddress)` on new Booztory
+- [ ] Update `NEXT_PUBLIC_BOOZTORY_ADDRESS` + `NEXT_PUBLIC_RAFFLE_ADDRESS` in `.env.local`
+- [x] Update `BOOZTORY_ABI` in `lib/contract.ts` (add `pause`/`unpause`, `advanceCursor`, NFT pass functions) ✅
+- [ ] Update `RAFFLE_ABI` in `lib/contract.ts` (add `BOOZMintFailed` event, `pause`/`unpause`)
+- [ ] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet (production: 100 / 20)
+
 ### Mainnet Launch
 - [ ] `lib/wagmi.ts` — change `APP_CHAIN = baseSepolia` → `APP_CHAIN = base`
 - [ ] Deploy all 3 contracts to Base Mainnet
 - [ ] Add BooztoryRaffle (mainnet) as VRF consumer
 - [ ] Update `.env.local` with mainnet addresses
-- [ ] Set production `defaultDrawThreshold` + `defaultMinUniqueEntrants`
+- [ ] Set production thresholds: `setDefaultDrawThreshold(100)` + `setDefaultMinUniqueEntrants(20)`
 - [ ] Fund raffle contract with USDC for first draw
 - [ ] Set up Dune analytics dashboard
 
@@ -468,8 +514,9 @@ Confirmed on current Base Sepolia deploy:
 - [ ] Additional BOOZ burn sinks: slot boost, leaderboard badge, governance
 - [ ] NFT Pass collection: design, deploy, snapshot slot minters for allowlist
 - [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform — after NFT design is finalized
-- [ ] Add NFT mint path functions to `Booztory.sol` (`setNFTContract`, `mintSlotWithNFTDiscount`, `mintSlotFreeWithNFT`)
-- [ ] Frontend: NFT path options in submit content modal
+- [x] Add NFT pass infrastructure to `Booztory.sol` (`setNFTContract`, `getApprovedNFTContracts`, `approvedNFTList`, `mintSlotWithNFTDiscount`, `mintSlotFreeWithNFT`) ✅
+- [x] Admin UI: `app/admin/nft/page.tsx` — approve/revoke collections, persistent on-chain list ✅
+- [ ] Frontend: NFT path toggle in submit content modal (visible only if wallet holds an approved NFT)
 - [x] Leaderboard: deploy The Graph subgraph + `/api/leaderboard` + `/leaderboard` page (see §14) ✅
 - [ ] Profile page `/profile/[address]` — per-wallet stats (see §15)
 
@@ -493,12 +540,13 @@ Confirmed on current Base Sepolia deploy:
 - [ ] Test BOOZ raffle (1-tx: createRaffle only, minted at draw)
 
 ### `/sponsor` page — Pending
-- [ ] Show countdown to auto-refund deadline on Pending applications
+- [x] Show countdown to auto-refund deadline on Pending applications — reads `refundTimeout` live from contract ✅
 - [ ] Validate ad image URL is reachable before submit
 - [ ] After Accept: consider linking owner directly to raffle creation panel
 
 ### Known Frontend Issues
-- [ ] Wallet disconnect dropdown hidden behind sidebar ads on desktop — fix by portaling to `document.body`
+- [x] Wallet disconnect dropdown hidden behind sidebar ads on desktop — portalled to `document.body` via `createPortal`, `position: fixed`, `z-[60]` ✅
+- [x] GM modal blocked at day 90 — `journeyComplete` replaced with `isVeteran`, veteran mode UI active, `isConsecutive` no longer capped at day 90 ✅
 
 ---
 
@@ -643,7 +691,7 @@ graph init --from-contract <BOOZTORY_ADDRESS> --network base-sepolia
 ### Data to display
 | Section | Source | Notes |
 |---|---|---|
-| Display name | ENS / Basename / truncated address | Same as `useWalletName` |
+| Display name | Farcaster (mini app, own address) → Basename → ENS → truncated address | `useIdentity().displayName` |
 | Total slots minted | `SlotMinted` events (The Graph) | All 3 mint paths |
 | Total USDC received | `DonationReceived` events (The Graph) | Creator earnings |
 | Total USDC donated | `DonationReceived` events (The Graph) | As donor |

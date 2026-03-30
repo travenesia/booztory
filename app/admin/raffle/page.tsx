@@ -4,6 +4,8 @@ import { useState, useMemo } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { parseUnits, isAddress } from "viem"
+import { sendTransaction } from "wagmi/actions"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -95,7 +97,9 @@ export default function AdminRafflePage() {
   const [isWithdrawing, setIsWithdrawing]         = useState(false)
 
   // Create raffle state
-  const [crToken, setCrToken]                     = useState<"usdc" | "booz">("usdc")
+  const [crToken, setCrToken]                     = useState<"usdc" | "booz" | "eth" | "custom">("usdc")
+  const [crCustomTokenAddress, setCrCustomTokenAddress] = useState("")
+  const [crCustomDecimals, setCrCustomDecimals]   = useState("18")
   const [crWinnerCount, setCrWinnerCount]         = useState("3")
   const [crPrizes, setCrPrizes]                   = useState<string[]>(["", "", ""])
   const [crDurationIdx, setCrDurationIdx]         = useState(1)
@@ -324,47 +328,60 @@ export default function AdminRafflePage() {
   async function handleCreateRaffle() {
     const prizes = crPrizes.slice(0, winnerCount)
     if (prizes.some(p => !p || parseFloat(p) <= 0)) return
+    if (crToken === "custom" && !isAddress(crCustomTokenAddress)) return
 
     const sponsorApp     = crSponsorAppId !== null ? [...activeSponsors, ...missedSponsors].find(s => s.appId === crSponsorAppId) : undefined
     const selectedOption = DURATION_OPTIONS[crDurationIdx]
-    const isCustom       = selectedOption?.seconds === 0
+    const isCustomDuration = selectedOption?.seconds === 0
     const duration       = sponsorApp
       ? sponsorApp.duration
-      : isCustom ? Math.max(1, parseInt(crCustomHours) || 1) * 3600 : (selectedOption?.seconds ?? DURATION_OPTIONS[1].seconds)
+      : isCustomDuration ? Math.max(1, parseInt(crCustomHours) || 1) * 3600 : (selectedOption?.seconds ?? DURATION_OPTIONS[1].seconds)
 
-    const isUsdc  = sponsorApp ? true : crToken === "usdc"
-    const prizeBns = prizes.map(p =>
-      isUsdc
-        ? BigInt(Math.round(parseFloat(p) * 1_000_000))
-        : BigInt(Math.round(parseFloat(p))) * 10n ** 18n
-    )
-    const totalPrize   = prizeBns.reduce((a, b) => a + b, 0n)
+    const tokenType   = sponsorApp ? "usdc" : crToken
+    const decimals    = tokenType === "usdc" ? 6 : tokenType === "custom" ? (parseInt(crCustomDecimals) || 18) : 18
+    const prizeToken  = tokenType === "usdc" ? USDC_ADDRESS
+                      : tokenType === "booz" ? TOKEN_ADDRESS
+                      : tokenType === "eth"  ? "0x0000000000000000000000000000000000000000"
+                      : crCustomTokenAddress
+    const prizeBns    = prizes.map(p => parseUnits(p, decimals))
+    const totalPrize  = prizeBns.reduce((a, b) => a + b, 0n)
     const prizeAmounts = [prizeBns]
-    const prizeToken   = isUsdc ? USDC_ADDRESS : TOKEN_ADDRESS
+
+    const prizeLabel = tokenType === "usdc"   ? `$${(Number(totalPrize) / 1e6).toFixed(2)} USDC`
+                     : tokenType === "booz"   ? `${(Number(totalPrize) / 1e18).toFixed(0)} BOOZ`
+                     : tokenType === "eth"    ? `${(Number(totalPrize) / 1e18).toFixed(4)} ETH`
+                     : `${prizes.reduce((a, p) => a + parseFloat(p), 0).toFixed(4)} (custom)`
 
     setIsCreatingRaffle(true)
     try {
       if (sponsorApp) {
-        // Sponsor-funded — prize already in contract
+        // Sponsor-funded — USDC prize already in contract
         const tx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "createRaffle", args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: tx })
-      } else if (isUsdc) {
-        // Owner USDC: approve → create → deposit
-        const approveTx = await writeContractAsync({ address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalPrize], chainId: APP_CHAIN.id })
+      } else if (tokenType === "booz") {
+        // BOOZ — minted at draw, no deposit needed
+        const tx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "createRaffle", args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)], chainId: APP_CHAIN.id })
+        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      } else if (tokenType === "eth") {
+        // ETH — send to contract first, then create raffle
+        const ethTx = await sendTransaction(wagmiConfig, { to: RAFFLE_ADDRESS, value: totalPrize, chainId: APP_CHAIN.id })
+        await waitForTransactionReceipt(wagmiConfig, { hash: ethTx })
+        const createTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "createRaffle", args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)], chainId: APP_CHAIN.id })
+        await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
+      } else {
+        // USDC or custom ERC-20 — approve → create → deposit
+        const tokenAddr = tokenType === "usdc" ? USDC_ADDRESS : crCustomTokenAddress as `0x${string}`
+        const approveTx = await writeContractAsync({ address: tokenAddr, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalPrize], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
         const createTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "createRaffle", args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
-        const depositTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "depositPrize", args: [USDC_ADDRESS, totalPrize], chainId: APP_CHAIN.id })
+        const depositTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "depositPrize", args: [tokenAddr, totalPrize], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: depositTx })
-      } else {
-        // BOOZ — minted at draw
-        const tx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "createRaffle", args: [[prizeToken], prizeAmounts, BigInt(winnerCount), BigInt(duration)], chainId: APP_CHAIN.id })
-        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       }
 
-      setCrPrizes(["", "", ""]); setCrWinnerCount("3"); setCrSponsorAppId(null)
+      setCrPrizes(["", "", ""]); setCrWinnerCount("3"); setCrSponsorAppId(null); setCrCustomTokenAddress(""); setCrCustomDecimals("18")
       refetchActiveRaffles()
-      toast({ title: "Raffle Created!", description: `${winnerCount} winner${winnerCount !== 1 ? "s" : ""} · ${isUsdc ? `$${(Number(totalPrize) / 1e6).toFixed(2)} USDC` : `${(Number(totalPrize) / 1e18).toFixed(0)} BOOZ`}` })
+      toast({ title: "Raffle Created!", description: `${winnerCount} winner${winnerCount !== 1 ? "s" : ""} · ${prizeLabel}` })
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.toLowerCase().includes("rejected")) return
@@ -531,14 +548,33 @@ export default function AdminRafflePage() {
 
         {/* Token toggle — hidden when sponsor selected */}
         {crSponsorAppId === null && (
-          <div className="flex rounded-lg border overflow-hidden text-sm font-semibold">
-            {(["usdc", "booz"] as const).map(t => (
-              <button key={t} onClick={() => setCrToken(t)}
-                className={cn("flex-1 py-2 transition-colors", crToken === t ? "bg-amber-500 text-white" : "bg-white text-amber-700 hover:bg-amber-50")}
-              >
-                {t === "usdc" ? "USDC" : "BOOZ"}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <div className="flex rounded-lg border overflow-hidden text-sm font-semibold">
+              {(["usdc", "booz", "eth", "custom"] as const).map(t => (
+                <button key={t} onClick={() => setCrToken(t)}
+                  className={cn("flex-1 py-2 transition-colors", crToken === t ? "bg-amber-500 text-white" : "bg-white text-amber-700 hover:bg-amber-50")}
+                >
+                  {t === "usdc" ? "USDC" : t === "booz" ? "BOOZ" : t === "eth" ? "ETH" : "Custom"}
+                </button>
+              ))}
+            </div>
+            {crToken === "custom" && (
+              <div className="flex gap-2">
+                <input
+                  value={crCustomTokenAddress} onChange={e => setCrCustomTokenAddress(e.target.value)}
+                  placeholder="Token address (0x…)"
+                  className={cn("flex-1 border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400", crCustomTokenAddress && !isAddress(crCustomTokenAddress) ? "border-red-400" : "")}
+                />
+                <input
+                  type="number" min={0} max={18} value={crCustomDecimals} onChange={e => setCrCustomDecimals(e.target.value)}
+                  placeholder="Decimals"
+                  className="w-24 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+            )}
+            {crToken === "eth" && (
+              <p className="text-xs text-muted-foreground">ETH will be sent to the raffle contract (tx 1), then the raffle is created (tx 2).</p>
+            )}
           </div>
         )}
 
@@ -595,7 +631,7 @@ export default function AdminRafflePage() {
                 <input
                   type="number" min={0} step="0.01" value={p}
                   onChange={e => { const next = [...crPrizes]; next[i] = e.target.value; setCrPrizes(next) }}
-                  placeholder="USDC amount"
+                  placeholder={crSponsorAppId !== null || crToken === "usdc" ? "USDC amount" : crToken === "booz" ? "BOOZ amount" : crToken === "eth" ? "ETH amount" : "Token amount"}
                   className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
@@ -605,10 +641,15 @@ export default function AdminRafflePage() {
 
         <button
           onClick={handleCreateRaffle}
-          disabled={isCreatingRaffle || crPrizes.slice(0, winnerCount).some(p => !p || parseFloat(p) <= 0)}
+          disabled={isCreatingRaffle || crPrizes.slice(0, winnerCount).some(p => !p || parseFloat(p) <= 0) || (crToken === "custom" && !isAddress(crCustomTokenAddress))}
           className="w-full bg-amber-500 text-white text-sm font-bold py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
         >
-          {isCreatingRaffle ? "Creating..." : `Create Raffle (${crSponsorAppId !== null ? "Sponsor-funded" : crToken === "usdc" ? "3 txs" : "1 tx"})`}
+          {isCreatingRaffle ? "Creating..." : `Create Raffle (${
+            crSponsorAppId !== null ? "Sponsor-funded" :
+            crToken === "booz"   ? "1 tx" :
+            crToken === "eth"    ? "2 txs" :
+            "3 txs"
+          })`}
         </button>
       </Section>
 

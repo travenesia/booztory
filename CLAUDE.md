@@ -66,6 +66,10 @@ No test runner is configured. Use `pnpm build` to catch TypeScript errors.
 | `/history` | `app/history/page.tsx` | Past content with infinite scroll |
 | `/upcoming` | `app/upcoming/page.tsx` | Queued content with infinite scroll |
 | `/reward` | `app/reward/page.tsx` | BOOZ balance, GM streak, raffle entries, weekly draw status |
+| `/leaderboard` | `app/leaderboard/page.tsx` | 6-category leaderboard (Mint/Streak/Points/Creators/Donors/Winners), podium, connected wallet row |
+| `/sponsor` | `app/sponsor/page.tsx` | Sponsor application form, upcoming/past ad schedule, admin accept/reject panel |
+| `/stats` | `app/stats/page.tsx` | Platform-wide stats |
+| `/profile/[address]` | `app/profile/[address]/page.tsx` | Per-wallet profile: avatar, identity, on-chain activity feed |
 | `/tweet/[tweet]` | `app/tweet/[tweet]/page.tsx` | Dynamic tweet rendering with metadata |
 
 ---
@@ -104,12 +108,12 @@ Components are organized into subfolders. Import using `@/components/<subfolder>
 
 ### `components/modals/`
 - `submitContent.tsx` — Full submission drawer: URL validation, TikTok short URL resolution, content preview, approve + mintSlot flow (standard / discount / free token-burn paths), mobile keyboard detection
-- `donationModal.tsx` — Donation dialog: preset amounts (1/5/10 USDC). Calls `processDonation(amount, tokenId)`. Resolves recipient and donor addresses via `useWalletName` for ENS/Basename display.
+- `donationModal.tsx` — Donation dialog: preset amounts (1/5/10 USDC). Calls `processDonation(amount, tokenId)`. Resolves recipient and donor addresses via `useIdentity` for Farcaster/ENS/Basename display.
 - `gmModal.tsx` — GM daily streak modal (desktop Dialog) and mobile bottom sheet (Vaul `Drawer`). Shows streak day, rewards, milestone progress, confetti on claim. Background gradient lives on the wrapper (`DialogContent` / `Drawer.Content`), not on `GMContent` itself.
 
 ### `components/wallet/`
-- `connectWallet.tsx` — RainbowKit connect button with auto SIWE sign-in via `useAccountEffect`. Farcaster Mini App detection via `sdk.isInMiniApp()` — uses QuickAuth instead of SIWE. Resolves ENS (mainnet) and Basename (Base L2). Desktop: click-outside dropdown. Mobile: bottom Sheet.
-- `walletDropdown.tsx` — Wallet dropdown/sheet content: display name, BOOZ balance, disconnect button.
+- `connectWallet.tsx` — RainbowKit connect button with auto SIWE sign-in via `useAccountEffect`. Farcaster Mini App detection via `isMiniApp()` — uses QuickAuth instead of SIWE. Uses `useIdentity` for display name + avatar. When authenticated with avatar: renders 32px circular avatar button (no text, no background, `p-0` to override global CSS). Desktop: click-outside portal dropdown. Mobile: Vaul bottom drawer.
+- `walletDropdown.tsx` — Wallet dropdown/sheet content: avatar, display name, BOOZ balance, disconnect button. Uses `useIdentity`.
 
 ---
 
@@ -146,7 +150,8 @@ Both are composed in `app/layout.tsx`. Also includes `MiniappInit` component for
 | `hooks/useContractContent.ts` | `useCurrentSlot()`, `useUpcomingSlots()`, `useAllPastSlots()` — wagmi `useReadContract` wrappers. Placeholder is a stable module-level singleton to prevent re-renders. |
 | `hooks/usePayment.tsx` | `mintSlot(slotData)`, `mintSlotWithDiscount(slotData)`, `mintSlotWithTokens(slotData)` — handles USDC approve + contract call for all three mint paths |
 | `hooks/useDonation.tsx` | `processDonation(amount: number, tokenId: bigint)` — USDC `approve(BOOZTORY_ADDRESS, amount)` → `donate(tokenId, amount)` |
-| `hooks/useWalletName.ts` | `useWalletName(address)` — resolves wallet to Basename → ENS → truncated address. Used in cards and donation modal. |
+| `hooks/useIdentity.ts` | `useIdentity(address)` — full identity resolution returning `{ displayName, walletName, avatarUrl, farcasterUsername, baseName, ensName }`. Priority: Farcaster (mini app + own address only) → stripped Basename → stripped ENS → truncated address. All Farcaster data gated behind `isOwn && isMiniApp()` guard to prevent cache leakage. Used in connectWallet, walletDropdown, topbar, leaderboard, profile page, donationModal. |
+| `hooks/useWalletName.ts` | `useWalletName(address)` — resolves wallet to stripped Basename → stripped ENS → truncated address. Used only in content cards (contentCard, historyCard, upcomingCard) and DonationDesc on profile page. |
 | `hooks/use-toast.ts` | Shadcn toast system |
 | `hooks/use-mobile.tsx` | Mobile device detection |
 

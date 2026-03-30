@@ -55,7 +55,7 @@ Everything core to the product:
 | Smart Contracts | Solidity 0.8.28 · OpenZeppelin · Hardhat 2.28.6 |
 | Randomness | Chainlink VRF v2.5 |
 | Chain | Base (8453) · Base Sepolia (84532) |
-| Identity | ENS · Basenames |
+| Identity | ENS · Basenames · Farcaster (`useIdentity`) |
 
 ---
 
@@ -83,6 +83,10 @@ booztory/
 │   ├── history/page.tsx    # Past content with infinite scroll
 │   ├── upcoming/page.tsx   # Queued content with infinite scroll
 │   ├── reward/page.tsx     # BOOZ balance, GM streak, raffle entries, weekly draw
+│   ├── leaderboard/page.tsx # 6-category leaderboard with podium
+│   ├── sponsor/page.tsx    # Sponsor application form and ad schedule
+│   ├── stats/page.tsx      # Platform-wide stats
+│   ├── profile/[address]/page.tsx # Per-wallet profile and activity feed
 │   ├── faq/page.tsx        # FAQ accordion
 │   └── api/                # API routes (nonce, SIWE, tweet data, TikTok resolver)
 ├── components/
@@ -95,7 +99,7 @@ booztory/
 │   ├── Booztory.sol        # ERC-721 slot contract with donation and reward hooks
 │   ├── BooztoryToken.sol   # BOOZ ERC-20 reward token (SuperchainERC20 / IERC7802)
 │   └── BooztoryRaffle.sol  # Weekly raffle powered by Chainlink VRF v2.5
-├── hooks/                  # useContractContent, usePayment, useDonation, useWalletName
+├── hooks/                  # useContractContent, usePayment, useDonation, useIdentity, useWalletName
 ├── lib/                    # Contract ABI, wagmi config, cache, metadata fetchers
 ├── providers/              # WagmiProvider, SessionProvider
 └── scripts/
@@ -408,7 +412,7 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] Farcaster Mini App + QuickAuth
 - [x] Content submission — standard, discount, and free (token burn) paths
 - [x] Donation flow (approve + donate, 95/5 split)
-- [x] ENS + Basename display
+- [x] ENS + Basename + Farcaster identity display (`useIdentity` — avatar, name, graceful fallback)
 - [x] YouTube, TikTok, X, Spotify, Vimeo, Twitch embeds
 - [x] History & Upcoming pages
 - [x] BOOZ reward token (ERC-20, soulbound Phase 1)
@@ -420,6 +424,10 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] Mobile drawer (Vaul) for GM streak — safe-area safe on all devices
 - [x] Base Sepolia deployment (Booztory + BooztoryToken)
 - [x] BooztoryRaffle redeployment to Base Sepolia
+- [x] Leaderboard page — 6 categories, podium, connected wallet row
+- [x] Sponsor page — application form, ad schedule, admin panel
+- [x] Profile page — per-wallet identity, on-chain activity feed
+- [x] Stats page
 - [x] Rate limiting on API endpoints (Upstash Redis)
 - [ ] Set content type images on-chain (`setContentTypeImage`)
 - [ ] Verify all 3 contracts on Basescan
