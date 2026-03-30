@@ -8,9 +8,9 @@ dataSources:
     name: Booztory
     network: base-sepolia
     source:
-      address: "0xf8d6064a173A4a3EA83a07309067939AD45E87cC"
+      address: "0xb73E5f05222f829397202bb2d9C2C15eE4a24132"
       abi: Booztory
-      startBlock: 39430960
+      startBlock: 39558013
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -46,9 +46,9 @@ dataSources:
     name: BooztoryRaffle
     network: base-sepolia
     source:
-      address: "0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2"
+      address: "0xE018C70AB3eC93848Fad52dbC66A433DBCC1d9Af"
       abi: BooztoryRaffle
-      startBlock: 39429911
+      startBlock: 39558014
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

@@ -76,6 +76,28 @@ export class ApplicationRejected__Params {
   }
 }
 
+export class BOOZMintFailed extends ethereum.Event {
+  get params(): BOOZMintFailed__Params {
+    return new BOOZMintFailed__Params(this);
+  }
+}
+
+export class BOOZMintFailed__Params {
+  _event: BOOZMintFailed;
+
+  constructor(event: BOOZMintFailed) {
+    this._event = event;
+  }
+
+  get winner(): Address {
+    return this._event.parameters[0].value.toAddress();
+  }
+
+  get amount(): BigInt {
+    return this._event.parameters[1].value.toBigInt();
+  }
+}
+
 export class BooztoryChanged extends ethereum.Event {
   get params(): BooztoryChanged__Params {
     return new BooztoryChanged__Params(this);
@@ -237,6 +259,24 @@ export class OwnershipTransferred__Params {
 
   get to(): Address {
     return this._event.parameters[1].value.toAddress();
+  }
+}
+
+export class Paused extends ethereum.Event {
+  get params(): Paused__Params {
+    return new Paused__Params(this);
+  }
+}
+
+export class Paused__Params {
+  _event: Paused;
+
+  constructor(event: Paused) {
+    this._event = event;
+  }
+
+  get account(): Address {
+    return this._event.parameters[0].value.toAddress();
   }
 }
 
@@ -405,6 +445,24 @@ export class TicketsCredited__Params {
 
   get amount(): BigInt {
     return this._event.parameters[1].value.toBigInt();
+  }
+}
+
+export class Unpaused extends ethereum.Event {
+  get params(): Unpaused__Params {
+    return new Unpaused__Params(this);
+  }
+}
+
+export class Unpaused__Params {
+  _event: Unpaused;
+
+  constructor(event: Unpaused) {
+    this._event = event;
+  }
+
+  get account(): Address {
+    return this._event.parameters[0].value.toAddress();
   }
 }
 
@@ -1068,6 +1126,21 @@ export class BooztoryRaffle extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(value[0].toAddress());
   }
 
+  paused(): boolean {
+    let result = super.call("paused", "paused():(bool)", []);
+
+    return result[0].toBoolean();
+  }
+
+  try_paused(): ethereum.CallResult<boolean> {
+    let result = super.tryCall("paused", "paused():(bool)", []);
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toBoolean());
+  }
+
   priceTiers(param0: BigInt): BooztoryRaffle__priceTiersResult {
     let result = super.call(
       "priceTiers",
@@ -1670,6 +1743,32 @@ export class EnterRaffleCall__Outputs {
   }
 }
 
+export class PauseCall extends ethereum.Call {
+  get inputs(): PauseCall__Inputs {
+    return new PauseCall__Inputs(this);
+  }
+
+  get outputs(): PauseCall__Outputs {
+    return new PauseCall__Outputs(this);
+  }
+}
+
+export class PauseCall__Inputs {
+  _call: PauseCall;
+
+  constructor(call: PauseCall) {
+    this._call = call;
+  }
+}
+
+export class PauseCall__Outputs {
+  _call: PauseCall;
+
+  constructor(call: PauseCall) {
+    this._call = call;
+  }
+}
+
 export class RawFulfillRandomWordsCall extends ethereum.Call {
   get inputs(): RawFulfillRandomWordsCall__Inputs {
     return new RawFulfillRandomWordsCall__Inputs(this);
@@ -2130,6 +2229,32 @@ export class TriggerDrawCall__Outputs {
   _call: TriggerDrawCall;
 
   constructor(call: TriggerDrawCall) {
+    this._call = call;
+  }
+}
+
+export class UnpauseCall extends ethereum.Call {
+  get inputs(): UnpauseCall__Inputs {
+    return new UnpauseCall__Inputs(this);
+  }
+
+  get outputs(): UnpauseCall__Outputs {
+    return new UnpauseCall__Outputs(this);
+  }
+}
+
+export class UnpauseCall__Inputs {
+  _call: UnpauseCall;
+
+  constructor(call: UnpauseCall) {
+    this._call = call;
+  }
+}
+
+export class UnpauseCall__Outputs {
+  _call: UnpauseCall;
+
+  constructor(call: UnpauseCall) {
     this._call = call;
   }
 }

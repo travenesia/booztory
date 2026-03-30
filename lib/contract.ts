@@ -287,8 +287,8 @@ export const TOKEN_ABI = [
   { inputs: [], name: "NotAuthorized", type: "error" },
   { inputs: [], name: "OnlySuperchainBridge", type: "error" },
   { inputs: [], name: "ZeroAddress", type: "error" },
-  { inputs: [], name: "TreasuryAlreadyMinted", type: "error" },
   { inputs: [], name: "ExceedsTreasuryCap", type: "error" },
+  { inputs: [], name: "ExceedsMaxSupply", type: "error" },
   { inputs: [{ internalType: "address", name: "owner", type: "address" }], name: "OwnableInvalidOwner", type: "error" },
   { inputs: [{ internalType: "address", name: "account", type: "address" }], name: "OwnableUnauthorizedAccount", type: "error" },
 
@@ -303,8 +303,9 @@ export const TOKEN_ABI = [
   // State vars
   { inputs: [], name: "soulbound", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
   { inputs: [{ internalType: "address", name: "", type: "address" }], name: "authorizedMinters", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
-  { inputs: [], name: "treasuryMinted", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "treasuryMinted", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "TREASURY_CAP", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "MAX_SUPPLY", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "SUPERCHAIN_BRIDGE", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
 
   // ERC-20 standard

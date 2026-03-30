@@ -384,6 +384,88 @@ export class MaxQueueSizeChanged__Params {
   }
 }
 
+export class NFTContractApproved extends ethereum.Event {
+  get params(): NFTContractApproved__Params {
+    return new NFTContractApproved__Params(this);
+  }
+}
+
+export class NFTContractApproved__Params {
+  _event: NFTContractApproved;
+
+  constructor(event: NFTContractApproved) {
+    this._event = event;
+  }
+
+  get nftContract(): Address {
+    return this._event.parameters[0].value.toAddress();
+  }
+
+  get approved(): boolean {
+    return this._event.parameters[1].value.toBoolean();
+  }
+}
+
+export class NFTDiscountSlotMinted extends ethereum.Event {
+  get params(): NFTDiscountSlotMinted__Params {
+    return new NFTDiscountSlotMinted__Params(this);
+  }
+}
+
+export class NFTDiscountSlotMinted__Params {
+  _event: NFTDiscountSlotMinted;
+
+  constructor(event: NFTDiscountSlotMinted) {
+    this._event = event;
+  }
+
+  get tokenId(): BigInt {
+    return this._event.parameters[0].value.toBigInt();
+  }
+
+  get creator(): Address {
+    return this._event.parameters[1].value.toAddress();
+  }
+
+  get nftContract(): Address {
+    return this._event.parameters[2].value.toAddress();
+  }
+
+  get nftTokenId(): BigInt {
+    return this._event.parameters[3].value.toBigInt();
+  }
+}
+
+export class NFTFreeSlotMinted extends ethereum.Event {
+  get params(): NFTFreeSlotMinted__Params {
+    return new NFTFreeSlotMinted__Params(this);
+  }
+}
+
+export class NFTFreeSlotMinted__Params {
+  _event: NFTFreeSlotMinted;
+
+  constructor(event: NFTFreeSlotMinted) {
+    this._event = event;
+  }
+
+  get tokenId(): BigInt {
+    return this._event.parameters[0].value.toBigInt();
+  }
+
+  get creator(): Address {
+    return this._event.parameters[1].value.toAddress();
+  }
+
+  get nftContract(): Address {
+    return this._event.parameters[2].value.toAddress();
+  }
+
+  get nftTokenId(): BigInt {
+    return this._event.parameters[3].value.toBigInt();
+  }
+}
+
 export class OwnershipTransferred extends ethereum.Event {
   get params(): OwnershipTransferred__Params {
     return new OwnershipTransferred__Params(this);
@@ -403,6 +485,24 @@ export class OwnershipTransferred__Params {
 
   get newOwner(): Address {
     return this._event.parameters[1].value.toAddress();
+  }
+}
+
+export class Paused extends ethereum.Event {
+  get params(): Paused__Params {
+    return new Paused__Params(this);
+  }
+}
+
+export class Paused__Params {
+  _event: Paused;
+
+  constructor(event: Paused) {
+    this._event = event;
+  }
+
+  get account(): Address {
+    return this._event.parameters[0].value.toAddress();
   }
 }
 
@@ -623,6 +723,24 @@ export class Transfer__Params {
 
   get tokenId(): BigInt {
     return this._event.parameters[2].value.toBigInt();
+  }
+}
+
+export class Unpaused extends ethereum.Event {
+  get params(): Unpaused__Params {
+    return new Unpaused__Params(this);
+  }
+}
+
+export class Unpaused__Params {
+  _event: Unpaused;
+
+  constructor(event: Unpaused) {
+    this._event = event;
+  }
+
+  get account(): Address {
+    return this._event.parameters[0].value.toAddress();
   }
 }
 
@@ -1083,6 +1201,52 @@ export class Booztory extends ethereum.SmartContract {
     return new Booztory("Booztory", address);
   }
 
+  approvedNFTContracts(param0: Address): boolean {
+    let result = super.call(
+      "approvedNFTContracts",
+      "approvedNFTContracts(address):(bool)",
+      [ethereum.Value.fromAddress(param0)],
+    );
+
+    return result[0].toBoolean();
+  }
+
+  try_approvedNFTContracts(param0: Address): ethereum.CallResult<boolean> {
+    let result = super.tryCall(
+      "approvedNFTContracts",
+      "approvedNFTContracts(address):(bool)",
+      [ethereum.Value.fromAddress(param0)],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toBoolean());
+  }
+
+  approvedNFTList(param0: BigInt): Address {
+    let result = super.call(
+      "approvedNFTList",
+      "approvedNFTList(uint256):(address)",
+      [ethereum.Value.fromUnsignedBigInt(param0)],
+    );
+
+    return result[0].toAddress();
+  }
+
+  try_approvedNFTList(param0: BigInt): ethereum.CallResult<Address> {
+    let result = super.tryCall(
+      "approvedNFTList",
+      "approvedNFTList(uint256):(address)",
+      [ethereum.Value.fromUnsignedBigInt(param0)],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toAddress());
+  }
+
   balanceOf(owner: Address): BigInt {
     let result = super.call("balanceOf", "balanceOf(address):(uint256)", [
       ethereum.Value.fromAddress(owner),
@@ -1289,6 +1453,29 @@ export class Booztory extends ethereum.SmartContract {
     }
     let value = result.value;
     return ethereum.CallResult.fromValue(value[0].toAddress());
+  }
+
+  getApprovedNFTContracts(): Array<Address> {
+    let result = super.call(
+      "getApprovedNFTContracts",
+      "getApprovedNFTContracts():(address[])",
+      [],
+    );
+
+    return result[0].toAddressArray();
+  }
+
+  try_getApprovedNFTContracts(): ethereum.CallResult<Array<Address>> {
+    let result = super.tryCall(
+      "getApprovedNFTContracts",
+      "getApprovedNFTContracts():(address[])",
+      [],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toAddressArray());
   }
 
   getCurrentSlot(): Booztory__getCurrentSlotResult {
@@ -1712,6 +1899,70 @@ export class Booztory extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(value[0].toBigInt());
   }
 
+  nftLastDiscountMint(param0: Address, param1: BigInt): BigInt {
+    let result = super.call(
+      "nftLastDiscountMint",
+      "nftLastDiscountMint(address,uint256):(uint256)",
+      [
+        ethereum.Value.fromAddress(param0),
+        ethereum.Value.fromUnsignedBigInt(param1),
+      ],
+    );
+
+    return result[0].toBigInt();
+  }
+
+  try_nftLastDiscountMint(
+    param0: Address,
+    param1: BigInt,
+  ): ethereum.CallResult<BigInt> {
+    let result = super.tryCall(
+      "nftLastDiscountMint",
+      "nftLastDiscountMint(address,uint256):(uint256)",
+      [
+        ethereum.Value.fromAddress(param0),
+        ethereum.Value.fromUnsignedBigInt(param1),
+      ],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toBigInt());
+  }
+
+  nftLastFreeMint(param0: Address, param1: BigInt): BigInt {
+    let result = super.call(
+      "nftLastFreeMint",
+      "nftLastFreeMint(address,uint256):(uint256)",
+      [
+        ethereum.Value.fromAddress(param0),
+        ethereum.Value.fromUnsignedBigInt(param1),
+      ],
+    );
+
+    return result[0].toBigInt();
+  }
+
+  try_nftLastFreeMint(
+    param0: Address,
+    param1: BigInt,
+  ): ethereum.CallResult<BigInt> {
+    let result = super.tryCall(
+      "nftLastFreeMint",
+      "nftLastFreeMint(address,uint256):(uint256)",
+      [
+        ethereum.Value.fromAddress(param0),
+        ethereum.Value.fromUnsignedBigInt(param1),
+      ],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toBigInt());
+  }
+
   owner(): Address {
     let result = super.call("owner", "owner():(address)", []);
 
@@ -1744,6 +1995,21 @@ export class Booztory extends ethereum.SmartContract {
     }
     let value = result.value;
     return ethereum.CallResult.fromValue(value[0].toAddress());
+  }
+
+  paused(): boolean {
+    let result = super.call("paused", "paused():(bool)", []);
+
+    return result[0].toBoolean();
+  }
+
+  try_paused(): ethereum.CallResult<boolean> {
+    let result = super.tryCall("paused", "paused():(bool)", []);
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toBoolean());
   }
 
   paymentToken(): Address {
@@ -2032,6 +2298,32 @@ export class ConstructorCall__Outputs {
   }
 }
 
+export class AdvanceCursorCall extends ethereum.Call {
+  get inputs(): AdvanceCursorCall__Inputs {
+    return new AdvanceCursorCall__Inputs(this);
+  }
+
+  get outputs(): AdvanceCursorCall__Outputs {
+    return new AdvanceCursorCall__Outputs(this);
+  }
+}
+
+export class AdvanceCursorCall__Inputs {
+  _call: AdvanceCursorCall;
+
+  constructor(call: AdvanceCursorCall) {
+    this._call = call;
+  }
+}
+
+export class AdvanceCursorCall__Outputs {
+  _call: AdvanceCursorCall;
+
+  constructor(call: AdvanceCursorCall) {
+    this._call = call;
+  }
+}
+
 export class ApproveCall extends ethereum.Call {
   get inputs(): ApproveCall__Inputs {
     return new ApproveCall__Inputs(this);
@@ -2206,6 +2498,64 @@ export class MintSlotCall__Outputs {
   }
 }
 
+export class MintSlotFreeWithNFTCall extends ethereum.Call {
+  get inputs(): MintSlotFreeWithNFTCall__Inputs {
+    return new MintSlotFreeWithNFTCall__Inputs(this);
+  }
+
+  get outputs(): MintSlotFreeWithNFTCall__Outputs {
+    return new MintSlotFreeWithNFTCall__Outputs(this);
+  }
+}
+
+export class MintSlotFreeWithNFTCall__Inputs {
+  _call: MintSlotFreeWithNFTCall;
+
+  constructor(call: MintSlotFreeWithNFTCall) {
+    this._call = call;
+  }
+
+  get nftContract(): Address {
+    return this._call.inputValues[0].value.toAddress();
+  }
+
+  get nftTokenId(): BigInt {
+    return this._call.inputValues[1].value.toBigInt();
+  }
+
+  get contentUrl(): string {
+    return this._call.inputValues[2].value.toString();
+  }
+
+  get contentType(): string {
+    return this._call.inputValues[3].value.toString();
+  }
+
+  get aspectRatio(): string {
+    return this._call.inputValues[4].value.toString();
+  }
+
+  get title(): string {
+    return this._call.inputValues[5].value.toString();
+  }
+
+  get authorName(): string {
+    return this._call.inputValues[6].value.toString();
+  }
+
+  get imageUrl(): string {
+    return this._call.inputValues[7].value.toString();
+  }
+}
+
+export class MintSlotFreeWithNFTCall__Outputs {
+  _call: MintSlotFreeWithNFTCall;
+
+  constructor(call: MintSlotFreeWithNFTCall) {
+    this._call = call;
+  }
+}
+
 export class MintSlotWithDiscountCall extends ethereum.Call {
   get inputs(): MintSlotWithDiscountCall__Inputs {
     return new MintSlotWithDiscountCall__Inputs(this);
@@ -2256,6 +2606,64 @@ export class MintSlotWithDiscountCall__Outputs {
   }
 }
 
+export class MintSlotWithNFTDiscountCall extends ethereum.Call {
+  get inputs(): MintSlotWithNFTDiscountCall__Inputs {
+    return new MintSlotWithNFTDiscountCall__Inputs(this);
+  }
+
+  get outputs(): MintSlotWithNFTDiscountCall__Outputs {
+    return new MintSlotWithNFTDiscountCall__Outputs(this);
+  }
+}
+
+export class MintSlotWithNFTDiscountCall__Inputs {
+  _call: MintSlotWithNFTDiscountCall;
+
+  constructor(call: MintSlotWithNFTDiscountCall) {
+    this._call = call;
+  }
+
+  get nftContract(): Address {
+    return this._call.inputValues[0].value.toAddress();
+  }
+
+  get nftTokenId(): BigInt {
+    return this._call.inputValues[1].value.toBigInt();
+  }
+
+  get contentUrl(): string {
+    return this._call.inputValues[2].value.toString();
+  }
+
+  get contentType(): string {
+    return this._call.inputValues[3].value.toString();
+  }
+
+  get aspectRatio(): string {
+    return this._call.inputValues[4].value.toString();
+  }
+
+  get title(): string {
+    return this._call.inputValues[5].value.toString();
+  }
+
+  get authorName(): string {
+    return this._call.inputValues[6].value.toString();
+  }
+
+  get imageUrl(): string {
+    return this._call.inputValues[7].value.toString();
+  }
+}
+
+export class MintSlotWithNFTDiscountCall__Outputs {
+  _call: MintSlotWithNFTDiscountCall;
+
+  constructor(call: MintSlotWithNFTDiscountCall) {
+    this._call = call;
+  }
+}
+
 export class MintSlotWithTokensCall extends ethereum.Call {
   get inputs(): MintSlotWithTokensCall__Inputs {
     return new MintSlotWithTokensCall__Inputs(this);
@@ -2302,6 +2710,32 @@ export class MintSlotWithTokensCall__Outputs {
   _call: MintSlotWithTokensCall;
 
   constructor(call: MintSlotWithTokensCall) {
+    this._call = call;
+  }
+}
+
+export class PauseCall extends ethereum.Call {
+  get inputs(): PauseCall__Inputs {
+    return new PauseCall__Inputs(this);
+  }
+
+  get outputs(): PauseCall__Outputs {
+    return new PauseCall__Outputs(this);
+  }
+}
+
+export class PauseCall__Inputs {
+  _call: PauseCall;
+
+  constructor(call: PauseCall) {
+    this._call = call;
+  }
+}
+
+export class PauseCall__Outputs {
+  _call: PauseCall;
+
+  constructor(call: PauseCall) {
     this._call = call;
   }
 }
@@ -2810,6 +3244,40 @@ export class SetMintPointRewardCall__Outputs {
   }
 }
 
+export class SetNFTContractCall extends ethereum.Call {
+  get inputs(): SetNFTContractCall__Inputs {
+    return new SetNFTContractCall__Inputs(this);
+  }
+
+  get outputs(): SetNFTContractCall__Outputs {
+    return new SetNFTContractCall__Outputs(this);
+  }
+}
+
+export class SetNFTContractCall__Inputs {
+  _call: SetNFTContractCall;
+
+  constructor(call: SetNFTContractCall) {
+    this._call = call;
+  }
+
+  get nftContract(): Address {
+    return this._call.inputValues[0].value.toAddress();
+  }
+
+  get approved(): boolean {
+    return this._call.inputValues[1].value.toBoolean();
+  }
+}
+
+export class SetNFTContractCall__Outputs {
+  _call: SetNFTContractCall;
+
+  constructor(call: SetNFTContractCall) {
+    this._call = call;
+  }
+}
+
 export class SetPaymentTokenCall extends ethereum.Call {
   get inputs(): SetPaymentTokenCall__Inputs {
     return new SetPaymentTokenCall__Inputs(this);
@@ -3088,6 +3556,32 @@ export class TransferOwnershipCall__Outputs {
   _call: TransferOwnershipCall;
 
   constructor(call: TransferOwnershipCall) {
+    this._call = call;
+  }
+}
+
+export class UnpauseCall extends ethereum.Call {
+  get inputs(): UnpauseCall__Inputs {
+    return new UnpauseCall__Inputs(this);
+  }
+
+  get outputs(): UnpauseCall__Outputs {
+    return new UnpauseCall__Outputs(this);
+  }
+}
+
+export class UnpauseCall__Inputs {
+  _call: UnpauseCall;
+
+  constructor(call: UnpauseCall) {
+    this._call = call;
+  }
+}
+
+export class UnpauseCall__Outputs {
+  _call: UnpauseCall;
+
+  constructor(call: UnpauseCall) {
     this._call = call;
   }
 }

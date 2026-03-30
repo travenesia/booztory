@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { useAccount, useReadContract } from "wagmi"
+import { useAccount, useReadContract, useReadContracts } from "wagmi"
 import { formatUnits } from "viem"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { YouTubeIcon, YouTubeShortsIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
@@ -25,7 +25,7 @@ import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
 import { TOKEN_ADDRESS, ERC20_ABI, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
 
-type PaymentMethod = "standard" | "discount" | "free"
+type PaymentMethod = "standard" | "discount" | "free" | "nft-discount" | "nft-free"
 type InputMode = "url" | "text"
 
 type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
@@ -60,6 +60,8 @@ export function ContentSubmissionDrawer() {
     mintSlot,
     mintSlotWithDiscount,
     mintSlotWithTokens,
+    mintSlotWithNFTDiscount,
+    mintSlotFreeWithNFT,
     isProcessing,
     paymentStep,
     resetPaymentState,
@@ -68,6 +70,10 @@ export function ContentSubmissionDrawer() {
     freeSlotCost,
     discountAmount,
   } = usePayment()
+
+  // ── NFT state ─────────────────────────────────────────────────────────────────
+  const [nftSelectedContract, setNftSelectedContract] = useState<string>("")
+  const [nftTokenIdInput, setNftTokenIdInput] = useState<string>("")
 
   const slotPriceDisplay = (Number(slotPrice) / 1_000_000).toFixed(2)
   const discountedPriceDisplay = ((Number(slotPrice) - Number(discountAmount)) / 1_000_000).toFixed(2)
@@ -133,6 +139,39 @@ export function ContentSubmissionDrawer() {
   const canDiscount = tokenEnabled && boozBalance >= Number(formatUnits(discountBurnCost, 18))
   const canFree = tokenEnabled && boozBalance >= Number(formatUnits(freeSlotCost, 18))
 
+  // ── NFT reads ─────────────────────────────────────────────────────────────────
+  const { data: approvedNFTsRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS,
+    abi: BOOZTORY_ABI,
+    functionName: "getApprovedNFTContracts",
+    chainId: APP_CHAIN.id,
+    query: { enabled: !!address },
+  })
+  const approvedNFTs = (approvedNFTsRaw as string[] | undefined) ?? []
+
+  const { data: nftBalancesRaw } = useReadContracts({
+    contracts: approvedNFTs.map(nft => ({
+      address: nft as `0x${string}`,
+      abi: [{ name: "balanceOf", type: "function", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" }] as const,
+      functionName: "balanceOf" as const,
+      args: [address!] as const,
+      chainId: APP_CHAIN.id,
+    })),
+    query: { enabled: !!address && approvedNFTs.length > 0 },
+  })
+
+  // NFT contracts where user has ≥1 token
+  const heldNFTs: string[] = approvedNFTs.filter((_, i) => {
+    const bal = nftBalancesRaw?.[i]?.result as bigint | undefined
+    return bal != null && bal > 0n
+  })
+  const hasNFT = heldNFTs.length > 0
+
+  // Auto-select first held NFT contract when switching to NFT path
+  const nftContractForMint = (nftSelectedContract || heldNFTs[0] || "") as `0x${string}`
+  const nftTokenId = nftTokenIdInput ? BigInt(nftTokenIdInput) : 0n
+  const canNFTMint = hasNFT && nftContractForMint !== "" && nftTokenIdInput !== "" && !isNaN(Number(nftTokenIdInput)) && Number(nftTokenIdInput) >= 0
+
   // Reset state when sheet closes
   useEffect(() => {
     if (!open) {
@@ -152,6 +191,8 @@ export function ContentSubmissionDrawer() {
       setInputMode("url")
       setTextContent("")
       setTextLinkError(false)
+      setNftSelectedContract("")
+      setNftTokenIdInput("")
       isProcessingRef.current = false
       resetPaymentState()
     } else {
@@ -418,9 +459,11 @@ export function ContentSubmissionDrawer() {
           imageUrl: "",
         }
         const mintResult = await (
-          paymentMethod === "discount" ? mintSlotWithDiscount(slotData) :
-          paymentMethod === "free"     ? mintSlotWithTokens(slotData) :
-                                         mintSlot(slotData)
+          paymentMethod === "nft-discount" ? mintSlotWithNFTDiscount(slotData, nftContractForMint, nftTokenId) :
+          paymentMethod === "nft-free"     ? mintSlotFreeWithNFT(slotData, nftContractForMint, nftTokenId) :
+          paymentMethod === "discount"     ? mintSlotWithDiscount(slotData) :
+          paymentMethod === "free"         ? mintSlotWithTokens(slotData) :
+                                             mintSlot(slotData)
         )
         if (!mintResult.success) {
           if (mintResult.error === "Payment was cancelled") {
@@ -528,9 +571,11 @@ export function ContentSubmissionDrawer() {
         imageUrl: metadata?.thumbnailUrl || "/placeholder.svg?height=180&width=320&text=Content",
       }
       const mintResult = await (
-        paymentMethod === "discount" ? mintSlotWithDiscount(slotData) :
-        paymentMethod === "free"     ? mintSlotWithTokens(slotData) :
-                                       mintSlot(slotData)
+        paymentMethod === "nft-discount" ? mintSlotWithNFTDiscount(slotData, nftContractForMint, nftTokenId) :
+        paymentMethod === "nft-free"     ? mintSlotFreeWithNFT(slotData, nftContractForMint, nftTokenId) :
+        paymentMethod === "discount"     ? mintSlotWithDiscount(slotData) :
+        paymentMethod === "free"         ? mintSlotWithTokens(slotData) :
+                                           mintSlot(slotData)
       )
 
       if (abortControllerRef.current?.signal.aborted) return
@@ -698,16 +743,20 @@ export function ContentSubmissionDrawer() {
 
     if (paymentMethod === "discount") return `Pay ${discountedPriceDisplay} USDC + Burn ${discountBurnDisplay} $BOOZ`
     if (paymentMethod === "free") return `Burn ${freeSlotCostDisplay} $BOOZ to Submit`
+    if (paymentMethod === "nft-discount") return `Pay ${(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC (NFT 50% off)`
+    if (paymentMethod === "nft-free") return "Free (NFT Pass)"
     return `Pay ${slotPriceDisplay} USDC to Submit`
   }
 
   const isTextValid = inputMode === "text"
     ? textContent.trim().length > 0 && textContent.trim().length <= 200 && !textLinkError
     : false
-  const canSubmit = inputMode === "url" ? isValidUrl : isTextValid
+  const contentReady = inputMode === "url" ? isValidUrl : isTextValid
+  const canSubmit = contentReady && (!isNFTPath || canNFTMint)
 
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
+  const isNFTPath = paymentMethod === "nft-discount" || paymentMethod === "nft-free"
 
   return (
     <>
@@ -912,7 +961,7 @@ export function ContentSubmissionDrawer() {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={cn("grid gap-2", hasNFT ? "grid-cols-5" : "grid-cols-3")}>
               {/* Standard */}
               <button
                 type="button"
@@ -945,7 +994,7 @@ export function ContentSubmissionDrawer() {
                 <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
                 <div className="flex items-center gap-0.5">
                   <HiBolt className="text-yellow-500" size={10} />
-                  <span className="text-[10px] text-gray-500">-{discountBurnDisplay} $BOOZ</span>
+                  <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
                 </div>
               </button>
 
@@ -965,10 +1014,74 @@ export function ContentSubmissionDrawer() {
                 <span className="text-xs font-bold text-gray-900">Free</span>
                 <div className="flex items-center gap-0.5">
                   <HiBolt className="text-yellow-500" size={10} />
-                  <span className="text-[10px] text-gray-500">{freeSlotCostDisplay} $BOOZ</span>
+                  <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
                 </div>
               </button>
+
+              {/* NFT Discount — only if user holds an approved NFT */}
+              {hasNFT && (
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("nft-discount")}
+                  disabled={isAnyOperationInProgress}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                    paymentMethod === "nft-discount"
+                      ? "border-amber-500 bg-amber-50"
+                      : "border-amber-200 hover:border-amber-300 bg-white"
+                  )}
+                >
+                  <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
+                  <span className="text-[10px] text-amber-600">NFT -50%</span>
+                </button>
+              )}
+
+              {/* NFT Free — only if user holds an approved NFT */}
+              {hasNFT && (
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("nft-free")}
+                  disabled={isAnyOperationInProgress}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                    paymentMethod === "nft-free"
+                      ? "border-amber-500 bg-amber-50"
+                      : "border-amber-200 hover:border-amber-300 bg-white"
+                  )}
+                >
+                  <span className="text-xs font-bold text-gray-900">Free</span>
+                  <span className="text-[10px] text-amber-600">NFT Pass</span>
+                </button>
+              )}
             </div>
+
+            {/* NFT contract + token ID selector — shown only on NFT paths */}
+            {isNFTPath && (
+              <div className="space-y-1.5 pt-1">
+                {heldNFTs.length > 1 && (
+                  <select
+                    value={nftSelectedContract}
+                    onChange={e => setNftSelectedContract(e.target.value)}
+                    disabled={isAnyOperationInProgress}
+                    className="w-full border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                  >
+                    {heldNFTs.map(addr => (
+                      <option key={addr} value={addr}>{addr.slice(0, 10)}…{addr.slice(-6)}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Your NFT token ID"
+                  value={nftTokenIdInput}
+                  onChange={e => setNftTokenIdInput(e.target.value)}
+                  disabled={isAnyOperationInProgress}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <p className="text-[10px] text-muted-foreground">No BOOZ earned · 1 raffle ticket · 24h cooldown (discount) / 30d cooldown (free)</p>
+              </div>
+            )}
 
           </div>
         )}

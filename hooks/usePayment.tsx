@@ -112,6 +112,10 @@ export function usePayment() {
   const SLOT_ARGS = (s: SlotData): [string, string, string, string, string, string] =>
     [s.contentUrl, s.contentType, s.aspectRatio, s.title, s.authorName, s.imageUrl]
 
+  const NFT_SLOT_ARGS = (nftContract: `0x${string}`, nftTokenId: bigint, s: SlotData):
+    [`0x${string}`, bigint, string, string, string, string, string, string] =>
+    [nftContract, nftTokenId, s.contentUrl, s.contentType, s.aspectRatio, s.title, s.authorName, s.imageUrl]
+
   // ── mintSlot (standard — 1 USDC) ─────────────────────────────────────────────
   const mintSlot = useCallback(
     async (slotData: SlotData): Promise<{ success: boolean; error?: string }> => {
@@ -218,10 +222,77 @@ export function usePayment() {
     [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
+  // ── mintSlotWithNFTDiscount (0.5 USDC, no BOOZ, 1 raffle ticket) ─────────────
+  const mintSlotWithNFTDiscount = useCallback(
+    async (slotData: SlotData, nftContract: `0x${string}`, nftTokenId: bigint): Promise<{ success: boolean; error?: string }> => {
+      if (isProcessing) return { success: false, error: "Payment already in progress" }
+      setIsProcessing(true)
+      setPaymentStep(1)
+      try {
+        await ensureChain()
+
+        const discountedPrice = slotPriceRef.current / 2n
+        const approveTx = await writeContractAsync({
+          address: USDC_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [BOOZTORY_ADDRESS, discountedPrice],
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+        setPaymentStep(2)
+
+        const mintTx = await writeContractAsync({
+          address: BOOZTORY_ADDRESS,
+          abi: BOOZTORY_ABI,
+          functionName: "mintSlotWithNFTDiscount",
+          args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+
+        toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1 raffle ticket.", variant: "success" })
+        fireConfetti()
+        resetPaymentState()
+        return { success: true }
+      } catch (error) {
+        return handleError(error)
+      }
+    },
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
+  )
+
+  // ── mintSlotFreeWithNFT (free, no BOOZ, 1 raffle ticket) ──────────────────────
+  const mintSlotFreeWithNFT = useCallback(
+    async (slotData: SlotData, nftContract: `0x${string}`, nftTokenId: bigint): Promise<{ success: boolean; error?: string }> => {
+      if (isProcessing) return { success: false, error: "Payment already in progress" }
+      setIsProcessing(true)
+      try {
+        await ensureChain()
+
+        const mintTx = await writeContractAsync({
+          address: BOOZTORY_ADDRESS,
+          abi: BOOZTORY_ABI,
+          functionName: "mintSlotFreeWithNFT",
+          args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+
+        toast({ title: "Free Slot Minted!", description: "Your content has been scheduled. You earned 1 raffle ticket.", variant: "success" })
+        fireConfetti()
+        resetPaymentState()
+        return { success: true }
+      } catch (error) {
+        return handleError(error)
+      }
+    },
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
+  )
+
   return {
     mintSlot,
     mintSlotWithDiscount,
     mintSlotWithTokens,
+    mintSlotWithNFTDiscount,
+    mintSlotFreeWithNFT,
     isProcessing,
     paymentStep,
     resetPaymentState,
