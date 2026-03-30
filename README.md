@@ -166,7 +166,7 @@ UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
 # The Graph subgraph endpoint
-SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.6
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.7
 ```
 
 ### 3. Run the dev server
@@ -291,9 +291,9 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 
 | Contract | Address |
 |---|---|
-| Booztory | `0xf8d6064a173A4a3EA83a07309067939AD45E87cC` |
+| Booztory | `0xb73E5f05222f829397202bb2d9C2C15eE4a24132` |
 | BooztoryToken (BOOZ) | `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1` |
-| BooztoryRaffle | `0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2` |
+| BooztoryRaffle | `0xE018C70AB3eC93848Fad52dbC66A433DBCC1d9Af` |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
 ### Base Mainnet
@@ -335,8 +335,8 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 | `burnFrom(address, uint256)` | Booztory only — burn BOOZ for free slot / discount redemption |
 | `burn(uint256)` | Any holder — voluntarily burn own tokens |
 | `setSoulbound(bool)` | Owner — toggle soulbound mode (Phase 1 → Phase 2) |
-| `setBooztory(address)` | Owner — set authorized Booztory contract |
-| `mintTreasury(address, uint256)` | Owner — one-time treasury mint (max 10M BOOZ) |
+| `setAuthorizedMinter(address, bool)` | Owner — grant/revoke minting rights (Booztory + Raffle) |
+| `mintTreasury(address, uint256)` | Owner — tranche treasury mint (max 10M BOOZ cumulative) |
 | `crosschainMint(address, uint256)` | Superchain bridge only — mint on bridge-in |
 | `crosschainBurn(address, uint256)` | Superchain bridge only — burn on bridge-out (blocked while soulbound) |
 
@@ -344,10 +344,22 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 
 | Function | Description |
 |---|---|
-| `addEntry(address)` | Booztory only — add one raffle entry per paid mint |
-| `requestWeeklyDraw(uint256 week)` | Owner — trigger VRF randomness request |
-| `setPrizes(amounts[])` | Owner — set prize tiers in USDC |
-| `setDrawThreshold(uint256)` | Owner — minimum entries to allow a draw |
+| `createRaffle(tokens, amounts[][], winnerCount, duration)` | Owner — create raffle with per-winner prize breakdown |
+| `enterRaffle(raffleId, ticketAmount)` | User — burn tickets to enter, weighted draw |
+| `triggerDraw(raffleId)` | Owner — request Chainlink VRF randomness after endTime + thresholds met |
+| `cancelRaffle(raffleId)` | Owner — cancel active raffle (threshold not met) |
+| `depositPrize(token, amount)` | Anyone — deposit ERC-20 prize (not needed for BOOZ) |
+| `submitApplication(adType, content, link, duration)` | Sponsor — submit sponsorship application |
+| `acceptApplication(appId)` | Owner — accept sponsor, auto-chains ad schedule |
+| `rejectApplication(appId)` | Owner — reject and refund sponsor |
+| `claimRefund(appId)` | Sponsor — trustless refund after 30-day timeout |
+| `creditTickets(address, uint256)` | Booztory only — credit raffle tickets from points conversion |
+| `setDefaultDrawThreshold(uint256)` | Owner — minimum total tickets for draw |
+| `setDefaultMinUniqueEntrants(uint256)` | Owner — minimum unique wallets for draw |
+| `setRaffleThresholds(raffleId, threshold, minUnique)` | Owner — override thresholds on a specific raffle |
+| `setPriceTier(duration, minPrize, fee)` | Owner — configure sponsorship price tier |
+| `setVrfConfig(subId, keyHash, gasLimit, confirmations)` | Owner — update VRF parameters |
+| `withdraw(token)` | Owner — withdraw ETH or any ERC-20; `address(0)` for ETH |
 
 ---
 
@@ -429,6 +441,11 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] Profile page — per-wallet identity, on-chain activity feed
 - [x] Stats page
 - [x] Rate limiting on API endpoints (Upstash Redis)
+- [x] NFT Pass infrastructure — `mintSlotWithNFTDiscount` + `mintSlotFreeWithNFT` (50% discount / free, per-token cooldown)
+- [x] NFT Pass UI — payment path toggle in submit modal (NFT holders only)
+- [x] NFT-gated raffle admin section (frontend-enforced NFT requirement + localStorage gate map)
+- [x] Subgraph v0.0.7 — regenerated ABIs from compiled artifacts, new NFT + Pausable events
+- [x] ABI audit + TOKEN_ABI fixes (`ExceedsMaxSupply`, `treasuryMinted` uint256, `MAX_SUPPLY`)
 - [ ] Set content type images on-chain (`setContentTypeImage`)
 - [ ] Verify all 3 contracts on Basescan
 - [ ] Base Mainnet deployment

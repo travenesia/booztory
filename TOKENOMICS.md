@@ -1,6 +1,6 @@
 # Booztory — Tokenomics & Roadmap
 
-Last updated: 2026-03-30 (session 4)
+Last updated: 2026-03-31 (session 5)
 
 ---
 
@@ -256,8 +256,10 @@ function mintSlotFreeWithNFT(address nftContract, uint256 nftTokenId, ...) exter
 - [x] `mintSlotWithNFTDiscount()` + `mintSlotFreeWithNFT()` added ✅
 - [x] Admin UI: `app/admin/nft/page.tsx` — approve, revoke, persistent on-chain list ✅
 - [x] ABI updated in `lib/contract.ts` ✅
-- [ ] Redeployment on Base Sepolia (pending — awaiting full redeploy run)
-- [ ] Frontend: new mint path options in submit content modal
+- [x] Redeployed on Base Sepolia block 39558013 ✅
+- [x] Frontend: NFT Discount / NFT Free toggle in submit modal — visible only to NFT holders ✅
+- [x] `usePayment.tsx`: `mintSlotWithNFTDiscount()` + `mintSlotFreeWithNFT()` hooks ✅
+- [x] Admin: NFT-gated raffle creation section in `/admin/raffle` — localStorage raffleId→nftContract map ✅
 
 ---
 
@@ -345,12 +347,12 @@ Always verify at https://docs.chain.link/vrf/v2-5/supported-networks before depl
 
 ## 8. Deployed Addresses
 
-### Base Sepolia (Testnet — current as of 2026-03-27)
+### Base Sepolia (Testnet — current as of 2026-03-31)
 | Contract | Address | Status |
 |---|---|---|
-| Booztory | `0xf8d6064a173A4a3EA83a07309067939AD45E87cC` | ✅ Redeployed (GM try/catch fix) |
+| Booztory | `0xb73E5f05222f829397202bb2d9C2C15eE4a24132` | ✅ Redeployed block 39558013 (NFT pass + slotCursor + Pausable) |
 | BooztoryToken (BOOZ) | `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1` | ✅ Redeployed (MAX_SUPPLY + tranche treasury) |
-| BooztoryRaffle | `0x34F8292aa73cb8eb87DBF43Ae7F0E04f91A778d2` | ✅ Redeployed (new token address) |
+| BooztoryRaffle | `0xE018C70AB3eC93848Fad52dbC66A433DBCC1d9Af` | ✅ Redeployed block 39558014 (new Booztory address) |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | — |
 
 ### Base Mainnet
@@ -364,9 +366,11 @@ Always verify at https://docs.chain.link/vrf/v2-5/supported-networks before depl
 Confirmed on current Base Sepolia deploy:
 - `setAuthorizedMinter(booztory, true)` + `setAuthorizedMinter(raffle, true)` on BooztoryToken ✅
 - `setRewardToken()` and `setRaffle()` called on Booztory ✅
-- BooztoryRaffle added as Chainlink VRF consumer ⚠️ (old raffle must be removed, new one added)
+- BooztoryRaffle added as Chainlink VRF consumer ✅
 - `acceptedAt` field in `SponsorApplication` struct ✅
 - ETH prize support (`receive()`, `address(0)` sentinel, ETH branch in `withdraw()`) ✅
+- NFT pass: `approvedNFTContracts`, `approvedNFTList`, `mintSlotWithNFTDiscount`, `mintSlotFreeWithNFT` ✅
+- Subgraph v0.0.7 deployed — ABIs regenerated from compiled artifacts, new NFT + Pausable events ✅
 
 ---
 
@@ -459,10 +463,11 @@ Confirmed on current Base Sepolia deploy:
 ### Smart Contracts
 | Contract | Status |
 |---|---|
-| `Booztory.sol` — 3 mint paths, GM streak, points, donations | Deployed on Base Sepolia ✅ — **pending redeploy** (Pausable + slotCursor fix) |
-| `BooztoryToken.sol` (BOOZ) | Deployed on Base Sepolia ✅ |
-| `BooztoryRaffle.sol` — VRF v2.5, concurrent raffles, sponsor applications, ETH prize support, 30d refund timeout | Deployed on Base Sepolia ✅ — **pending redeploy** (BOOZMintFailed event + Pausable) |
+| `Booztory.sol` — 5 mint paths (standard/discount/free/NFT-discount/NFT-free), GM streak, points, donations, Pausable, slotCursor | Deployed on Base Sepolia ✅ block 39558013 |
+| `BooztoryToken.sol` (BOOZ) — MAX_SUPPLY 100M, tranche treasury, SuperchainERC20 | Deployed on Base Sepolia ✅ |
+| `BooztoryRaffle.sol` — VRF v2.5, concurrent raffles, sponsor applications, ETH prize, Pausable, BOOZMintFailed event | Deployed on Base Sepolia ✅ block 39558014 |
 | Base Sepolia wiring | Done ✅ |
+| Subgraph v0.0.7 | Deployed ✅ — ABIs regenerated from compiled artifacts |
 | Base Mainnet deployment | Pending |
 
 ---
@@ -485,17 +490,17 @@ Confirmed on current Base Sepolia deploy:
 VRF_SUBSCRIPTION_ID=<id> npx hardhat run scripts/redeploy.ts --network base-sepolia
 ```
 
-- [ ] Run `scripts/redeploy.ts` on Base Sepolia (deploys both Booztory + BooztoryRaffle)
+- [x] Run `scripts/redeploy.ts` on Base Sepolia ✅ (Booztory block 39558013, Raffle block 39558014)
 - [ ] Verify both contracts on Basescan
-- [ ] Remove old BooztoryRaffle from Chainlink VRF subscription
-- [ ] Add new BooztoryRaffle as Chainlink VRF consumer
-- [ ] Call `setAuthorizedMinter(newRaffle, true)` on BooztoryToken
-- [ ] Call `setRewardToken(tokenAddress)` on new Booztory
-- [ ] Call `setRaffle(newRaffleAddress)` on new Booztory
-- [ ] Update `NEXT_PUBLIC_BOOZTORY_ADDRESS` + `NEXT_PUBLIC_RAFFLE_ADDRESS` in `.env.local`
+- [x] Remove old BooztoryRaffle from Chainlink VRF subscription ✅
+- [x] Add new BooztoryRaffle as Chainlink VRF consumer ✅
+- [x] Call `setAuthorizedMinter(newRaffle, true)` on BooztoryToken ✅
+- [x] Call `setRewardToken(tokenAddress)` on new Booztory ✅
+- [x] Call `setRaffle(newRaffleAddress)` on new Booztory ✅
+- [x] Update `NEXT_PUBLIC_BOOZTORY_ADDRESS` + `NEXT_PUBLIC_RAFFLE_ADDRESS` in `.env.local` ✅
 - [x] Update `BOOZTORY_ABI` in `lib/contract.ts` (add `pause`/`unpause`, `advanceCursor`, NFT pass functions) ✅
-- [ ] Update `RAFFLE_ABI` in `lib/contract.ts` (add `BOOZMintFailed` event, `pause`/`unpause`)
-- [ ] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet (production: 100 / 20)
+- [x] Update `RAFFLE_ABI` in `lib/contract.ts` (add `BOOZMintFailed` event, `pause`/`unpause`) ✅
+- [x] Call `setDefaultDrawThreshold(1)` + `setDefaultMinUniqueEntrants(1)` for testnet ✅ (done via redeploy script step 9)
 
 ### Mainnet Launch
 - [ ] `lib/wagmi.ts` — change `APP_CHAIN = baseSepolia` → `APP_CHAIN = base`
@@ -516,9 +521,11 @@ VRF_SUBSCRIPTION_ID=<id> npx hardhat run scripts/redeploy.ts --network base-sepo
 - [ ] Call `setContentTypeImage(contentType, imageUrl)` for each platform — after NFT design is finalized
 - [x] Add NFT pass infrastructure to `Booztory.sol` (`setNFTContract`, `getApprovedNFTContracts`, `approvedNFTList`, `mintSlotWithNFTDiscount`, `mintSlotFreeWithNFT`) ✅
 - [x] Admin UI: `app/admin/nft/page.tsx` — approve/revoke collections, persistent on-chain list ✅
-- [ ] Frontend: NFT path toggle in submit content modal (visible only if wallet holds an approved NFT)
+- [x] Frontend: NFT Discount / NFT Free toggle in submit modal ✅
+- [x] NFT-gated raffle admin section in `/admin/raffle` ✅
+- [x] Subgraph v0.0.7 — ABIs regenerated from Hardhat artifacts, NFT + Pausable events, deployed to Studio ✅
 - [x] Leaderboard: deploy The Graph subgraph + `/api/leaderboard` + `/leaderboard` page (see §14) ✅
-- [ ] Profile page `/profile/[address]` — per-wallet stats (see §15)
+- [x] Profile page `/profile/[address]` — per-wallet stats ✅
 
 ---
 
