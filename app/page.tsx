@@ -14,7 +14,7 @@ import { useCurrentSlot } from "@/hooks/useContractContent"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SponsorAdFloatingBar } from "@/components/ads/sponsorAd"
+import { SponsorAdFloatingBar, useSponsorAd, useAdCountdown, LiveBadge } from "@/components/ads/sponsorAd"
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -32,6 +32,8 @@ export default function Home() {
   const isConnected = status === "authenticated"
 
   const { content, isPlaceholder, isLoading, refetch, contractUsdcBalance } = useCurrentSlot()
+  const sponsorAd = useSponsorAd()
+  const adCountdown = useAdCountdown(sponsorAd?.endTime ?? 0)
   const readyCalled = useRef(false)
 
   // Signal to the Farcaster/Base mini app shell that the app is ready once content loads
@@ -135,7 +137,19 @@ export default function Home() {
       {/* Desktop two-column layout — breaks out of max-w-[650px] to fill full viewport */}
       <div className="hidden xl:grid xl:grid-cols-2 xl:gap-12 xl:items-center flex-1 px-12 mt-12 xl:w-screen xl:ml-[calc(50%-50vw)]">
         {/* Left: platform info + CTA */}
-        <div className="flex flex-col justify-center space-y-6 py-12">
+        <div className="flex flex-col justify-center space-y-6 py-12 px-12">
+          {sponsorAd && (
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("booztory:open-ad"))}
+              className="flex items-center gap-2 w-fit px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 hover:border-sky-300 hover:bg-sky-50 transition-all text-[11px] group"
+            >
+              <LiveBadge />
+              <span className="text-sky-600">Ads by</span>
+              <span className="text-sky-800 font-semibold group-hover:text-sky-900 transition-colors">{sponsorAd.sponsorName}</span>
+              {sponsorAd.tagline && <span className="text-sky-500 hidden sm:inline truncate max-w-[160px]">· {sponsorAd.tagline}</span>}
+              <span className="text-sky-600 font-mono tabular-nums">{adCountdown}</span>
+            </button>
+          )}
           <p className="flex items-center gap-2 text-xs font-semibold tracking-widest text-[#E63946] uppercase">
             <motion.span
               className="inline-block w-2 h-2 rounded-full bg-[#E63946]"
@@ -151,12 +165,15 @@ export default function Home() {
               className="text-amber-500"
             />
           </h1>
+          <p className="text-lg font-semibold text-gray-700 leading-snug -mt-2">
+            The on-chain billboard for the internet.
+          </p>
           <p className="text-base text-gray-500 leading-relaxed">
             <span className="italic">No algorithm. No gatekeepers.</span>
             <br />
-            Every <span className="font-bold text-gray-900">15 minutes</span>, one creator owns the spotlight.
+            Every <span className="font-bold text-gray-900">15 minutes</span>, one creator owns the spotlight on Base.
             <br />
-            Pay <span className="font-bold text-gray-900">1 USDC</span> and make it yours.
+            <span className="font-bold text-gray-900">1 USDC.</span> Your moment. On-chain, forever.
           </p>
           <Button
             onClick={handleFabClick}
@@ -167,7 +184,7 @@ export default function Home() {
         </div>
 
         {/* Right: content card */}
-        <div className="flex flex-col items-center justify-center py-4 gap-2">
+        <div className="flex flex-col items-center justify-center px-12 gap-2">
           {isLoading ? (
             <div className="w-full animate-pulse">
               <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />

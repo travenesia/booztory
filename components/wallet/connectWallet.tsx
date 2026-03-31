@@ -20,6 +20,19 @@ import { WalletDropdownContent } from "@/components/wallet/walletDropdown"
 
 const USER_PROFILE_CACHE_KEY = "user_profile"
 
+const AVATARS = [
+  ...Array.from({ length: 20 }, (_, i) => `/avatars/boy${i + 1}.webp`),
+  ...Array.from({ length: 20 }, (_, i) => `/avatars/girl${i + 1}.webp`),
+]
+function addressAvatar(addr: string): string {
+  if (!addr) return AVATARS[0]
+  let hash = 0
+  for (let i = 2; i < addr.length; i++) {
+    hash = (addr.charCodeAt(i) + ((hash << 5) - hash)) | 0
+  }
+  return AVATARS[Math.abs(hash) % AVATARS.length]
+}
+
 export function ConnectWalletButton() {
   const { data: session, status } = useSession()
   const { address, isConnected: isWalletConnected, status: walletStatus } = useAccount()
@@ -263,11 +276,12 @@ export function ConnectWalletButton() {
 
   // ── Mobile — Vaul bottom drawer ─────────────────────────────────────────────
   if (isMobile) {
+    const mobileAvatar = avatarUrl || (address ? addressAvatar(address) : null)
     return (
       <>
-        {avatarUrl ? (
+        {mobileAvatar ? (
           <button onClick={() => setOpen(true)} className="w-8 h-8 p-0 rounded-full overflow-hidden focus:outline-none">
-            <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+            <img src={mobileAvatar} alt="avatar" className="w-full h-full object-cover" />
           </button>
         ) : (
           <div className="flex flex-col items-center">

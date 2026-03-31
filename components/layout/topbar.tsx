@@ -10,6 +10,7 @@ import { FaRankingStar } from "react-icons/fa6"
 import { RiCopperCoinFill } from "react-icons/ri"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { GMButton, GMContent } from "@/components/modals/gmModal"
+import { useSponsorAd, useAdCountdown, LiveBadge } from "@/components/ads/sponsorAd"
 import { usePathname } from "next/navigation"
 import { useAccount } from "wagmi"
 import { useIdentity } from "@/hooks/useIdentity"
@@ -48,6 +49,8 @@ export function Topbar() {
   const { address } = useAccount()
   const { data: session } = useSession()
   const { avatarUrl, displayName: identityName } = useIdentity(address)
+  const sponsorAd = useSponsorAd()
+  const adCountdown = useAdCountdown(sponsorAd?.endTime ?? 0)
   const displayName = identityName || session?.user?.username || null
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
 
@@ -80,6 +83,19 @@ export function Topbar() {
             <span className="hidden md:inline text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">Testnet</span>
           </Link>
         </div>
+
+        {/* Center: mobile ad teaser — homepage only, hidden on desktop */}
+        {sponsorAd && (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("booztory:open-ad"))}
+            className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 text-[10px] group max-w-[180px]"
+          >
+            <LiveBadge />
+            <span className="text-sky-600 flex-shrink-0">Ads by</span>
+            <span className="text-sky-800 font-semibold truncate group-hover:text-sky-900 transition-colors">{sponsorAd.sponsorName}</span>
+            <span className="text-sky-500 font-mono tabular-nums flex-shrink-0">{adCountdown}</span>
+          </button>
+        )}
 
         {/* Center: nav — desktop only */}
         <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
@@ -155,7 +171,7 @@ export function Topbar() {
                   />
                   <div className="flex flex-col min-w-0">
                     <span className="text-lg font-bold text-gray-900 truncate">
-                      Gm, {displayName} 👋
+                      {displayName && displayName !== shortAddress ? `Gm, ${displayName} 👋` : "Gm 👋"}
                     </span>
                     <div className="flex items-center gap-1 mt-0.5">
                       <span className="text-sm text-gray-500 font-mono">{shortAddress}</span>

@@ -608,6 +608,12 @@ export function SponsorAdFloatingBar() {
   const ad = useSponsorAd()
   const countdown = useAdCountdown(ad?.endTime ?? 0)
 
+  useEffect(() => {
+    const handler = () => setOpen(true)
+    window.addEventListener("booztory:open-ad", handler)
+    return () => window.removeEventListener("booztory:open-ad", handler)
+  }, [])
+
   // Same dimension pre-computation as SponsorAdDesktopPopover
   const [videoW, setVideoW] = useState(360)
   const [videoH, setVideoH] = useState(480)
@@ -666,8 +672,8 @@ export function SponsorAdFloatingBar() {
 
   return (
     <>
-      {/* Fixed purple strip — no layout shift */}
-      <div className="fixed top-12 left-0 right-0 z-40 bg-gradient-to-r from-sky-200 via-blue-100 to-sky-200 px-4 py-1.5">
+      {/* Fixed strip — hidden everywhere; topbar handles mobile, left grid handles desktop */}
+      <div className="hidden fixed top-12 left-0 right-0 z-40 bg-gradient-to-r from-sky-200 via-blue-100 to-sky-200 px-4 py-1.5">
         <button
           onClick={() => setOpen(o => !o)}
           className="flex items-center justify-center w-full text-[11px] group"
