@@ -137,7 +137,7 @@ export default function Home() {
       {/* Desktop two-column layout — breaks out of max-w-[650px] to fill full viewport */}
       <div className="hidden xl:grid xl:grid-cols-2 xl:gap-12 xl:items-center flex-1 px-12 mt-12 xl:w-screen xl:ml-[calc(50%-50vw)]">
         {/* Left: platform info + CTA */}
-        <div className="flex flex-col justify-center space-y-6 py-12 px-12">
+        <div className="flex flex-col justify-center space-y-6 py-12 pl-12">
           {sponsorAd && (
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("booztory:open-ad"))}
@@ -184,7 +184,7 @@ export default function Home() {
         </div>
 
         {/* Right: content card */}
-        <div className="flex flex-col items-center justify-center px-12 gap-2">
+        <div className="flex flex-col items-center justify-center pr-12 gap-2">
           {isLoading ? (
             <div className="w-full animate-pulse">
               <Skeleton className="w-full rounded-t-[5px] bg-gray-200" style={{ height: "320px" }} />
