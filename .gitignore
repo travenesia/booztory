@@ -108,3 +108,17 @@ temp/
 artifacts/
 cache/
 typechain-types/
+
+# Subgraph dependencies
+subgraph/node_modules/
+
+# IDE & AI tooling (local only)
+.claude/
+.cursor/
+.vscode/
+
+# Internal project docs (not for public repo)
+CLAUDE.md
+TOAST.md
+GRANTS.md
+TOKENOMICS.md
