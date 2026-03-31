@@ -166,7 +166,7 @@ UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
 # The Graph subgraph endpoint
-SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.7
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.8
 ```
 
 ### 3. Run the dev server
@@ -444,8 +444,12 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] NFT Pass infrastructure — `mintSlotWithNFTDiscount` + `mintSlotFreeWithNFT` (50% discount / free, per-token cooldown)
 - [x] NFT Pass UI — payment path toggle in submit modal (NFT holders only)
 - [x] NFT-gated raffle admin section (frontend-enforced NFT requirement + localStorage gate map)
-- [x] Subgraph v0.0.7 — regenerated ABIs from compiled artifacts, new NFT + Pausable events
+- [x] Subgraph v0.0.8 — fixed double-count bug (discount/free mints were counted as standard AND duplicated `totalSlots`); `handleSlotMinted` is now the sole record creator using `tokenId` as stable ID
 - [x] ABI audit + TOKEN_ABI fixes (`ExceedsMaxSupply`, `treasuryMinted` uint256, `MAX_SUPPLY`)
+- [x] Submit content — desktop uses centered Dialog modal; mobile keeps bottom Sheet drawer (`useIsMobile` conditional)
+- [x] Deterministic avatar fallback on mobile connect button — `addressAvatar(addr)` hash-based index into avatar pool when no Farcaster/ENS/Basename identity
+- [x] Topbar nav centering — `absolute left-1/2 -translate-x-1/2` pattern on both `topbar.tsx` and `pageTopbar.tsx`
+- [x] Homepage desktop — two-column layout with inline sponsor ad pill above "Live Spotlight"; mobile sponsor pill in topbar center
 - [ ] Set content type images on-chain (`setContentTypeImage`)
 - [ ] Verify all 3 contracts on Basescan
 - [ ] Base Mainnet deployment

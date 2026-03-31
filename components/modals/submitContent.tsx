@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from "react"
 import { useAccount, useReadContract, useReadContracts } from "wagmi"
 import { formatUnits } from "viem"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { YouTubeIcon, YouTubeShortsIcon, TikTokIcon, TwitterIcon, VimeoIcon, SpotifyIcon, TwitchIcon } from "@/components/content/icon"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { Loader2 } from "lucide-react"
@@ -52,6 +54,7 @@ export function ContentSubmissionDrawer() {
   const [textContent, setTextContent] = useState("")
   const [textLinkError, setTextLinkError] = useState(false)
   const { toast } = useToast()
+  const isMobile = useIsMobile()
 
   // Use ref to track if we're currently processing to prevent race conditions
   const isProcessingRef = useRef(false)
@@ -841,6 +844,7 @@ export function ContentSubmissionDrawer() {
         </div>
       </div>
     )}
+    {isMobile ? (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
@@ -1208,6 +1212,362 @@ export function ContentSubmissionDrawer() {
         </div>
       </SheetContent>
     </Sheet>
+    ) : (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg bg-white text-gray-900 flex flex-col overflow-hidden max-h-[90vh] p-0 gap-0 rounded-xl">
+        <DialogHeader className="px-4 pt-5 pb-3 flex-shrink-0 text-left">
+          <DialogTitle className="text-lg text-gray-900 font-medium">Submit Content</DialogTitle>
+          <DialogDescription className="text-xs text-gray-500 mt-1">
+            Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Content area */}
+        <div className="px-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+
+          {inputMode === "text" ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-xs font-medium bg-gray-100 rounded-md p-0.5">
+                  <button type="button" onClick={() => setInputMode("url")} disabled={isAnyOperationInProgress} className="px-2.5 py-1 rounded-[5px] text-gray-400 hover:text-gray-600 transition-colors">Content URL</button>
+                  <span className="px-2.5 py-1 rounded-[5px] bg-white text-gray-900 shadow-sm">Text</span>
+                </div>
+                <span className={cn("text-xs", textContent.length > 200 ? "text-red-500" : "text-gray-400")}>
+                  {textContent.length}/200
+                </span>
+              </div>
+              <textarea
+                rows={4}
+                placeholder={"Write up to 200 characters...\n\nTip: *italic*  **bold**"}
+                value={textContent}
+                onChange={handleTextChange}
+                disabled={isAnyOperationInProgress}
+                className={cn(
+                  "w-full rounded-[5px] border px-3 py-2 text-sm text-gray-900 outline-none transition-colors duration-200 resize-none disabled:cursor-not-allowed disabled:opacity-50",
+                  textLinkError
+                    ? "bg-red-50 border-red-300 focus:border-red-400"
+                    : textContent.length > 200
+                      ? "bg-red-50 border-red-300 focus:border-red-400"
+                      : textContent.length > 0
+                        ? "bg-green-50 border-green-200 focus:border-green-400"
+                        : "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
+                )}
+              />
+              {textLinkError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <HiExclamationTriangle className="h-3.5 w-3.5" />
+                  Links are not allowed in text posts
+                </p>
+              )}
+              {textContent.trim().length > 0 && !textLinkError && textContent.length <= 200 && (
+                <div className="border rounded-[5px] p-3 bg-gray-50 border-gray-200">
+                  <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
+                  <p
+                    className="text-sm text-gray-900 leading-relaxed break-words whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{
+                      __html: textContent
+                        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                        .replace(/\*(.+?)\*/g, "<em>$1</em>"),
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+          <>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center text-xs font-medium bg-gray-100 rounded-md p-0.5">
+                <span className="px-2.5 py-1 rounded-[5px] bg-white text-gray-900 shadow-sm">Content URL</span>
+                <button type="button" onClick={() => setInputMode("text")} disabled={isAnyOperationInProgress} className="px-2.5 py-1 rounded-[5px] text-gray-400 hover:text-gray-600 transition-colors">Text</button>
+              </div>
+              {contentType ? (
+                <div className="flex-shrink-0">{renderPlatformIcon()}</div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/youtube.svg" alt="YouTube" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/youtubeshorts.svg" alt="YouTube Shorts" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/tiktok.svg" alt="TikTok" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/x.svg" alt="X" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/spotify.svg" alt="Spotify" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/vimeo.svg" alt="Vimeo" width={14} height={14} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/social/twitch.svg" alt="Twitch" width={14} height={14} />
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              {contentUrl && previewError && !isInputFocused && (
+                <HiExclamationTriangle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 h-4 w-4 pointer-events-none z-10" />
+              )}
+              {contentUrl && isValidUrl && (
+                <HiCheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4 pointer-events-none z-10" />
+              )}
+              <input
+                id="content-url"
+                type="text"
+                placeholder={getPlaceholderText()}
+                value={contentUrl}
+                onChange={handleUrlChange}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
+                disabled={isAnyOperationInProgress}
+                className={`w-full h-9 rounded-[5px] border px-3 text-sm text-gray-900 outline-none transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  !contentUrl
+                    ? "bg-blue-50 border-blue-200 focus:border-blue-400 placeholder:text-blue-300"
+                    : previewError && !isInputFocused
+                      ? "bg-white border-gray-300 focus:border-gray-400 pl-9"
+                      : isValidUrl
+                        ? "bg-green-50 border-green-200 focus:border-green-400 pl-9"
+                        : "bg-white border-gray-300 focus:border-gray-400"
+                }`}
+              />
+            </div>
+          </div>
+
+          {contentType && urlForPreview && (
+            <div className="border rounded-[5px] p-3 bg-gray-0 border-gray-300 transition-all duration-200">
+              <div className="text-xs font-medium mb-2 text-gray-900">Preview</div>
+              {isPreviewLoading ? (
+                <div className="flex items-center justify-center h-[200px]">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : isValidUrl && urlForPreview ? (
+                <div className="rounded-[5px] overflow-hidden" style={getPreviewContainerStyle()}>
+                  <ContentEmbed
+                    contentType={contentType}
+                    contentUrl={urlForPreview}
+                    aspectRatio={
+                      contentType === "youtubeshorts"
+                        ? "9:16"
+                        : contentType === "tiktok"
+                          ? detectedTikTokAspectRatio
+                          : "16:9"
+                    }
+                    isPreview={true}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-[200px] bg-gray-100 rounded-[5px]">
+                  <span className="text-xs text-gray-700">Invalid URL format or unable to load preview.</span>
+                </div>
+              )}
+            </div>
+          )}
+          </>
+          )}
+        </div>
+
+        {/* Payment method selector */}
+        {session?.user?.id && tokenEnabled && (
+          <div className="flex-shrink-0 px-4 pt-3 pb-0 bg-white space-y-2">
+            <div className="flex items-center justify-between">
+              {hasNFT ? (
+                <div className="bg-gray-100 rounded-md p-0.5 flex">
+                  <button
+                    type="button"
+                    disabled={isAnyOperationInProgress}
+                    onClick={() => setPaymentMethod("standard")}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded text-[11px] font-medium transition-all",
+                      !isNFTPath ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    Payment
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isAnyOperationInProgress}
+                    onClick={() => setPaymentMethod("nft-discount")}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded text-[11px] font-medium transition-all",
+                      isNFTPath ? "bg-white shadow-sm text-amber-700" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    NFT Pass
+                  </button>
+                </div>
+              ) : (
+                <label className="text-gray-900 font-medium text-xs">Payment Method</label>
+              )}
+              {(paymentMethod === "discount" || paymentMethod === "free") && (
+                <span className="flex items-center gap-1 text-xs text-gray-500">
+                  Balance: <span className="font-semibold text-gray-800">{boozFormatted}</span>
+                  <HiBolt className="text-yellow-500" size={11} />
+                  <span>$BOOZ</span>
+                </span>
+              )}
+            </div>
+
+            {!isNFTPath && (
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("standard")}
+                  disabled={isAnyOperationInProgress}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                    paymentMethod === "standard"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
+                  )}
+                >
+                  <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
+                  <span className="text-[10px] text-gray-500">Standard</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => canDiscount && setPaymentMethod("discount")}
+                  disabled={isAnyOperationInProgress || !canDiscount}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                    paymentMethod === "discount"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white",
+                    !canDiscount && "opacity-40 cursor-not-allowed"
+                  )}
+                >
+                  <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
+                  <div className="flex items-center gap-0.5">
+                    <HiBolt className="text-yellow-500" size={10} />
+                    <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => canFree && setPaymentMethod("free")}
+                  disabled={isAnyOperationInProgress || !canFree}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                    paymentMethod === "free"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white",
+                    !canFree && "opacity-40 cursor-not-allowed"
+                  )}
+                >
+                  <span className="text-xs font-bold text-gray-900">Free</span>
+                  <div className="flex items-center gap-0.5">
+                    <HiBolt className="text-yellow-500" size={10} />
+                    <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {isNFTPath && (
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-3 gap-2 items-stretch">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("nft-discount")}
+                    disabled={isAnyOperationInProgress}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                      paymentMethod === "nft-discount"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
+                    <span className="text-[10px] text-gray-500">-50% Discount</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("nft-free")}
+                    disabled={isAnyOperationInProgress}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                      paymentMethod === "nft-free"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-gray-900">Free</span>
+                    <span className="text-[10px] text-gray-500">30d cooldown</span>
+                  </button>
+                  {isEnumerating ? (
+                    <div className="flex flex-col items-center justify-center gap-0.5 border border-gray-200 rounded-lg px-2.5 text-xs text-gray-400 bg-white">
+                      <Loader2 size={11} className="animate-spin" />
+                      <span>Loading…</span>
+                    </div>
+                  ) : canEnumerate ? (
+                    <Select
+                      value={nftSelectedTokenId}
+                      onValueChange={setNftSelectedTokenId}
+                      disabled={isAnyOperationInProgress}
+                    >
+                      <SelectTrigger className="h-full text-xs font-bold bg-white border-gray-200 text-gray-900 rounded-lg px-2.5 focus:ring-0 focus:ring-offset-0 [&>svg]:text-gray-400 hover:border-gray-300">
+                        <SelectValue placeholder="Select NFT" />
+                      </SelectTrigger>
+                      <SelectContent className="min-w-[var(--radix-select-trigger-width)]">
+                        <SelectGroup>
+                          {ownedTokenIds.map(id => (
+                            <SelectItem key={id} value={id} className="text-xs font-medium">
+                              {nftCollectionName ? `${nftCollectionName} #${id}` : `#${id}`}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Token ID"
+                      value={nftTokenIdInput}
+                      onChange={e => setNftTokenIdInput(e.target.value)}
+                      disabled={isAnyOperationInProgress}
+                      className="border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
+                    />
+                  )}
+                </div>
+                {heldNFTs.length > 1 && (
+                  <select
+                    value={nftSelectedContract}
+                    onChange={e => setNftSelectedContract(e.target.value)}
+                    disabled={isAnyOperationInProgress}
+                    className="w-full border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                  >
+                    {heldNFTs.map(addr => (
+                      <option key={addr} value={addr}>{addr.slice(0, 10)}…{addr.slice(-6)}</option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-[10px] text-muted-foreground">No BOOZ earned · 1 raffle ticket · 24h cooldown (discount) / 30d cooldown (free)</p>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* Button */}
+        <div className="flex-shrink-0 px-4 pt-3 pb-3 mt-0.5 border-t border-gray-100 bg-white">
+          <button
+            className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50"
+            onClick={handleSubmit}
+            disabled={!canSubmit || isAnyOperationInProgress || !session?.user?.id || isQueueFull}
+          >
+            {isAnyOperationInProgress ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                {getButtonText()}
+              </>
+            ) : (
+              getButtonText()
+            )}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    )}
     </>
   )
 }
