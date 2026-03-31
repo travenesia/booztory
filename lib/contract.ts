@@ -45,6 +45,10 @@ export const BOOZTORY_ABI = [
   { inputs: [{ internalType: "address", name: "account", type: "address" }], name: "OwnableUnauthorizedAccount", type: "error" },
   { inputs: [], name: "ReentrancyGuardReentrantCall", type: "error" },
   { inputs: [], name: "QueueFull", type: "error" },
+  { inputs: [], name: "NFTContractNotApproved", type: "error" },
+  { inputs: [], name: "NFTNotOwned", type: "error" },
+  { inputs: [], name: "NFTDiscountCooldown", type: "error" },
+  { inputs: [], name: "NFTFreeCooldown", type: "error" },
 
   // Events
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "owner", type: "address" }, { indexed: true, internalType: "address", name: "approved", type: "address" }, { indexed: true, internalType: "uint256", name: "tokenId", type: "uint256" }], name: "Approval", type: "event" },
@@ -159,6 +163,7 @@ export const BOOZTORY_ABI = [
   // Additional events
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }, { indexed: false, internalType: "string", name: "reason", type: "string" }], name: "PointsEarned", type: "event" },
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "pointsBurned", type: "uint256" }, { indexed: false, internalType: "uint256", name: "ticketsMinted", type: "uint256" }], name: "TicketsConverted", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint16", name: "streakCount", type: "uint16" }, { indexed: false, internalType: "uint256", name: "reward", type: "uint256" }], name: "GMClaimed", type: "event" },
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint16", name: "day", type: "uint16" }, { indexed: false, internalType: "uint256", name: "bonus", type: "uint256" }], name: "GMMilestoneReached", type: "event" },
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "newRaffle", type: "address" }], name: "RaffleChanged", type: "event" },
   { anonymous: false, inputs: [{ indexed: false, internalType: "uint256", name: "newSize", type: "uint256" }], name: "MaxQueueSizeChanged", type: "event" },
@@ -198,6 +203,26 @@ export const BOOZTORY_ABI = [
 
 // ─── Raffle ABI ───────────────────────────────────────────────────────────────
 export const RAFFLE_ABI = [
+  // Errors
+  { inputs: [], name: "OnlyBooztory", type: "error" },
+  { inputs: [], name: "InvalidAddress", type: "error" },
+  { inputs: [], name: "InvalidRaffle", type: "error" },
+  { inputs: [], name: "RaffleNotActive", type: "error" },
+  { inputs: [], name: "RaffleStillRunning", type: "error" },
+  { inputs: [], name: "AlreadyDrawRequested", type: "error" },
+  { inputs: [], name: "BelowThreshold", type: "error" },
+  { inputs: [], name: "NotEnoughUniqueEntrants", type: "error" },
+  { inputs: [], name: "InsufficientPrizeFunds", type: "error" },
+  { inputs: [], name: "InsufficientTickets", type: "error" },
+  { inputs: [], name: "ApplicationNotPending", type: "error" },
+  { inputs: [], name: "RefundTooEarly", type: "error" },
+  { inputs: [], name: "EarlierApplicationPending", type: "error" },
+  { inputs: [], name: "InvalidDuration", type: "error" },
+  { inputs: [], name: "PriceTierNotFound", type: "error" },
+  { inputs: [], name: "NothingToWithdraw", type: "error" },
+  { inputs: [], name: "ArrayLengthMismatch", type: "error" },
+  { inputs: [], name: "NoWinners", type: "error" },
+
   // Events
   { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "TicketsCredited", type: "event" },
   { anonymous: false, inputs: [{ indexed: true, internalType: "uint256", name: "raffleId", type: "uint256" }, { indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "ticketAmount", type: "uint256" }, { indexed: false, internalType: "uint256", name: "totalUserTickets", type: "uint256" }], name: "RaffleEntered", type: "event" },

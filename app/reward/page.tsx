@@ -10,7 +10,7 @@ import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { HiBolt, HiTrophy } from "react-icons/hi2"
 import { FaCoins, FaRankingStar } from "react-icons/fa6"
 import { Ticket, BadgeCheck, Flame } from "lucide-react"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { APP_CHAIN, NFT_CHAIN_ID } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { PageTopbar } from "@/components/layout/pageTopbar"
@@ -89,6 +89,11 @@ function groupPrizes(prizeList: bigint[]): { start: number; end: number; amount:
   return groups
 }
 
+const ERC721_NFT_ABI = [
+  { name: "name",      type: "function", stateMutability: "view", inputs: [],                                    outputs: [{ type: "string"  }] },
+  { name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ type: "uint256" }] },
+] as const
+
 // TODO: move to NEXT_PUBLIC_RAFFLE_DEPLOY_BLOCK env var once confirmed on mainnet
 const RAFFLE_DEPLOY_BLOCK = 38_200_000n
 
@@ -134,6 +139,7 @@ function ActiveRaffleCard({
   const [isDrawing, setIsDrawing] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [nftGatedMap, setNftGatedMap] = useState<Record<number, string>>({})
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
@@ -260,6 +266,28 @@ function ActiveRaffleCard({
     document.addEventListener("visibilitychange", onVisible)
     return () => document.removeEventListener("visibilitychange", onVisible)
   }, [refetchRaffle, refetchUserTickets, refetchHasEntered])
+
+  // Read NFT-gated raffle map from localStorage (written by admin raffle page)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("booztory_nft_gated_raffles")
+      if (stored) setNftGatedMap(JSON.parse(stored))
+    } catch {}
+  }, [])
+  const nftContract = nftGatedMap[Number(selectedId)] as string | undefined
+  const nftAddr = (nftContract ?? "0x0000000000000000000000000000000000000000") as `0x${string}`
+  const { data: nftCollectionNameRaw } = useReadContract({
+    address: nftAddr, abi: ERC721_NFT_ABI, functionName: "name",
+    chainId: NFT_CHAIN_ID, query: { enabled: !!nftContract },
+  })
+  const { data: nftBalanceRaw } = useReadContract({
+    address: nftAddr, abi: ERC721_NFT_ABI, functionName: "balanceOf",
+    args: userAddress ? [userAddress] : undefined,
+    chainId: NFT_CHAIN_ID, query: { enabled: !!nftContract && !!userAddress },
+  })
+  const nftCollectionName = nftCollectionNameRaw as string | undefined
+  const holdsNft  = !nftContract || (nftBalanceRaw !== undefined && Number(nftBalanceRaw) > 0)
+  const blockedByNft = !!nftContract && nftBalanceRaw !== undefined && !holdsNft
 
   if (!raffle) return null
 
@@ -493,6 +521,28 @@ function ActiveRaffleCard({
           </div>
         )}
 
+        {/* NFT-gated raffle info */}
+        {!raffleSponsor && nftContract && (
+          <div className="flex flex-col items-center gap-2 mt-2 pt-2 pb-4 border-t border-white/10">
+            <span className="text-xs text-white/60 text-center">Sponsored by</span>
+            <span className="text-sm font-semibold text-white text-center">
+              {nftCollectionName ?? `${nftContract.slice(0, 6)}…${nftContract.slice(-4)}`}
+            </span>
+            <div className="flex items-center justify-center gap-3">
+              <a href={`https://opensea.io/assets/base/${nftContract}`} target="_blank" rel="noopener noreferrer"
+                className="opacity-60 hover:opacity-100 transition-opacity">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/social/opensea.svg" width={14} height={14} alt="OpenSea" className="invert" />
+              </a>
+              <a href={`https://basescan.org/address/${nftContract}`} target="_blank" rel="noopener noreferrer"
+                className="opacity-60 hover:opacity-100 transition-opacity">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/social/basescan.svg" width={14} height={14} alt="Basescan" className="invert" />
+              </a>
+            </div>
+          </div>
+        )}
+
         <div className="text-xs text-center mt-2">
           {isCancelled ? (
             <span className="bg-red-400/20 border border-red-300/30 rounded-full px-2.5 py-0.5 text-red-200">
@@ -588,8 +638,16 @@ function ActiveRaffleCard({
           </div>
         )}
 
+        {/* NFT gate — shown only once balanceOf resolves to 0 */}
+        {userAddress && !ended && !isDrawn && !isCancelled && blockedByNft && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800">
+            <BadgeCheck size={14} className="shrink-0 text-amber-500" />
+            <span>Hold a <strong>{nftCollectionName ?? "required NFT"}</strong> to enter this raffle.</span>
+          </div>
+        )}
+
         {/* Enter raffle input */}
-        {userAddress && !ended && !isDrawn && !isCancelled && (
+        {userAddress && !ended && !isDrawn && !isCancelled && holdsNft && (
           <div className="flex gap-2">
             <div className="flex-1 flex border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
               <input

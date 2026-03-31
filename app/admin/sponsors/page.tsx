@@ -304,7 +304,20 @@ function PriceTiersSection() {
     <div className="rounded-xl border bg-white p-5 space-y-4">
       <div>
         <p className="text-sm font-bold text-gray-900">Sponsor Price Tiers</p>
-        <p className="text-xs text-muted-foreground mt-1">Same duration overwrites the existing tier. Set price to 0 removes it.</p>
+        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+          Defines what sponsors pay when applying for a raffle slot. <strong className="text-gray-700">Min Prize</strong> is the minimum USDC the sponsor must deposit as the raffle prize pool — it goes to winners, not you. <strong className="text-gray-700">Fee</strong> is the platform revenue you keep regardless of outcome. Sponsor pays <strong className="text-gray-700">Prize + Fee</strong> upfront.
+        </p>
+        <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-800 space-y-1">
+          <p className="font-bold text-amber-900">Rules to follow</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li>Duration is in <strong>hours</strong> — use 168 (7d), 336 (14d), or 720 (30d). Arbitrary durations work but sponsors won't see them in the UI.</li>
+            <li>Same duration overwrites the existing tier — editing is non-destructive.</li>
+            <li>Set both Prize and Fee to <strong>0</strong> to remove a tier entirely. Sponsors can no longer apply for that duration.</li>
+            <li>Never set Fee to 0 unless it is intentional — you earn nothing and the sponsor still occupies a slot.</li>
+            <li>Set Min Prize high enough that the raffle is worth entering for users. Too low (e.g. $1) undermines trust.</li>
+            <li>Removing a tier does <strong>not</strong> cancel active applications or accepted ads already using that tier.</li>
+          </ul>
+        </div>
       </div>
 
       {/* Existing tiers */}

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, NFT_CHAIN_ID } from "@/lib/wagmi"
 import { parseUnits, isAddress } from "viem"
 import { sendTransaction } from "wagmi/actions"
 import { cn } from "@/lib/utils"
@@ -16,6 +16,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ── Constants ──────────────────────────────────────────────────────────────────
+
+const ERC721_NAME_ABI = [
+  { name: "name", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+] as const
 
 const DURATION_OPTIONS = [
   { label: "7 days",  seconds: 7  * 86400 },
@@ -110,12 +114,23 @@ export default function AdminRafflePage() {
 
   // NFT-gated raffle state
   const [nftGatedMap, setNftGatedMap] = useState<Record<number, string>>({}) // raffleId → nftContract
-  const [ngrNftAddress, setNgrNftAddress]         = useState("")
-  const [ngrToken, setNgrToken]                   = useState<"usdc" | "booz" | "eth">("booz")
-  const [ngrWinnerCount, setNgrWinnerCount]       = useState("1")
-  const [ngrPrizes, setNgrPrizes]                 = useState<string[]>([""])
-  const [ngrDurationIdx, setNgrDurationIdx]       = useState(1)
-  const [isCreatingNgrRaffle, setIsCreatingNgrRaffle] = useState(false)
+  const [ngrNftAddress, setNgrNftAddress]               = useState("")
+  const [ngrToken, setNgrToken]                         = useState<"usdc" | "booz" | "eth" | "custom">("booz")
+  const [ngrCustomTokenAddress, setNgrCustomTokenAddress] = useState("")
+  const [ngrCustomDecimals, setNgrCustomDecimals]       = useState("18")
+  const [ngrWinnerCount, setNgrWinnerCount]             = useState("1")
+  const [ngrPrizes, setNgrPrizes]                       = useState<string[]>([""])
+  const [ngrDurationIdx, setNgrDurationIdx]             = useState(1)
+  const [ngrCustomHours, setNgrCustomHours]             = useState("1")
+  const [isCreatingNgrRaffle, setIsCreatingNgrRaffle]   = useState(false)
+
+  // Refund timeout state
+  const [refundDaysInput, setRefundDaysInput] = useState("")
+  const [isSettingRefund, setIsSettingRefund] = useState(false)
+
+  // Raffle emergency controls
+  const [isRafflePausing, setIsRafflePausing]   = useState(false)
+  const [isRaffleUnpausing, setIsRaffleUnpausing] = useState(false)
 
   // ── Contract reads ──────────────────────────────────────────────────────────
 
@@ -148,6 +163,27 @@ export default function AdminRafflePage() {
     chainId: APP_CHAIN.id,
   })
   const approvedNFTs = (approvedNFTsRaw as string[] | undefined) ?? []
+
+  const { data: nftNamesRaw } = useReadContracts({
+    contracts: approvedNFTs.map(addr => ({
+      address: addr as `0x${string}`,
+      abi: ERC721_NAME_ABI,
+      functionName: "name" as const,
+      chainId: NFT_CHAIN_ID,
+    })),
+    allowFailure: true,
+    query: { enabled: approvedNFTs.length > 0 },
+  })
+  const nftNames = approvedNFTs.map((_, i) => (nftNamesRaw?.[i]?.result as string | undefined) ?? "")
+
+  const { data: refundTimeoutRaw, refetch: refetchRefundTimeout } = useReadContract({
+    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "refundTimeout",
+    chainId: APP_CHAIN.id,
+  })
+  const { data: rafflePausedRaw, refetch: refetchRafflePaused } = useReadContract({
+    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "paused",
+    chainId: APP_CHAIN.id,
+  })
 
   // Persist NFT-gated raffle mapping in localStorage
   useEffect(() => {
@@ -433,12 +469,16 @@ export default function AdminRafflePage() {
     const wc = Math.max(1, Math.min(20, parseInt(ngrWinnerCount) || 1))
     const prizes = ngrPrizes.slice(0, wc)
     if (prizes.some(p => !p || parseFloat(p) <= 0)) return
+    if (ngrToken === "custom" && !isAddress(ngrCustomTokenAddress)) return
 
     const selectedOption = DURATION_OPTIONS[ngrDurationIdx]
-    const duration = selectedOption?.seconds ?? DURATION_OPTIONS[1].seconds
-    const decimals = ngrToken === "usdc" ? 6 : 18
-    const prizeToken = ngrToken === "usdc" ? USDC_ADDRESS
-                     : ngrToken === "eth"  ? "0x0000000000000000000000000000000000000000" as `0x${string}`
+    const duration = selectedOption?.seconds === 0
+      ? Math.round(parseFloat(ngrCustomHours) * 3600)
+      : selectedOption?.seconds ?? DURATION_OPTIONS[1].seconds
+    const decimals = ngrToken === "usdc" ? 6 : ngrToken === "custom" ? parseInt(ngrCustomDecimals) || 18 : 18
+    const prizeToken = ngrToken === "usdc"   ? USDC_ADDRESS
+                     : ngrToken === "eth"    ? "0x0000000000000000000000000000000000000000" as `0x${string}`
+                     : ngrToken === "custom" ? ngrCustomTokenAddress as `0x${string}`
                      : TOKEN_ADDRESS
     const prizeBns   = prizes.map(p => parseUnits(p, decimals))
     const totalPrize = prizeBns.reduce((a, b) => a + b, 0n)
@@ -457,11 +497,13 @@ export default function AdminRafflePage() {
         const createTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "createRaffle", args: [[prizeToken], prizeAmounts, BigInt(wc), BigInt(duration)], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
       } else {
-        const approveTx = await writeContractAsync({ address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalPrize], chainId: APP_CHAIN.id })
+        // USDC or custom ERC-20: approve → create → deposit
+        const tokenAddr = ngrToken === "custom" ? ngrCustomTokenAddress as `0x${string}` : USDC_ADDRESS
+        const approveTx = await writeContractAsync({ address: tokenAddr, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalPrize], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
         const createTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "createRaffle", args: [[prizeToken], prizeAmounts, BigInt(wc), BigInt(duration)], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: createTx })
-        const depositTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "depositPrize", args: [USDC_ADDRESS, totalPrize], chainId: APP_CHAIN.id })
+        const depositTx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "depositPrize", args: [tokenAddr, totalPrize], chainId: APP_CHAIN.id })
         await waitForTransactionReceipt(wagmiConfig, { hash: depositTx })
       }
 
@@ -488,6 +530,46 @@ export default function AdminRafflePage() {
       return next.slice(0, n)
     })
   }
+
+  // ── Emergency handlers ───────────────────────────────────────────────────────
+
+  async function handleSetRefundTimeout() {
+    const days = parseFloat(refundDaysInput)
+    if (isNaN(days) || days <= 0) return
+    setIsSettingRefund(true)
+    try {
+      const tx = await writeContractAsync({
+        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "setRefundTimeout",
+        args: [BigInt(Math.round(days * 86400))],
+        chainId: APP_CHAIN.id,
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      setRefundDaysInput("")
+      refetchRefundTimeout()
+      toast({ title: "Updated", description: `Refund timeout set to ${days} day(s).` })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.toLowerCase().includes("rejected")) return
+      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
+    } finally { setIsSettingRefund(false) }
+  }
+
+  async function handleRafflePause(action: "pause" | "unpause") {
+    action === "pause" ? setIsRafflePausing(true) : setIsRaffleUnpausing(true)
+    try {
+      const tx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: action, chainId: APP_CHAIN.id })
+      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      refetchRafflePaused()
+      toast({ title: action === "pause" ? "Paused" : "Unpaused" })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.toLowerCase().includes("rejected")) return
+      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
+    } finally { action === "pause" ? setIsRafflePausing(false) : setIsRaffleUnpausing(false) }
+  }
+
+  const rafflePaused         = rafflePausedRaw as boolean | undefined
+  const currentRefundDays    = refundTimeoutRaw != null ? (Number(refundTimeoutRaw as bigint) / 86400).toFixed(0) : null
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -757,11 +839,13 @@ export default function AdminRafflePage() {
               <select
                 value={ngrNftAddress}
                 onChange={e => setNgrNftAddress(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
               >
                 <option value="">Select collection…</option>
-                {approvedNFTs.map(addr => (
-                  <option key={addr} value={addr}>{addr}</option>
+                {approvedNFTs.map((addr, i) => (
+                  <option key={addr} value={addr}>
+                    {nftNames[i] ? `${nftNames[i]} — ${addr.slice(0, 6)}…${addr.slice(-4)}` : addr}
+                  </option>
                 ))}
               </select>
             </div>
@@ -771,19 +855,33 @@ export default function AdminRafflePage() {
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-gray-700">Prize Token</p>
                 <div className="flex rounded-lg border overflow-hidden text-sm font-semibold">
-                  {(["booz", "usdc", "eth"] as const).map(t => (
+                  {(["booz", "usdc", "eth", "custom"] as const).map(t => (
                     <button key={t} onClick={() => setNgrToken(t)}
                       className={cn("flex-1 py-2 transition-colors", ngrToken === t ? "bg-amber-500 text-white" : "bg-white text-amber-700 hover:bg-amber-50")}
                     >
-                      {t.toUpperCase()}
+                      {t === "custom" ? "Custom" : t.toUpperCase()}
                     </button>
                   ))}
                 </div>
+                {ngrToken === "custom" && (
+                  <div className="flex gap-2">
+                    <input
+                      value={ngrCustomTokenAddress} onChange={e => setNgrCustomTokenAddress(e.target.value)}
+                      placeholder="Token address (0x…)"
+                      className={cn("flex-1 border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400", ngrCustomTokenAddress && !isAddress(ngrCustomTokenAddress) ? "border-red-400" : "")}
+                    />
+                    <input
+                      type="number" min={0} max={18} value={ngrCustomDecimals} onChange={e => setNgrCustomDecimals(e.target.value)}
+                      placeholder="Decimals"
+                      className="w-24 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-gray-700">Duration</p>
                 <div className="flex rounded-lg border overflow-hidden text-sm font-semibold">
-                  {DURATION_OPTIONS.filter(o => o.seconds > 0).map((opt, i) => (
+                  {DURATION_OPTIONS.map((opt, i) => (
                     <button key={opt.label} onClick={() => setNgrDurationIdx(i)}
                       className={cn("flex-1 py-2 transition-colors", ngrDurationIdx === i ? "bg-amber-500 text-white" : "bg-white text-amber-700 hover:bg-amber-50")}
                     >
@@ -791,6 +889,11 @@ export default function AdminRafflePage() {
                     </button>
                   ))}
                 </div>
+                {DURATION_OPTIONS[ngrDurationIdx]?.seconds === 0 && (
+                  <input type="number" min={1} value={ngrCustomHours} onChange={e => setNgrCustomHours(e.target.value)}
+                    placeholder="Hours" className="w-32 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                )}
               </div>
             </div>
 
@@ -811,7 +914,7 @@ export default function AdminRafflePage() {
                     <input
                       type="number" min={0} step="0.01" value={p}
                       onChange={e => { const next = [...ngrPrizes]; next[i] = e.target.value; setNgrPrizes(next) }}
-                      placeholder={ngrToken === "usdc" ? "USDC" : ngrToken === "eth" ? "ETH" : "BOOZ"}
+                      placeholder={ngrToken === "usdc" ? "USDC" : ngrToken === "eth" ? "ETH" : ngrToken === "custom" ? "Amount" : "BOOZ"}
                       className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                     />
                   </div>
@@ -821,7 +924,7 @@ export default function AdminRafflePage() {
 
             <button
               onClick={handleCreateNFTGatedRaffle}
-              disabled={isCreatingNgrRaffle || !isAddress(ngrNftAddress) || ngrPrizes.slice(0, Math.max(1, parseInt(ngrWinnerCount) || 1)).some(p => !p || parseFloat(p) <= 0)}
+              disabled={isCreatingNgrRaffle || !isAddress(ngrNftAddress) || ngrPrizes.slice(0, Math.max(1, parseInt(ngrWinnerCount) || 1)).some(p => !p || parseFloat(p) <= 0) || (ngrToken === "custom" && !isAddress(ngrCustomTokenAddress))}
               className="w-full bg-amber-500 text-white text-sm font-bold py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
             >
               {isCreatingNgrRaffle ? "Creating…" : `Create NFT-Gated Raffle (${ngrToken === "booz" ? "1 tx" : ngrToken === "eth" ? "2 txs" : "3 txs"})`}
@@ -845,6 +948,57 @@ export default function AdminRafflePage() {
             )}
           </div>
         )}
+      </Section>
+
+      {/* Emergency Controls */}
+      <Section
+        title="Emergency Controls"
+        description="Pause halts user-facing raffle actions (enterRaffle, submitApplication). Also adjust sponsor refund timeout."
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Raffle Contract State</p>
+              {rafflePaused != null && (
+                <p className="text-xs mt-0.5">
+                  Currently{" "}
+                  <span className={cn("font-semibold", rafflePaused ? "text-red-600" : "text-emerald-600")}>
+                    {rafflePaused ? "PAUSED" : "Active"}
+                  </span>
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleRafflePause("pause")}
+                disabled={isRafflePausing || isRaffleUnpausing || rafflePaused === true}
+                className="bg-red-500 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                {isRafflePausing ? "Pausing…" : "Pause"}
+              </button>
+              <button
+                onClick={() => handleRafflePause("unpause")}
+                disabled={isRafflePausing || isRaffleUnpausing || rafflePaused === false}
+                className="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                {isRaffleUnpausing ? "Unpausing…" : "Unpause"}
+              </button>
+            </div>
+          </div>
+          <div className="border-t pt-3">
+            <InputRow
+              label="Set Refund Timeout"
+              placeholder="30"
+              value={refundDaysInput}
+              onChange={setRefundDaysInput}
+              onSubmit={handleSetRefundTimeout}
+              loading={isSettingRefund}
+            />
+            {currentRefundDays != null && (
+              <p className="text-xs text-muted-foreground mt-1">Current: <span className="font-semibold text-gray-700">{currentRefundDays} days</span></p>
+            )}
+          </div>
+        </div>
       </Section>
 
     </div>
