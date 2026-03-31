@@ -13,8 +13,9 @@ import { Navbar } from "@/components/layout/navbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { useIdentity } from "@/hooks/useIdentity"
-import { useWalletName } from "@/hooks/useWalletName"
 import { APP_CHAIN } from "@/lib/wagmi"
+import { sdk } from "@farcaster/miniapp-sdk"
+import { isMiniApp } from "@/lib/miniapp-flag"
 import { cn } from "@/lib/utils"
 import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import type { ProfileData, TxItem, TxType } from "@/app/api/profile/[address]/route"
@@ -216,12 +217,12 @@ const EMPTY_MSG: Record<Tab, string> = {
 
 // ── Donation description (resolves counterparty address) ──────────────────────
 function DonationDesc({ tx, connectedAddress }: { tx: TxItem; connectedAddress?: string }) {
-  const resolved = useWalletName(tx.counterparty as `0x${string}` | undefined)
+  const identity = useIdentity(tx.counterparty as `0x${string}` | undefined)
   const isYou = !!(connectedAddress && tx.counterparty && connectedAddress.toLowerCase() === tx.counterparty.toLowerCase())
   const short = tx.counterparty
     ? `${tx.counterparty.slice(0, 6)}...${tx.counterparty.slice(-4)}`
     : "—"
-  const display = isYou ? "you" : (resolved || short)
+  const display = isYou ? "you" : (identity.walletName || short)
   const prefix = tx.type === "donated" ? "to" : "from"
   return (
     <span className="text-xs text-gray-500 truncate">
@@ -351,6 +352,18 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(false), 1500)
   }
 
+  const handleVisitProfile = () => {
+    if (!address) return
+    if (isMiniApp()) {
+      const target = identity.farcasterUsername
+        ? `https://farcaster.xyz/${identity.farcasterUsername}`
+        : `https://farcaster.xyz/${address}`
+      sdk.actions.openUrl(target)
+    } else {
+      window.open(`https://base.app/profile/${address}`, "_blank")
+    }
+  }
+
   const [page, setPage] = useState(0)
   const PAGE_SIZE = 10
 
@@ -402,6 +415,13 @@ export default function ProfilePage() {
                     aria-label="Copy address"
                   >
                     {copied ? <Check className="w-3 h-3 text-green-300" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                  <button
+                    onClick={handleVisitProfile}
+                    className="text-blue-300 hover:text-white transition-colors p-0.5 rounded"
+                    aria-label="View profile"
+                  >
+                    <ExternalLink className="w-3 h-3" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2">

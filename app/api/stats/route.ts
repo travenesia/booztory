@@ -1,28 +1,32 @@
 import { NextResponse } from "next/server"
 import { dataLimiter, getIp } from "@/lib/ratelimit"
 
-const QUERY = `{
-  wallets(first: 1000) {
-    totalSlots
-    totalDonated
-    totalWins
-    totalWinnings
-    totalPoints
+// ── Pagination helper ──────────────────────────────────────────────────────────
+// The Graph caps `first` at 1000 and `skip` at 5000. We loop pages until a
+// partial page is returned, giving us up to 6 000 records per entity — enough
+// for any early-stage stats query. Each call is a separate POST to the subgraph,
+// so entities are fetched in parallel via Promise.all in the handler below.
+async function fetchAll<T>(url: string, entity: string, fields: string): Promise<T[]> {
+  const all: T[] = []
+  let skip = 0
+  for (;;) {
+    const q = `{ r: ${entity}(first: 1000, skip: ${skip}) { ${fields} } }`
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q }),
+    })
+    if (!res.ok) throw new Error(`Subgraph responded with ${res.status}`)
+    const json = await res.json()
+    if (json.errors) throw new Error(json.errors[0]?.message ?? "Subgraph query error")
+    const page: T[] = json.data?.r ?? []
+    all.push(...page)
+    if (page.length < 1000) break
+    skip += 1000
+    if (skip > 5000) break // The Graph skip ceiling
   }
-  gmclaimEvents(first: 1000) {
-    boozAmount
-  }
-  ticketsConvertedEvents(first: 1000) {
-    ticketsMinted
-    pointsBurned
-  }
-  donationEvents(first: 1000) {
-    id
-  }
-  drawnRaffles(first: 1000) {
-    id
-  }
-}`
+  return all
+}
 
 export async function GET(request: Request) {
   const { success } = await dataLimiter.limit(getIp(request))
@@ -34,54 +38,67 @@ export async function GET(request: Request) {
   }
 
   try {
-    const res = await fetch(subgraphUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: QUERY }),
-    })
+    const [
+      wallets,
+      gmclaimEvents,
+      ticketsConvertedEvents,
+      donationEvents,
+      drawnRaffles,
+      slotMintEvents,
+      raffleEnteredEvents,
+    ] = await Promise.all([
+      fetchAll<{ totalSlots: string; totalDonated: string; totalWins: string; totalWinnings: string; totalPoints: string }>(
+        subgraphUrl, "wallets", "id totalSlots totalDonated totalWins totalWinnings totalPoints"
+      ),
+      fetchAll<{ boozAmount: string }>(
+        subgraphUrl, "gmclaimEvents", "id boozAmount"
+      ),
+      fetchAll<{ ticketsMinted: string; pointsBurned: string }>(
+        subgraphUrl, "ticketsConvertedEvents", "id ticketsMinted pointsBurned"
+      ),
+      fetchAll<{ id: string }>(
+        subgraphUrl, "donationEvents", "id"
+      ),
+      fetchAll<{ id: string }>(
+        subgraphUrl, "drawnRaffles", "id"
+      ),
+      fetchAll<{ mintType: string }>(
+        subgraphUrl, "slotMintEvents", "id mintType"
+      ),
+      fetchAll<{ ticketAmount: string }>(
+        subgraphUrl, "raffleEnteredEvents", "id ticketAmount"
+      ),
+    ])
 
-    if (!res.ok) {
-      throw new Error(`Subgraph responded with ${res.status}`)
-    }
+    // ── Content ──────────────────────────────────────────────────────────────
+    const totalSlotsMinted     = slotMintEvents.length
+    const totalContentHours    = parseFloat((totalSlotsMinted * 15 / 60).toFixed(1))
+    const totalUniqueCreators  = wallets.filter(w => Number(w.totalSlots) > 0).length
+    const totalUsers           = wallets.length
+    const totalStandardMints   = slotMintEvents.filter(e => e.mintType === "standard").length
+    const totalDiscountMints   = slotMintEvents.filter(e => e.mintType === "discount").length
+    const totalFreeMints       = slotMintEvents.filter(e => e.mintType === "free").length
 
-    const json = await res.json()
-    if (json.errors) {
-      throw new Error(json.errors[0]?.message ?? "Subgraph query error")
-    }
-
-    const { wallets = [], gmclaimEvents = [], ticketsConvertedEvents = [], donationEvents = [], drawnRaffles = [] } = json.data ?? {}
-
-    // Content
-    const totalSlotsMinted = wallets.reduce((sum: number, w: { totalSlots: string }) => sum + Number(w.totalSlots), 0)
-    const totalContentHours = parseFloat((totalSlotsMinted * 15 / 60).toFixed(1))
-    const totalUniqueCreators = wallets.filter((w: { totalSlots: string }) => Number(w.totalSlots) > 0).length
-    const totalUsers = wallets.length
-
-    // Community
-    const totalGMClaims = gmclaimEvents.length
-    const totalUSDCDonated = parseFloat(
-      (wallets.reduce((sum: number, w: { totalDonated: string }) => sum + Number(w.totalDonated), 0) / 1_000_000).toFixed(2)
+    // ── Community ─────────────────────────────────────────────────────────────
+    const totalGMClaims        = gmclaimEvents.length
+    const totalUSDCDonated     = parseFloat(
+      (wallets.reduce((s, w) => s + Number(w.totalDonated), 0) / 1_000_000).toFixed(2)
     )
+    const totalDonationCount   = donationEvents.length
 
-    // Rewards & Raffle
-    const totalBOOZEarned = Math.round(
-      gmclaimEvents.reduce((sum: number, e: { boozAmount: string }) => sum + Number(e.boozAmount), 0) / 1e18
+    // ── Rewards & Raffle ──────────────────────────────────────────────────────
+    const totalBOOZEarned      = Math.round(
+      gmclaimEvents.reduce((s, e) => s + Number(e.boozAmount), 0) / 1e18
     )
-    const totalPointsEarned = wallets.reduce((sum: number, w: { totalPoints: string }) => sum + Number(w.totalPoints), 0)
-    const totalTicketsIssued = ticketsConvertedEvents.reduce(
-      (sum: number, e: { ticketsMinted: string }) => sum + Number(e.ticketsMinted),
-      0
+    const totalPointsEarned    = wallets.reduce((s, w) => s + Number(w.totalPoints), 0)
+    const totalTicketsIssued   = ticketsConvertedEvents.reduce((s, e) => s + Number(e.ticketsMinted), 0)
+    const totalPointsBurned    = ticketsConvertedEvents.reduce((s, e) => s + Number(e.pointsBurned), 0)
+    const totalRaffleEntries   = raffleEnteredEvents.reduce((s, e) => s + Number(e.ticketAmount), 0)
+    const totalRafflesDrawn    = drawnRaffles.length
+    const totalPrizePoolPaid   = parseFloat(
+      (wallets.reduce((s, w) => s + Number(w.totalWinnings), 0) / 1_000_000).toFixed(2)
     )
-    const totalPointsBurned = ticketsConvertedEvents.reduce(
-      (sum: number, e: { pointsBurned: string }) => sum + Number(e.pointsBurned),
-      0
-    )
-    const totalDonationCount = donationEvents.length
-    const totalRafflesDrawn = drawnRaffles.length
-    const totalPrizePoolPaid = parseFloat(
-      (wallets.reduce((sum: number, w: { totalWinnings: string }) => sum + Number(w.totalWinnings), 0) / 1_000_000).toFixed(2)
-    )
-    const totalUniqueWinners = wallets.filter((w: { totalWins: string }) => Number(w.totalWins) > 0).length
+    const totalUniqueWinners   = wallets.filter(w => Number(w.totalWins) > 0).length
 
     return NextResponse.json(
       {
@@ -89,22 +106,22 @@ export async function GET(request: Request) {
         totalContentHours,
         totalUniqueCreators,
         totalUsers,
+        totalStandardMints,
+        totalDiscountMints,
+        totalFreeMints,
         totalGMClaims,
         totalUSDCDonated,
+        totalDonationCount,
         totalBOOZEarned,
         totalPointsEarned,
         totalTicketsIssued,
         totalPointsBurned,
-        totalDonationCount,
+        totalRaffleEntries,
         totalRafflesDrawn,
         totalPrizePoolPaid,
         totalUniqueWinners,
       },
-      {
-        headers: {
-          "Cache-Control": "s-maxage=1800, stale-while-revalidate",
-        },
-      }
+      { headers: { "Cache-Control": "s-maxage=1800, stale-while-revalidate" } }
     )
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error"

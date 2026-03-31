@@ -14,6 +14,9 @@ interface StatsData {
   totalContentHours: number
   totalUniqueCreators: number
   totalUsers: number
+  totalStandardMints: number
+  totalDiscountMints: number
+  totalFreeMints: number
   totalGMClaims: number
   totalUSDCDonated: number
   totalDonationCount: number
@@ -21,6 +24,7 @@ interface StatsData {
   totalPointsEarned: number
   totalPointsBurned: number
   totalTicketsIssued: number
+  totalRaffleEntries: number
   totalRafflesDrawn: number
   totalPrizePoolPaid: number
   totalUniqueWinners: number
@@ -75,7 +79,7 @@ function LoadingState() {
       {/* Cards */}
       <Skeleton className="h-4 w-24 rounded bg-gray-200 mb-3" />
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+        {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
       </div>
       <Skeleton className="h-4 w-24 rounded bg-gray-200 mt-6 mb-3" />
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -83,7 +87,7 @@ function LoadingState() {
       </div>
       <Skeleton className="h-4 w-32 rounded bg-gray-200 mt-6 mb-3" />
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {[...Array(7)].map((_, i) => <SkeletonCard key={i} />)}
+        {[...Array(9)].map((_, i) => <SkeletonCard key={i} />)}
       </div>
     </>
   )
@@ -211,6 +215,9 @@ export default function StatsPage() {
                 <StatCard value={stats.totalSlotsMinted.toLocaleString()}          label="Total Content Minted"      theme="blue"   />
                 <StatCard value={`${stats.totalContentHours.toFixed(1)} hrs`}      label="Content Hours Featured"    theme="blue"   />
                 <StatCard value={stats.totalUniqueCreators.toLocaleString()}       label="Unique Creators"           theme="blue"   />
+                <StatCard value={stats.totalStandardMints.toLocaleString()}        label="Standard Mints"            theme="blue"   />
+                <StatCard value={stats.totalDiscountMints.toLocaleString()}        label="Discount Mints"            theme="blue"   />
+                <StatCard value={stats.totalFreeMints.toLocaleString()}            label="Free Mints"                theme="blue"   />
                 <StatCard value={stats.totalUsers.toLocaleString()}                label="Total Users"               theme="teal"   />
                 <StatCard value={stats.totalGMClaims.toLocaleString()}             label="Total GM Claims"           theme="teal"   />
                 <StatCard value={`$${stats.totalUSDCDonated.toFixed(2)}`}          label="USDC Donated to Creators"  theme="teal"   />
@@ -219,6 +226,7 @@ export default function StatsPage() {
                 <StatCard value={stats.totalPointsEarned.toLocaleString()}         label="Total Points Earned"       theme="purple" />
                 <StatCard value={stats.totalPointsBurned.toLocaleString()}         label="Points Burned for Tickets" theme="purple" />
                 <StatCard value={stats.totalTicketsIssued.toLocaleString()}        label="Tickets Issued"            theme="purple" />
+                <StatCard value={stats.totalRaffleEntries.toLocaleString()}        label="Total Raffle Entries"      theme="purple" />
                 <StatCard value={stats.totalRafflesDrawn.toLocaleString()}         label="Raffles Completed"         theme="purple" />
                 <StatCard value={`$${stats.totalPrizePoolPaid.toFixed(2)}`}        label="Prize Pool Paid Out"       theme="purple" />
                 <StatCard value={stats.totalUniqueWinners.toLocaleString()}        label="Unique Winners"            theme="purple" />
@@ -231,6 +239,9 @@ export default function StatsPage() {
                 <StatCard value={stats.totalSlotsMinted.toLocaleString()}          label="Total Content Minted"      theme="blue" />
                 <StatCard value={`${stats.totalContentHours.toFixed(1)} hrs`}      label="Content Hours Featured"    theme="blue" />
                 <StatCard value={stats.totalUniqueCreators.toLocaleString()}       label="Unique Creators"           theme="blue" />
+                <StatCard value={stats.totalStandardMints.toLocaleString()}        label="Standard Mints"            theme="blue" />
+                <StatCard value={stats.totalDiscountMints.toLocaleString()}        label="Discount Mints"            theme="blue" />
+                <StatCard value={stats.totalFreeMints.toLocaleString()}            label="Free Mints"                theme="blue" />
               </div>
             )}
 
@@ -251,6 +262,7 @@ export default function StatsPage() {
                 <StatCard value={stats.totalPointsEarned.toLocaleString()}         label="Total Points Earned"       theme="purple" />
                 <StatCard value={stats.totalPointsBurned.toLocaleString()}         label="Points Burned for Tickets" theme="purple" />
                 <StatCard value={stats.totalTicketsIssued.toLocaleString()}        label="Tickets Issued"            theme="purple" />
+                <StatCard value={stats.totalRaffleEntries.toLocaleString()}        label="Total Raffle Entries"      theme="purple" />
                 <StatCard value={stats.totalRafflesDrawn.toLocaleString()}         label="Raffles Completed"         theme="purple" />
                 <StatCard value={`$${stats.totalPrizePoolPaid.toFixed(2)}`}        label="Prize Pool Paid Out"       theme="purple" />
                 <StatCard value={stats.totalUniqueWinners.toLocaleString()}        label="Unique Winners"            theme="purple" />

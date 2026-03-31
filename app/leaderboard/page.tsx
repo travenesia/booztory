@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useAccount } from "wagmi"
 import { useIdentity } from "@/hooks/useIdentity"
 import { cn } from "@/lib/utils"
@@ -87,9 +88,10 @@ function PodiumCard({ entry, rank, category }: { entry: LeaderEntry; rank: numbe
   const display = identity.displayName
   const isFirst = rank === 1
   const cfg = PODIUM_CONFIG[rank as 1 | 2 | 3]
+  const router = useRouter()
 
   return (
-    <div className="flex flex-col items-center w-full">
+    <div className="flex flex-col items-center w-full cursor-pointer" onClick={() => router.push(`/profile/${entry.address}`)}>
       {/* crown spacer */}
       {isFirst
         ? <span className="text-2xl leading-none mb-1.5">👑</span>
@@ -267,11 +269,13 @@ function LeaderRow({
 }) {
   const identity = useIdentity(entry.address)
   const display = identity.displayName
+  const router = useRouter()
 
   return (
     <div
-      className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border", rowBorderClass(rank, isYou))}
+      className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer", rowBorderClass(rank, isYou))}
       style={rowGradient(rank, isYou)}
+      onClick={() => router.push(`/profile/${entry.address}`)}
     >
       <RankDisplay rank={rank} isYou={isYou} />
       <Identicon address={entry.address} pfpUrl={identity.avatarUrl} />
@@ -313,9 +317,10 @@ function LeaderRow({
 function YourRow({ address, category }: { address: string; category: CategoryId }) {
   const identity = useIdentity(address)
   const display = identity.displayName
+  const router = useRouter()
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-indigo-50 border-indigo-200">
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-indigo-50 border-indigo-200 cursor-pointer" onClick={() => router.push(`/profile/${address}`)}>
       <RankDisplay rank={null} isYou />
       <Identicon address={address} pfpUrl={identity.avatarUrl} />
       <div className="flex-1 min-w-0">
