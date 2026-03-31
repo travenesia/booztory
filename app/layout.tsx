@@ -11,7 +11,7 @@ import { WagmiClientWrapper } from "@/providers/wagmi-client-wrapper"
 import { MiniAppInit } from "@/components/miniapp-init"
 import { FlickeringGrid } from "@/components/ui/flickering-grid"
 import { SubmitDrawerProvider } from "@/providers/submit-drawer-provider"
-import { ContentSubmissionDrawer, SponsorAdSidebar } from "@/providers/lazy-ui"
+import { ContentSubmissionDrawer, SponsorAdSidebar, LivePill } from "@/providers/lazy-ui"
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -113,6 +113,7 @@ export default function RootLayout({
                 <ScrollToTop />
                 <div className="mx-auto max-w-[650px] min-h-screen relative z-10">{children}</div>
                 <SponsorAdSidebar />
+                <LivePill />
                 <ContentSubmissionDrawer />
                 <Toaster />
               </SubmitDrawerProvider>

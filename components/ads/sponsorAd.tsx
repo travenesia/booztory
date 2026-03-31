@@ -16,7 +16,7 @@ type AdType = "image" | "embed" | "text"
 type EmbedContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
 type SponsorLinks = { website?: string; x?: string; discord?: string; telegram?: string }
 
-interface ActiveAd {
+export interface ActiveAd {
   sponsorName: string
   adType: AdType
   imageUrl?: string
@@ -151,7 +151,7 @@ export function useSponsorAd(): ActiveAd | null {
 
 // ── Countdown hook ────────────────────────────────────────────────────────────
 
-function useAdCountdown(endTime: number): string {
+export function useAdCountdown(endTime: number): string {
   const [display, setDisplay] = useState("")
 
   useEffect(() => {
@@ -179,7 +179,7 @@ function useAdCountdown(endTime: number): string {
 
 // ── LiveBadge — pulsing dot to indicate ad is currently active ────────────────
 
-function LiveBadge() {
+export function LiveBadge() {
   return (
     <span className="flex items-center gap-1 flex-shrink-0">
       <span className="relative flex h-1.5 w-1.5">
@@ -196,7 +196,7 @@ function LiveBadge() {
 // maxBodyH is passed from the modal — measured from window, not the container itself.
 // This avoids the chicken-and-egg problem where measuring h-full gives the forced
 // panel height rather than the content's natural height.
-function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; flush?: boolean }) {
+export function AdContent({ ad, maxBodyH, flush }: { ad: ActiveAd; maxBodyH?: number; flush?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState<number>(0)
 

@@ -11,3 +11,8 @@ export const SponsorAdSidebar = dynamic(
   () => import("@/components/ads/sponsorAd").then((m) => ({ default: m.SponsorAdSidebar })),
   { ssr: false },
 )
+
+export const LivePill = dynamic(
+  () => import("@/components/layout/livePill").then((m) => ({ default: m.LivePill })),
+  { ssr: false },
+)

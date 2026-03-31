@@ -60,7 +60,7 @@ export function Topbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
-      <div className="flex items-center h-full px-4 md:px-12">
+      <div className="relative flex items-center h-full px-4 md:px-12">
 
         {/* Hamburger — mobile only */}
         <span
@@ -72,36 +72,37 @@ export function Topbar() {
           <HiMiniBars3BottomLeft size={22} />
         </span>
 
-        {/* Left: logo + nav */}
-        <div className="flex items-center gap-4 flex-1">
+        {/* Left: logo */}
+        <div className="flex items-center flex-1">
           <Link href="/" className="flex items-center gap-2">
             <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
             <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
             <span className="hidden md:inline text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">Testnet</span>
           </Link>
-
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors duration-150",
-                  pathname === item.href
-                    ? "text-[#E63946]"
-                    : "text-gray-900 hover:text-[#E63946]"
-                )}
-              >
-                {item.name}
-                {item.badge && (
-                  <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
-                    New
-                  </span>
-                )}
-              </Link>
-            ))}
-          </nav>
         </div>
+
+        {/* Center: nav — desktop only */}
+        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors duration-150",
+                pathname === item.href
+                  ? "text-[#E63946]"
+                  : "text-gray-900 hover:text-[#E63946]"
+              )}
+            >
+              {item.name}
+              {item.badge && (
+                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                  New
+                </span>
+              )}
+            </Link>
+          ))}
+        </nav>
 
         {/* Right: icons + wallet */}
         <div className="flex items-center gap-2">
