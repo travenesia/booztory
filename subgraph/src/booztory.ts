@@ -39,7 +39,13 @@ function eventId(hash: Bytes, logIndex: BigInt): string {
   return hash.toHexString() + "-" + logIndex.toString()
 }
 
-// ── Slot mint handlers — all three paths count toward totalSlots ──────────────
+// ── Slot mint handlers ────────────────────────────────────────────────────────
+// SlotMinted fires for ALL mint paths (emitted inside _createSlot).
+// FreeSlotMinted / DiscountSlotMinted fire immediately after for non-standard paths.
+// Strategy: handleSlotMinted is the single place that creates the record and
+// increments totalSlots. Type-specific handlers only update mintType on the
+// existing record — they never create a second record or touch totalSlots.
+
 export function handleSlotMinted(event: SlotMinted): void {
   const wallet = getOrCreateWallet(event.params.creator)
   wallet.totalSlots = wallet.totalSlots.plus(BigInt.fromI32(1))
@@ -49,7 +55,8 @@ export function handleSlotMinted(event: SlotMinted): void {
   slot.creator = event.params.creator
   slot.save()
 
-  const ev = new SlotMintEvent(eventId(event.transaction.hash, event.logIndex))
+  // Use tokenId as the SlotMintEvent ID so type-specific handlers can load it
+  const ev = new SlotMintEvent(event.params.tokenId.toString())
   ev.creator = event.params.creator
   ev.tokenId = event.params.tokenId
   ev.mintType = "standard"
@@ -59,39 +66,21 @@ export function handleSlotMinted(event: SlotMinted): void {
 }
 
 export function handleFreeSlotMinted(event: FreeSlotMinted): void {
-  const wallet = getOrCreateWallet(event.params.creator)
-  wallet.totalSlots = wallet.totalSlots.plus(BigInt.fromI32(1))
-  wallet.save()
-
-  const slot = new Slot(event.params.tokenId.toString())
-  slot.creator = event.params.creator
-  slot.save()
-
-  const ev = new SlotMintEvent(eventId(event.transaction.hash, event.logIndex))
-  ev.creator = event.params.creator
-  ev.tokenId = event.params.tokenId
-  ev.mintType = "free"
-  ev.txHash = event.transaction.hash.toHexString()
-  ev.blockTimestamp = event.block.timestamp
-  ev.save()
+  // SlotMinted already fired — just correct the mintType, don't increment totalSlots
+  const ev = SlotMintEvent.load(event.params.tokenId.toString())
+  if (ev) {
+    ev.mintType = "free"
+    ev.save()
+  }
 }
 
 export function handleDiscountSlotMinted(event: DiscountSlotMinted): void {
-  const wallet = getOrCreateWallet(event.params.creator)
-  wallet.totalSlots = wallet.totalSlots.plus(BigInt.fromI32(1))
-  wallet.save()
-
-  const slot = new Slot(event.params.tokenId.toString())
-  slot.creator = event.params.creator
-  slot.save()
-
-  const ev = new SlotMintEvent(eventId(event.transaction.hash, event.logIndex))
-  ev.creator = event.params.creator
-  ev.tokenId = event.params.tokenId
-  ev.mintType = "discount"
-  ev.txHash = event.transaction.hash.toHexString()
-  ev.blockTimestamp = event.block.timestamp
-  ev.save()
+  // SlotMinted already fired — just correct the mintType, don't increment totalSlots
+  const ev = SlotMintEvent.load(event.params.tokenId.toString())
+  if (ev) {
+    ev.mintType = "discount"
+    ev.save()
+  }
 }
 
 // ── GM streak ─────────────────────────────────────────────────────────────────
