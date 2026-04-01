@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi"
+import { useQueryClient } from "@tanstack/react-query"
 import { HiBolt } from "react-icons/hi2"
 import { FaCoins } from "react-icons/fa6"
 import { Loader2 } from "lucide-react"
@@ -58,6 +59,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
+  const queryClient = useQueryClient()
 
   const today = BigInt(getUtcDay())
   const streakData = streakRaw as [bigint, number, number] | undefined
@@ -103,9 +105,13 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   useEffect(() => {
     if (!isSuccess) return
     confetti({ particleCount: 140, spread: 90, origin: { y: 0.55 } })
-    refetchStreak()
     reset()
-  }, [isSuccess, refetchStreak, reset])
+    // Delay refetch slightly — mainnet RPCs may not reflect new state immediately after receipt
+    setTimeout(() => {
+      queryClient.invalidateQueries({ predicate: (q) => q.queryKey.some((k) => typeof k === "object" && k !== null && "functionName" in k && (k as any).functionName === "gmStreaks") })
+      refetchStreak()
+    }, 2000)
+  }, [isSuccess, refetchStreak, reset, queryClient])
 
   const handleClaim = async () => {
     if (!address) return

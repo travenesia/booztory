@@ -6,7 +6,9 @@ import { ContentStats } from "./contentStats"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { DonationModal } from "@/components/modals/donationModal"
 import { useWalletName } from "@/hooks/useWalletName"
-import { BOOZTORY_ADDRESS } from "@/lib/contract"
+import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
+import { useReadContracts } from "wagmi"
+import { APP_CHAIN } from "@/lib/wagmi"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { UsersOnline } from "@/components/layout/usersOnline"
 
@@ -47,6 +49,23 @@ export function ContentCard({
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false)
   const [containerWidth, setContainerWidth] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const { data: contractInfo } = useReadContracts({
+    contracts: [
+      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotPrice", chainId: APP_CHAIN.id },
+      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotDuration", chainId: APP_CHAIN.id },
+    ],
+    query: { enabled: isPlaceholder },
+  })
+  const slotPriceDisplay = contractInfo?.[0].result
+    ? (Number(contractInfo[0].result as bigint) / 1_000_000).toFixed(2)
+    : "1.00"
+  const slotDurationSecs = Number(contractInfo?.[1].result ?? 900n)
+  const slotDurationDisplay = slotDurationSecs >= 3600
+    ? `${slotDurationSecs / 3600} hour${slotDurationSecs / 3600 !== 1 ? "s" : ""}`
+    : `${slotDurationSecs / 60} minutes`
+  const isDurationPromo = slotDurationSecs !== 900
+  const isPricePromo = Number(contractInfo?.[0].result ?? 1_000_000n) !== 1_000_000
 
   const resolvedWalletName = useWalletName(submittedBy)
 
@@ -220,10 +239,11 @@ export function ContentCard({
                     <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
                     <div className="text-center p-4 space-y-2">
                       <h1 className="text-xl font-black text-gray-900">Welcome to Booztory</h1>
-                      <p className="text-sm text-gray-600 italic">The on-chain content spotlight on Base.</p>
+                      <p className="text-sm text-gray-600 italic">The on-chain content spotlight on Base</p>
                       <p className="text-sm text-gray-700">
-                        Pay <span className="font-bold">1 USDC</span> to feature your content for{" "}
-                        <span className="font-bold">15 minutes</span>.
+                        Pay <span className="font-bold">{slotPriceDisplay} USDC</span>
+                        {isPricePromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}{" "}
+                        to feature your content
                       </p>
                       <div className="flex items-center justify-center gap-3 py-1">
                         {[
@@ -238,6 +258,10 @@ export function ContentCard({
                           <img key={alt} src={src} alt={alt} title={alt} className="w-5 h-5 object-contain" />
                         ))}
                       </div>
+                      <p className="text-sm text-gray-700">
+                        for <span className="font-bold">{slotDurationDisplay}</span>
+                        {isDurationPromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
+                      </p>
                       <p className="text-xs text-gray-500 italic">
                         No queue? Your content goes live <span className="font-semibold not-italic">instantly</span>.
                       </p>

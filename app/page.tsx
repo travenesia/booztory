@@ -11,6 +11,9 @@ import { useToast } from "@/hooks/use-toast"
 import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
 import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
+import { useReadContracts } from "wagmi"
+import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
+import { APP_CHAIN } from "@/lib/wagmi"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -32,6 +35,22 @@ export default function Home() {
   const isConnected = status === "authenticated"
 
   const { content, isPlaceholder, isLoading, refetch, contractUsdcBalance } = useCurrentSlot()
+
+  const { data: contractInfo } = useReadContracts({
+    contracts: [
+      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotPrice", chainId: APP_CHAIN.id },
+      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotDuration", chainId: APP_CHAIN.id },
+    ],
+  })
+  const slotPriceDisplay = contractInfo?.[0].result
+    ? (Number(contractInfo[0].result as bigint) / 1_000_000).toFixed(2)
+    : "1.00"
+  const slotDurationSecs = Number(contractInfo?.[1].result ?? 900n)
+  const slotDurationDisplay = slotDurationSecs >= 3600
+    ? `${slotDurationSecs / 3600} hour${slotDurationSecs / 3600 !== 1 ? "s" : ""}`
+    : `${slotDurationSecs / 60} minutes`
+  const isDurationPromo = slotDurationSecs !== 900
+  const isPricePromo = Number(contractInfo?.[0].result ?? 1_000_000n) !== 1_000_000
   const sponsorAd = useSponsorAd()
   const adCountdown = useAdCountdown(sponsorAd?.endTime ?? 0)
   const readyCalled = useRef(false)
@@ -171,9 +190,13 @@ export default function Home() {
           <p className="text-base text-gray-500 leading-relaxed">
             <span className="italic">No algorithm. No gatekeepers.</span>
             <br />
-            Every <span className="font-bold text-gray-900">15 minutes</span>, one creator owns the spotlight on Base.
+            Every <span className="font-bold text-gray-900">{slotDurationDisplay}</span>
+            {isDurationPromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
+            , one creator owns the spotlight on Base.
             <br />
-            <span className="font-bold text-gray-900">1 USDC.</span> Your moment. On-chain, forever.
+            <span className="font-bold text-gray-900">{slotPriceDisplay} USDC</span>
+            {isPricePromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
+            . Your moment. On-chain, forever.
           </p>
           <Button
             onClick={handleFabClick}

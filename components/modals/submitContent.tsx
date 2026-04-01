@@ -123,6 +123,11 @@ export function ContentSubmissionDrawer() {
     chainId: APP_CHAIN.id,
   })
 
+  const slotDurationSecs = Number(slotDurationRaw ?? 900n)
+  const slotDurationDisplay = slotDurationSecs >= 3600
+    ? `${slotDurationSecs / 3600} hour${slotDurationSecs / 3600 !== 1 ? "s" : ""}`
+    : `${slotDurationSecs / 60} minutes`
+
   const queueSize = Number(queueSizeRaw ?? 0n)
   const maxQueue = Number(maxQueueSizeRaw ?? 96n)
   const isQueueFull = queueSize >= maxQueue
@@ -886,7 +891,7 @@ export function ContentSubmissionDrawer() {
         <SheetHeader className="px-4 pt-2 pb-3 flex-shrink-0 text-left">
           <SheetTitle className="text-lg text-gray-900 font-medium">Submit Content</SheetTitle>
           <SheetDescription className="text-xs text-gray-500 mt-1">
-            Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
+            Pay {slotPriceDisplay} USDC to feature your content for {slotDurationDisplay}
           </SheetDescription>
         </SheetHeader>
 
@@ -1270,7 +1275,7 @@ export function ContentSubmissionDrawer() {
         <DialogHeader className="px-4 pt-5 pb-3 flex-shrink-0 text-left">
           <DialogTitle className="text-lg text-gray-900 font-medium">Submit Content</DialogTitle>
           <DialogDescription className="text-xs text-gray-500 mt-1">
-            Pay {slotPriceDisplay} USDC to feature your content for 15 minutes
+            Pay {slotPriceDisplay} USDC to feature your content for {slotDurationDisplay}
           </DialogDescription>
         </DialogHeader>
 
