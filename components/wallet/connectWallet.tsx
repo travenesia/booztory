@@ -264,7 +264,7 @@ export function ConnectWalletButton() {
         {/* Escape hatch: wallet connected but SIWE not completed — allow reset */}
         {isWalletConnected && !isAuthenticated && !isLoading && (
           <button
-            onClick={() => disconnect()}
+            onClick={() => { disconnect(); signOut({ redirect: false }) }}
             className="text-[10px] text-gray-400 hover:text-gray-600 mt-0.5 underline underline-offset-2"
           >
             disconnect
