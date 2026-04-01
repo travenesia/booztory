@@ -354,12 +354,18 @@ export default function ProfilePage() {
 
   const handleVisitProfile = () => {
     if (!address) return
-    if (isMiniApp()) {
+    const isCoinbaseBrowser = !!(
+      (window as any).ethereum?.isCoinbaseBrowser ||
+      (window?.top as any)?.ethereum?.isCoinbaseBrowser
+    )
+    if (isMiniApp() && !isCoinbaseBrowser) {
+      // Actual Farcaster/Warpcast — sdk.actions.openUrl works here
       const target = identity.farcasterUsername
         ? `https://farcaster.xyz/${identity.farcasterUsername}`
         : `https://base.app/profile/${address}`
       sdk.actions.openUrl(target)
     } else {
+      // Base App (isCoinbaseBrowser) or regular browser — use window.open
       window.open(`https://base.app/profile/${address}`, "_blank")
     }
   }
