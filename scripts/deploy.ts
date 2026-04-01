@@ -15,8 +15,8 @@ const USDC_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
 // Source: https://docs.chain.link/vrf/v2-5/supported-networks
 const VRF_COORDINATOR_BASE    = "0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634"
 const VRF_COORDINATOR_SEPOLIA = "0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE"
-const KEY_HASH_BASE    = "0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71"
-const KEY_HASH_SEPOLIA = "0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71"
+const KEY_HASH_BASE    = "0xdc2f87677b01473c763cb0aee938ed3341512f6057324a584e5944e786144d70" // 30 gwei — Base Mainnet
+const KEY_HASH_SEPOLIA = "0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71" // Base Sepolia
 
 // ── VRF Subscription ID ───────────────────────────────────────────────────────
 // Set via env: VRF_SUBSCRIPTION_ID=<id> npx hardhat run scripts/deploy.ts --network base

@@ -1,5 +1,5 @@
 # ── Aggregated per-wallet totals (used for All Time queries) ──────────────────
-type Wallet @entity {
+type Wallet @entity(immutable: false) {
   id: ID!               # lowercased hex address
   totalSlots: BigInt!   # all mint paths combined
   bestStreak: Int!      # highest GMClaimed streakCount ever
@@ -11,13 +11,13 @@ type Wallet @entity {
 }
 
 # ── Slot entity — maps tokenId → creator for DonationReceived lookup ──────────
-type Slot @entity {
+type Slot @entity(immutable: false) {
   id: ID!        # tokenId as string
   creator: Bytes!
 }
 
 # ── Timestamped events — used for leaderboard (30-day) and profile tx history ──
-type SlotMintEvent @entity {
+type SlotMintEvent @entity(immutable: true) {
   id: ID!
   creator: Bytes!
   tokenId: BigInt!
@@ -26,7 +26,7 @@ type SlotMintEvent @entity {
   blockTimestamp: BigInt!
 }
 
-type GMClaimEvent @entity {
+type GMClaimEvent @entity(immutable: true) {
   id: ID!
   user: Bytes!
   streakCount: Int!
@@ -35,7 +35,7 @@ type GMClaimEvent @entity {
   blockTimestamp: BigInt!
 }
 
-type PointsEarnedEvent @entity {
+type PointsEarnedEvent @entity(immutable: true) {
   id: ID!
   user: Bytes!
   amount: BigInt!
@@ -43,7 +43,7 @@ type PointsEarnedEvent @entity {
   blockTimestamp: BigInt!
 }
 
-type DonationEvent @entity {
+type DonationEvent @entity(immutable: true) {
   id: ID!
   donor: Bytes!
   creator: Bytes!
@@ -54,7 +54,7 @@ type DonationEvent @entity {
   blockTimestamp: BigInt!
 }
 
-type WinEvent @entity {
+type WinEvent @entity(immutable: true) {
   id: ID!
   winner: Bytes!
   raffleId: BigInt!
@@ -63,7 +63,7 @@ type WinEvent @entity {
   blockTimestamp: BigInt!
 }
 
-type TicketsConvertedEvent @entity {
+type TicketsConvertedEvent @entity(immutable: true) {
   id: ID!
   user: Bytes!
   pointsBurned: BigInt!
@@ -72,7 +72,7 @@ type TicketsConvertedEvent @entity {
   blockTimestamp: BigInt!
 }
 
-type RaffleEnteredEvent @entity {
+type RaffleEnteredEvent @entity(immutable: true) {
   id: ID!
   user: Bytes!
   raffleId: BigInt!
@@ -81,6 +81,6 @@ type RaffleEnteredEvent @entity {
   blockTimestamp: BigInt!
 }
 
-type DrawnRaffle @entity {
+type DrawnRaffle @entity(immutable: true) {
   id: ID!   # raffleId as string
 }

@@ -7,12 +7,11 @@ dataSources:
   - kind: ethereum
     name: Booztory
     # Change to "base" at mainnet deployment
-    network: base-sepolia
+    network: base
     source:
-      address: "0xb73E5f05222f829397202bb2d9C2C15eE4a24132"
+      address: "0x59d764E631C3382cd89B104BF1e4846053Be5c35"
       abi: Booztory
-      # Set to the block your contract was deployed — check Basescan
-      startBlock: 39558013
+      startBlock: 44138035
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -46,11 +45,11 @@ dataSources:
       file: ./src/booztory.ts
   - kind: ethereum
     name: BooztoryRaffle
-    network: base-sepolia
+    network: base
     source:
-      address: "0xE018C70AB3eC93848Fad52dbC66A433DBCC1d9Af"
+      address: "0xb10954830e0628C39c502a89C489a0e14734697c"
       abi: BooztoryRaffle
-      startBlock: 39558014
+      startBlock: 44138037
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

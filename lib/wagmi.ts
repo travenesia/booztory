@@ -4,7 +4,7 @@ import { base, baseSepolia, mainnet } from "wagmi/chains"
 
 // Toggle this to switch between testnet and mainnet.
 // Change to `APP_CHAIN = base` when deploying to production.
-export const APP_CHAIN = baseSepolia
+export const APP_CHAIN = base
 
 // NFT Pass collections are always read from Base Mainnet regardless of APP_CHAIN.
 // At mainnet deployment this will equal APP_CHAIN.id automatically.

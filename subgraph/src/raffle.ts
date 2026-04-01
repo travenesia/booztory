@@ -3,8 +3,8 @@ import { DrawCompleted, RaffleEntered } from "../generated/BooztoryRaffle/Boozto
 import { BooztoryRaffle } from "../generated/BooztoryRaffle/BooztoryRaffle"
 import { Wallet, WinEvent, RaffleEnteredEvent, DrawnRaffle } from "../generated/schema"
 
-// USDC on Base Sepolia — set to Base Mainnet USDC at mainnet deploy
-const USDC_ADDRESS = Address.fromString("0x036CbD53842c5426634e7929541eC2318f3dCF7e")
+// USDC on Base Mainnet
+const USDC_ADDRESS = Address.fromString("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
 
 function getOrCreateWallet(address: Bytes): Wallet {
   const id = address.toHexString().toLowerCase()
