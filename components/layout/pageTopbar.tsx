@@ -47,7 +47,7 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
         </div>
 
         {/* Center: nav — desktop only */}
-        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
+        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center justify-evenly w-[650px]">
           {navItems.map((item) => (
             <Link
               key={item.name}
