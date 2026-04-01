@@ -11,8 +11,11 @@ export const setMiniApp = (value: boolean) => {
 
 export const isMiniApp = () => _isMiniApp
 
-// Call sdk.actions.ready() only when in a mini app context.
+// Call sdk.actions.ready() whenever running inside any mini app context
+// (Warpcast, Farcaster preview tool, Base App, etc).
 // Invoked from app/page.tsx after content finishes loading.
 export const callReady = () => {
-  if (_isMiniApp) sdk.actions.ready()
+  sdk.isInMiniApp().then((inMiniApp) => {
+    if (inMiniApp) sdk.actions.ready()
+  })
 }

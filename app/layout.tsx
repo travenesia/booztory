@@ -54,7 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
     other: {
       "base:app_id": "69af300b298d227d6bc5439f",
       "fc:miniapp": JSON.stringify({
-        version: "next",
+        version: "1",
         imageUrl: `${appUrl}/hero.jpg`,
         screenshotUrls: [
           `${appUrl}/screenshot/screenshot1.png`,
