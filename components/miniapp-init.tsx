@@ -14,47 +14,46 @@ export function MiniAppInit() {
     if (initialized.current) return
     initialized.current = true
 
-    sdk.isInMiniApp().then(async (inMiniApp) => {
-      if (inMiniApp) {
-        // Farcaster mini app path — set flag so QuickAuth is used for sign-in
-        setMiniApp(true)
-        const provider = await sdk.wallet.getEthereumProvider()
-        if (!provider) return
+    // Base App check FIRST — isCoinbaseBrowser takes priority over sdk.isInMiniApp().
+    // Base App currently returns true from isInMiniApp(), which would incorrectly set
+    // the QuickAuth flag and break reconnect after disconnect. Skip Farcaster path entirely.
+    try {
+      const eth = (window.top?.ethereum ?? window.ethereum) as any
+      if (eth?.isCoinbaseBrowser) {
         connect({
           connector: injected({
             target() {
               return {
-                id: "farcaster",
-                name: "Farcaster Wallet",
-                provider: provider as any,
+                id: "base-app",
+                name: "Base App",
+                provider: eth,
               }
             },
           }),
         })
         return
       }
+    } catch {
+      // window.top access may throw in sandboxed iframes — safe to ignore
+    }
 
-      // Base App standard web app path (post-April 9 2026 migration)
-      // Base App injects window.ethereum with isCoinbaseBrowser = true.
-      // Do NOT set isMiniApp flag — SIWE handles sign-in for this path.
-      try {
-        const eth = (window.top?.ethereum ?? window.ethereum) as any
-        if (eth?.isCoinbaseBrowser) {
-          connect({
-            connector: injected({
-              target() {
-                return {
-                  id: "base-app",
-                  name: "Base App",
-                  provider: eth,
-                }
-              },
-            }),
-          })
-        }
-      } catch {
-        // window.top access may throw in sandboxed iframes — safe to ignore
-      }
+    // Farcaster mini app path (Warpcast / actual Farcaster client)
+    sdk.isInMiniApp().then(async (inMiniApp) => {
+      if (!inMiniApp) return
+      setMiniApp(true)
+      const provider = await sdk.wallet.getEthereumProvider()
+      if (!provider) return
+      connect({
+        connector: injected({
+          target() {
+            return {
+              id: "farcaster",
+              name: "Farcaster Wallet",
+              provider: provider as any,
+            }
+          },
+        }),
+      })
     })
   }, [connect])
 

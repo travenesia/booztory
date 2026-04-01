@@ -20,7 +20,7 @@ const DATA_SUFFIX = "0x62635f716171687a7a71700b008021802180218021802180218021802
 export const wagmiConfig = getDefaultConfig({
   appName: "Booztory",
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-  chains: [APP_CHAIN, base, mainnet],
+  chains: [APP_CHAIN, mainnet],
   transports: {
     [baseSepolia.id]: fallback([
       http(`https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`),

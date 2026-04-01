@@ -354,19 +354,15 @@ export default function ProfilePage() {
 
   const handleVisitProfile = () => {
     if (!address) return
-    const isCoinbaseBrowser = !!(
-      (window as any).ethereum?.isCoinbaseBrowser ||
-      (window?.top as any)?.ethereum?.isCoinbaseBrowser
-    )
-    if (isMiniApp() && !isCoinbaseBrowser) {
-      // Actual Farcaster/Warpcast — sdk.actions.openUrl works here
+    if (isMiniApp()) {
+      // Farcaster/Warpcast — use sdk.actions.openUrl
       const target = identity.farcasterUsername
         ? `https://farcaster.xyz/${identity.farcasterUsername}`
         : `https://base.app/profile/${address}`
       sdk.actions.openUrl(target)
     } else {
-      // Base App or regular browser — viewProfile deeplink per SKILLS.md
-      window.location.href = `https://base.app/profile/${address}`
+      // Base App or regular browser — window.open
+      window.open(`https://base.app/profile/${address}`, "_blank")
     }
   }
 
