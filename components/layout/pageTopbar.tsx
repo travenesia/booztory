@@ -43,7 +43,6 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
             <HiMiniArrowSmallLeft size={24} className="md:hidden" onClick={(e) => { e.preventDefault(); router.back() }} />
             <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
             <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight hover:text-gray-900">Booztory</span>
-            <span className="hidden md:inline text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">Testnet</span>
           </Link>
         </div>
 

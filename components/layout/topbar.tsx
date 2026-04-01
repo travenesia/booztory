@@ -80,7 +80,6 @@ export function Topbar() {
           <Link href="/" className="flex items-center gap-2">
             <Image src="/logo-color.svg" alt="Booztory logo" width={28} height={28} priority className="hidden md:block" />
             <span className="hidden md:inline text-xl font-bold text-gray-900 tracking-tight">Booztory</span>
-            <span className="hidden md:inline text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">Testnet</span>
           </Link>
         </div>
 
