@@ -31,6 +31,15 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 type PaymentMethod = "standard" | "discount" | "free" | "nft-discount" | "nft-free"
 type InputMode = "url" | "text"
 
+function formatCooldown(secsLeft: number): string {
+  const d = Math.floor(secsLeft / 86400)
+  const h = Math.floor((secsLeft % 86400) / 3600)
+  const m = Math.floor((secsLeft % 3600) / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
 type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
 
 const URL_LINK_PATTERN = /https?:\/\/|www\./i
@@ -219,6 +228,27 @@ export function ContentSubmissionDrawer() {
   const activeTokenIdStr = canEnumerate ? nftSelectedTokenId : nftTokenIdInput
   const nftTokenId = activeTokenIdStr ? BigInt(activeTokenIdStr) : 0n
   const canNFTMint = hasNFT && nftContractForMint !== "" && activeTokenIdStr !== "" && !isNaN(Number(activeTokenIdStr)) && Number(activeTokenIdStr) >= 0
+
+  // ── NFT cooldown reads ─────────────────────────────────────────────────────────
+  const { data: lastDiscountRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI,
+    functionName: "nftLastDiscountMint",
+    args: [nftContractForMint, nftTokenId],
+    chainId: APP_CHAIN.id,
+    query: { enabled: canNFTMint },
+  })
+  const { data: lastFreeRaw } = useReadContract({
+    address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI,
+    functionName: "nftLastFreeMint",
+    args: [nftContractForMint, nftTokenId],
+    chainId: APP_CHAIN.id,
+    query: { enabled: canNFTMint },
+  })
+  const nowTs = Math.floor(Date.now() / 1000)
+  const discountSecsLeft = Math.max(0, Number(lastDiscountRaw ?? 0n) + 86400 - nowTs)
+  const freeSecsLeft     = Math.max(0, Number(lastFreeRaw ?? 0n) + 30 * 86400 - nowTs)
+  const discountOnCooldown = canNFTMint && discountSecsLeft > 0
+  const freeOnCooldown     = canNFTMint && freeSecsLeft > 0
 
   // Reset selected token ID when the NFT contract changes
   useEffect(() => {
@@ -1112,31 +1142,53 @@ export function ContentSubmissionDrawer() {
                 <div className="grid grid-cols-3 gap-2 items-stretch">
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("nft-discount")}
-                    disabled={isAnyOperationInProgress}
+                    onClick={() => !discountOnCooldown && setPaymentMethod("nft-discount")}
+                    disabled={isAnyOperationInProgress || discountOnCooldown}
                     className={cn(
                       "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                      paymentMethod === "nft-discount"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300 bg-white"
+                      discountOnCooldown
+                        ? "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
+                        : paymentMethod === "nft-discount"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white"
                     )}
                   >
-                    <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
-                    <span className="text-[10px] text-gray-500">-50% Discount</span>
+                    {discountOnCooldown ? (
+                      <>
+                        <span className="text-xs font-bold text-gray-400">in {formatCooldown(discountSecsLeft)}</span>
+                        <span className="text-[10px] text-gray-400">-50% on cooldown</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
+                        <span className="text-[10px] text-gray-500">-50% Discount</span>
+                      </>
+                    )}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("nft-free")}
-                    disabled={isAnyOperationInProgress}
+                    onClick={() => !freeOnCooldown && setPaymentMethod("nft-free")}
+                    disabled={isAnyOperationInProgress || freeOnCooldown}
                     className={cn(
                       "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                      paymentMethod === "nft-free"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300 bg-white"
+                      freeOnCooldown
+                        ? "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
+                        : paymentMethod === "nft-free"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white"
                     )}
                   >
-                    <span className="text-xs font-bold text-gray-900">Free</span>
-                    <span className="text-[10px] text-gray-500">30d cooldown</span>
+                    {freeOnCooldown ? (
+                      <>
+                        <span className="text-xs font-bold text-gray-400">in {formatCooldown(freeSecsLeft)}</span>
+                        <span className="text-[10px] text-gray-400">Free on cooldown</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-bold text-gray-900">Free</span>
+                        <span className="text-[10px] text-gray-500">30d cooldown</span>
+                      </>
+                    )}
                   </button>
                   {isEnumerating ? (
                     <div className="flex flex-col items-center justify-center gap-0.5 border border-gray-200 rounded-lg px-2.5 text-xs text-gray-400 bg-white">
@@ -1467,31 +1519,53 @@ export function ContentSubmissionDrawer() {
                 <div className="grid grid-cols-3 gap-2 items-stretch">
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("nft-discount")}
-                    disabled={isAnyOperationInProgress}
+                    onClick={() => !discountOnCooldown && setPaymentMethod("nft-discount")}
+                    disabled={isAnyOperationInProgress || discountOnCooldown}
                     className={cn(
                       "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                      paymentMethod === "nft-discount"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300 bg-white"
+                      discountOnCooldown
+                        ? "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
+                        : paymentMethod === "nft-discount"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white"
                     )}
                   >
-                    <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
-                    <span className="text-[10px] text-gray-500">-50% Discount</span>
+                    {discountOnCooldown ? (
+                      <>
+                        <span className="text-xs font-bold text-gray-400">in {formatCooldown(discountSecsLeft)}</span>
+                        <span className="text-[10px] text-gray-400">-50% on cooldown</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-bold text-gray-900">{(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC</span>
+                        <span className="text-[10px] text-gray-500">-50% Discount</span>
+                      </>
+                    )}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("nft-free")}
-                    disabled={isAnyOperationInProgress}
+                    onClick={() => !freeOnCooldown && setPaymentMethod("nft-free")}
+                    disabled={isAnyOperationInProgress || freeOnCooldown}
                     className={cn(
                       "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                      paymentMethod === "nft-free"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300 bg-white"
+                      freeOnCooldown
+                        ? "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
+                        : paymentMethod === "nft-free"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white"
                     )}
                   >
-                    <span className="text-xs font-bold text-gray-900">Free</span>
-                    <span className="text-[10px] text-gray-500">30d cooldown</span>
+                    {freeOnCooldown ? (
+                      <>
+                        <span className="text-xs font-bold text-gray-400">in {formatCooldown(freeSecsLeft)}</span>
+                        <span className="text-[10px] text-gray-400">Free on cooldown</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-bold text-gray-900">Free</span>
+                        <span className="text-[10px] text-gray-500">30d cooldown</span>
+                      </>
+                    )}
                   </button>
                   {isEnumerating ? (
                     <div className="flex flex-col items-center justify-center gap-0.5 border border-gray-200 rounded-lg px-2.5 text-xs text-gray-400 bg-white">

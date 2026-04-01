@@ -1,0 +1,28 @@
+{
+  "_comment": "Vesting config for BooztoryToken (BOOZ) treasury allocations.",
+  "_notes": [
+    "boozAmount: human-readable BOOZ (no decimals) — script applies 1e18 internally.",
+    "cliffDays: days from deploy before ANY tokens unlock.",
+    "linearDays: days of linear vesting AFTER the cliff. Set 0 for full unlock at cliff.",
+    "Examples:",
+    "  Team (1yr cliff, full unlock): cliffDays=365, linearDays=0",
+    "  Investor (1yr cliff + 2yr linear): cliffDays=365, linearDays=730",
+    "Total boozAmount across all entries must not exceed remaining TREASURY_CAP (10,000,000 BOOZ)."
+  ],
+  "beneficiaries": [
+    {
+      "label": "Team — [TODO: name]",
+      "address": "0x0000000000000000000000000000000000000001",
+      "boozAmount": "1000000",
+      "cliffDays": 365,
+      "linearDays": 0
+    },
+    {
+      "label": "Investor — [TODO: name]",
+      "address": "0x0000000000000000000000000000000000000002",
+      "boozAmount": "500000",
+      "cliffDays": 365,
+      "linearDays": 730
+    }
+  ]
+}

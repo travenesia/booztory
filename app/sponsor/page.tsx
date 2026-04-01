@@ -789,6 +789,7 @@ export default function SponsorPage() {
   const [adType,       setAdType]       = useState<AdTypeId>("image")
   const [sponsorName,  setSponsorName]  = useState("")
   const [imageUrl,     setImageUrl]     = useState("")
+  const [imageLoadState, setImageLoadState] = useState<"idle" | "loading" | "error" | "ok">("idle")
   const [ratio,        setRatio]        = useState<Ratio>("16:9")
   const [ratioAutoDetected, setRatioAutoDetected] = useState(false)
   const [embedUrl,     setEmbedUrl]     = useState("")
@@ -801,18 +802,21 @@ export default function SponsorPage() {
   const [submitDone,   setSubmitDone]   = useState(false)
   const adTextRef = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-detect ratio from image URL dimensions (debounced 600ms)
+  // Auto-detect ratio + validate image URL (debounced 600ms)
   useEffect(() => {
     const url = imageUrl.trim()
-    if (!url) return
+    if (!url) { setImageLoadState("idle"); return }
+    setImageLoadState("loading")
     const timer = setTimeout(() => {
       const img = new window.Image()
       img.onload = () => {
+        setImageLoadState("ok")
         if (img.naturalWidth && img.naturalHeight) {
           setRatio(closestRatio(img.naturalWidth, img.naturalHeight))
           setRatioAutoDetected(true)
         }
       }
+      img.onerror = () => setImageLoadState("error")
       img.src = url
     }, 600)
     return () => clearTimeout(timer)
@@ -881,7 +885,7 @@ export default function SponsorPage() {
     sponsorName.trim().length > 0 &&
     hasAtLeastOneLink &&
     linksValid &&
-    (adType === "image" ? imageUrl.trim().length > 0
+    (adType === "image" ? imageLoadState === "ok"
       : adType === "embed" ? embedUrl.trim().length > 0
       : adText.trim().length > 0)
   )
@@ -1207,7 +1211,7 @@ export default function SponsorPage() {
                   {AD_TYPES.map(t => (
                     <button
                       key={t.id}
-                      onClick={() => setAdType(t.id)}
+                      onClick={() => { setAdType(t.id); setImageLoadState("idle") }}
                       className={cn(
                         "text-left p-3 rounded-xl border transition-all",
                         adType === t.id ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
@@ -1236,7 +1240,15 @@ export default function SponsorPage() {
                       placeholder="https://your-cdn.com/banner.png"
                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <p className="text-[10px] text-gray-400 mt-1">Accepted: jpeg, jpg, png, webp, gif</p>
+                    {imageLoadState === "error" ? (
+                      <p className="text-[10px] text-red-500 mt-1">Image could not be loaded. Use a direct image link (no hotlink protection).</p>
+                    ) : imageLoadState === "loading" ? (
+                      <p className="text-[10px] text-gray-400 mt-1">Checking image…</p>
+                    ) : imageLoadState === "ok" ? (
+                      <p className="text-[10px] text-green-600 mt-1">Image loaded successfully.</p>
+                    ) : (
+                      <p className="text-[10px] text-gray-400 mt-1">Accepted: jpeg, jpg, png, webp, gif</p>
+                    )}
                   </div>
 
                   {imageUrl.trim() && (

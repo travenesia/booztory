@@ -139,6 +139,9 @@ function ActiveRaffleCard({
   const [isDrawing, setIsDrawing] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [rtThreshold, setRtThreshold] = useState("")
+  const [rtMinUnique, setRtMinUnique] = useState("")
+  const [isSettingRt, setIsSettingRt] = useState(false)
   const [nftGatedMap, setNftGatedMap] = useState<Record<number, string>>({})
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
@@ -156,6 +159,14 @@ function ActiveRaffleCard({
     chainId: APP_CHAIN.id,
     query: { refetchInterval: 60_000 },
   })
+
+  // Pre-fill threshold inputs when raffle data loads or selection changes
+  useEffect(() => {
+    if (!raffleRaw) return
+    const r = raffleRaw as readonly [readonly string[], bigint, bigint, bigint, number, bigint, bigint, boolean, bigint, bigint]
+    setRtThreshold(r[5].toString())
+    setRtMinUnique(r[6].toString())
+  }, [raffleRaw, selectedId])
 
   const { data: prizeAmountsRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -457,6 +468,33 @@ function ActiveRaffleCard({
     }
   }
 
+  async function handleSetThresholds() {
+    const t = parseInt(rtThreshold)
+    const u = parseInt(rtMinUnique)
+    if (!rtThreshold && !rtMinUnique) return
+    if (rtThreshold && (isNaN(t) || t < 1)) return
+    if (rtMinUnique && (isNaN(u) || u < 1)) return
+    setIsSettingRt(true)
+    try {
+      await ensureChain()
+      const tx = await writeContractAsync({
+        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+        functionName: "setRaffleThresholds",
+        args: [selectedId, rtThreshold ? BigInt(t) : drawThreshold, rtMinUnique ? BigInt(u) : minUniqueEntrants],
+        chainId: APP_CHAIN.id,
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      refetchRaffle()
+      toast({ title: "Thresholds Updated", description: `Raffle #${Number(selectedId) + 1}: ${rtThreshold || drawThreshold} tickets · ${rtMinUnique || minUniqueEntrants} wallets` })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("user rejected") || msg.includes("User rejected")) return
+      toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
+    } finally {
+      setIsSettingRt(false)
+    }
+  }
+
   return (<>
     <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
       {/* Hero header */}
@@ -500,8 +538,8 @@ function ActiveRaffleCard({
 
         {/* Sponsor info */}
         {raffleSponsor && (
-          <div className="flex flex-col items-center gap-2 mt-2 pt-2 pb-4 border-t border-white/10">
-            <span className="text-xs text-white/60 text-center">Sponsored by</span>
+          <div className="flex flex-col items-center gap-2 mt-4 mb-4 border-t border-white/10">
+            <span className="text-xs text-white/60 text-center mt-4">Sponsored by</span>
             <span className="text-sm font-semibold text-white text-center">{raffleSponsor.sponsorName}</span>
             {sponsorLinks && (() => {
               const links = SPONSOR_LINK_ICONS.filter(({ key }) => sponsorLinks[key])
@@ -523,8 +561,8 @@ function ActiveRaffleCard({
 
         {/* NFT-gated raffle info */}
         {!raffleSponsor && nftContract && (
-          <div className="flex flex-col items-center gap-2 mt-2 pt-2 pb-4 border-t border-white/10">
-            <span className="text-xs text-white/60 text-center">Sponsored by</span>
+          <div className="flex flex-col items-center gap-2 mt-4 mb-4 border-t border-white/10">
+            <span className="text-xs text-white/60 text-center mt-4">Sponsored by</span>
             <span className="text-sm font-semibold text-white text-center">
               {nftCollectionName ?? `${nftContract.slice(0, 6)}…${nftContract.slice(-4)}`}
             </span>
@@ -543,29 +581,42 @@ function ActiveRaffleCard({
           </div>
         )}
 
-        <div className="text-xs text-center mt-2">
-          {isCancelled ? (
-            <span className="bg-red-400/20 border border-red-300/30 rounded-full px-2.5 py-0.5 text-red-200">
-              Cancelled
-            </span>
-          ) : isDrawn ? (
-            <span className="bg-emerald-400/20 border border-emerald-300/30 rounded-full px-2.5 py-0.5 text-emerald-200">
-              Drawn ✓
-            </span>
-          ) : isStuckDraw ? (
-            <span className="bg-green-400/20 border border-green-300/30 rounded-full px-2.5 py-0.5 text-green-200 animate-pulse">
-              VRF pending...
-            </span>
-          ) : ended ? (
-            <span className="bg-yellow-400/20 border border-yellow-300/30 rounded-full px-2.5 py-0.5 text-yellow-200">
-              Awaiting draw
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/20 rounded-full px-2.5 py-0.5 text-white/80 tabular-nums">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
-              Ends in {timeDisplay}
-            </span>
-          )}
+        <div className="mt-4 text-center space-y-1.5">
+          {(isDrawn || ended || isCancelled) && Number(startTime) > 0 && Number(endTime) > 0 && (() => {
+            const fmt = (ts: bigint) => {
+              const d = new Date(Number(ts) * 1000)
+              const date = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+              const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })
+              return `${date} · ${time} UTC`
+            }
+            return (
+              <p className="text-[10px] text-white mb-4">Ended: {fmt(endTime)}</p>
+            )
+          })()}
+          <div className="text-xs">
+            {isCancelled ? (
+              <span className="bg-red-400/20 border border-red-300/30 rounded-full px-2.5 py-0.5 text-red-200">
+                Cancelled
+              </span>
+            ) : isDrawn ? (
+              <span className="bg-emerald-400/20 border border-emerald-300/30 rounded-full px-2.5 py-0.5 text-emerald-200">
+                Drawn ✓
+              </span>
+            ) : isStuckDraw ? (
+              <span className="bg-green-400/20 border border-green-300/30 rounded-full px-2.5 py-0.5 text-green-200 animate-pulse">
+                VRF pending...
+              </span>
+            ) : ended ? (
+              <span className="bg-yellow-400/20 border border-yellow-300/30 rounded-full px-2.5 py-0.5 text-yellow-200">
+                Awaiting draw
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/20 rounded-full px-2.5 py-0.5 text-white/80 tabular-nums">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
+                Ends in {timeDisplay}
+              </span>
+            )}
+          </div>
         </div>
 
       </div>
@@ -601,6 +652,16 @@ function ActiveRaffleCard({
                 Total {isBoozPrize ? `${totalPrizeFormatted} $BOOZ` : `$${totalPrizeFormatted} USDC`}
               </span>
             </div>
+            {Number(startTime) > 0 && (
+              <div className="px-3 py-1.5 text-[10px] text-gray-400 text-center border-t border-gray-100">
+                {(() => {
+                    const d = new Date(Number(startTime) * 1000)
+                    const date = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+                    const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })
+                    return `Started: ${date} · ${time} UTC`
+                  })()}
+              </div>
+            )}
           </div>
         )}
 
@@ -720,6 +781,32 @@ function ActiveRaffleCard({
           >
             {isCancelled ? "Raffle Cancelled" : isCancelling ? "Cancelling..." : "Cancel Raffle"}
           </button>
+        )}
+
+        {/* Owner: override thresholds for this raffle */}
+        {isOwner && !isDrawn && !isCancelled && (
+          <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+            <p className="text-xs font-semibold text-gray-500">Override Thresholds — Raffle #{Number(selectedId) + 1}</p>
+            <div className="flex gap-2">
+              <input
+                type="number" min={1} value={rtThreshold} onChange={e => setRtThreshold(e.target.value)}
+                placeholder="Tickets"
+                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <input
+                type="number" min={1} value={rtMinUnique} onChange={e => setRtMinUnique(e.target.value)}
+                placeholder="Wallets"
+                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <button
+                onClick={handleSetThresholds}
+                disabled={isSettingRt || (!rtThreshold && !rtMinUnique)}
+                className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                {isSettingRt ? "Saving..." : "Set"}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
