@@ -357,7 +357,7 @@ export default function ProfilePage() {
     if (isMiniApp()) {
       const target = identity.farcasterUsername
         ? `https://farcaster.xyz/${identity.farcasterUsername}`
-        : `https://farcaster.xyz/${address}`
+        : `https://base.app/profile/${address}`
       sdk.actions.openUrl(target)
     } else {
       window.open(`https://base.app/profile/${address}`, "_blank")
