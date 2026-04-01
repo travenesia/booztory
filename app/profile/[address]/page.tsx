@@ -365,8 +365,8 @@ export default function ProfilePage() {
         : `https://base.app/profile/${address}`
       sdk.actions.openUrl(target)
     } else {
-      // Base App (isCoinbaseBrowser) or regular browser — use window.open
-      window.open(`https://base.app/profile/${address}`, "_blank")
+      // Base App or regular browser — viewProfile deeplink per SKILLS.md
+      window.location.href = `https://base.app/profile/${address}`
     }
   }
 
