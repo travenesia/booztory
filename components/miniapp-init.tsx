@@ -14,9 +14,13 @@ export function MiniAppInit() {
     if (initialized.current) return
     initialized.current = true
 
-    // Farcaster mini app path only — Base App is a standard browser, no special handling needed.
+    // Farcaster mini app path only.
+    // Base App returns true from isInMiniApp() until April 9 2026, but its in-app browser
+    // does NOT include "Warpcast" in the user agent — use that to distinguish real Farcaster.
     sdk.isInMiniApp().then(async (inMiniApp) => {
       if (!inMiniApp) return
+      const isWarpcast = /Warpcast/i.test(navigator.userAgent)
+      if (!isWarpcast) return // Base App or other non-Farcaster host — treat as standard browser
       setMiniApp(true)
       const provider = await sdk.wallet.getEthereumProvider()
       if (!provider) return
