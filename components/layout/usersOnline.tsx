@@ -42,7 +42,7 @@ export function UsersOnline() {
     }
   }, [])
 
-  if (count === null) return null
+  if (count === null || count < 50) return null
 
   const label = count === 1 ? "User Online" : "Users Online"
 

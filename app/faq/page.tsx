@@ -35,7 +35,7 @@ export default function FAQPage() {
           <div className="text-center mb-4">
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
               <p className="text-sm text-gray-700 leading-relaxed text-left">
-                Booztory is a decentralized digital spotlight built on Base. Rent a 15-minute featured slot for just 1 USDC and get your content seen by the world. Support creators you love — or earn support from your audience — through on-chain donations.
+                Booztory is a decentralized digital spotlight built on Base. Pay 1 USDC to feature your content in a live slot and get seen by the world. Support creators you love — or earn support from your audience — through on-chain donations.
               </p>
             </div>
           </div>
@@ -126,14 +126,9 @@ export default function FAQPage() {
                         <span className="w-2 h-2 bg-green-600 rounded-full"></span>
                         <span>Twitch (live streams, VODs, clips)</span>
                       </li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="font-medium text-yellow-600 mb-2">Coming soon:</p>
-                    <ul className="space-y-1 ml-4">
                       <li className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                        <span>Custom image, video, and text uploads</span>
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>Text</span>
                       </li>
                     </ul>
                   </div>
@@ -423,6 +418,10 @@ export default function FAQPage() {
                         <span className="w-2 h-2 bg-green-600 rounded-full"></span>
                         <span>Base Mini App + Farcaster Mini App</span>
                       </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>Creator profile &amp; analytics dashboard</span>
+                      </li>
                     </ul>
                   </div>
                   <div>
@@ -430,11 +429,7 @@ export default function FAQPage() {
                     <ul className="space-y-1 ml-4">
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                        <span>Base mainnet launch</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                        <span>Creator analytics dashboard</span>
+                        <span>Superchain expansion</span>
                       </li>
                     </ul>
                   </div>
