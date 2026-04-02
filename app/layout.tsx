@@ -52,6 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [`${appUrl}/hero.jpg`],
     },
     other: {
+      "talentapp:project_verification": "50790ffc14ad0d22cc56ebac06b971259205dd90502fe974e22b618c24edb19563d6d24fb25ab8e1275234f33db026fbcc85a66c79132f810dc6e439d442c770",
       "base:app_id": "69af300b298d227d6bc5439f",
       "fc:miniapp": JSON.stringify({
         version: "1",
