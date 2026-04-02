@@ -2,7 +2,7 @@
 
 **Booztory** is a decentralized content spotlight built on [Base](https://base.org). Pay 1 USDC to feature your content — YouTube, TikTok, X, Spotify, Vimeo, or Twitch — in a live 15-minute slot. Each slot is minted as an ERC-721 token. Fans can support creators directly through on-chain USDC donations. Minters earn **BOOZ** reward tokens, build daily GM streaks, and are entered into a weekly **Chainlink VRF raffle**. No algorithms. No gatekeepers. No database.
 
-> Currently live on **Base Sepolia Testnet** · Mainnet launch coming soon.
+> **Live on Base Mainnet** · [booztory.com](https://www.booztory.com)
 
 ---
 
@@ -166,7 +166,7 @@ UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
 # The Graph subgraph endpoint
-SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.8
+SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.9
 ```
 
 ### 3. Run the dev server
@@ -296,13 +296,13 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 | BooztoryRaffle | `0xE018C70AB3eC93848Fad52dbC66A433DBCC1d9Af` |
 | USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
-### Base Mainnet
+### Base Mainnet ✅ Live
 
 | Contract | Address |
 |---|---|
-| Booztory | _pending mainnet deployment_ |
-| BooztoryToken (BOOZ) | _pending mainnet deployment_ |
-| BooztoryRaffle | _pending mainnet deployment_ |
+| Booztory | `0x59d764E631C3382cd89B104BF1e4846053Be5c35` |
+| BooztoryToken (BOOZ) | `0x749fd925485B70190f03afa8676Bb22b5060E990` |
+| BooztoryRaffle | `0xb10954830e0628C39c502a89C489a0e14734697c` |
 | USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 
 ---
@@ -450,9 +450,13 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] Deterministic avatar fallback on mobile connect button — `addressAvatar(addr)` hash-based index into avatar pool when no Farcaster/ENS/Basename identity
 - [x] Topbar nav centering — `absolute left-1/2 -translate-x-1/2` pattern on both `topbar.tsx` and `pageTopbar.tsx`
 - [x] Homepage desktop — two-column layout with inline sponsor ad pill above "Live Spotlight"; mobile sponsor pill in topbar center
+- [x] Base Mainnet deployment ✅
+- [x] Farcaster Mini App published (Warpcast UA gating; splash screen fix via `sdk.isInMiniApp()`)
+- [x] Dynamic slot price + duration (LIMITED label when non-default)
 - [ ] Set content type images on-chain (`setContentTypeImage`)
 - [ ] Verify all 3 contracts on Basescan
-- [ ] Base Mainnet deployment
+- [ ] Add BooztoryRaffle as Chainlink VRF consumer (Base Mainnet)
+- [ ] Fund raffle with initial prize (200,000 BOOZ)
 - [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
 - [ ] World Chain deployment (World Mini App)
 - [ ] Superchain expansion (OP Mainnet, etc.)
