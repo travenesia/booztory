@@ -40,7 +40,7 @@ function formatCooldown(secsLeft: number): string {
   return `${m}m`
 }
 
-type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
+type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch" | "text"
 
 const URL_LINK_PATTERN = /https?:\/\/|www\./i
 

@@ -12,7 +12,7 @@ import { APP_CHAIN } from "@/lib/wagmi"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { UsersOnline } from "@/components/layout/usersOnline"
 
-type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch"
+type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch" | "text"
 
 interface ContentCardProps {
   username: string
