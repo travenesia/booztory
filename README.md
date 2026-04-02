@@ -150,7 +150,7 @@ NEXT_PUBLIC_TOKEN_ADDRESS=
 # USDC token address
 # Base mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 # Base Sepolia:  0x036CbD53842c5426634e7929541eC2318f3dCF7e
-NEXT_PUBLIC_USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+NEXT_PUBLIC_USDC_ADDRESS=
 
 # Deployer private key (for Hardhat scripts only — never expose)
 PRIVATE_KEY=0x...
@@ -166,7 +166,7 @@ UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
 # The Graph subgraph endpoint
-SUBGRAPH_URL=https://api.studio.thegraph.com/query/1745118/booztory/v0.0.9
+SUBGRAPH_URL=
 ```
 
 ### 3. Run the dev server
@@ -256,17 +256,17 @@ Make sure `BASESCAN_API_KEY` is set in `.env.local`, then run:
 
 **Booztory:**
 ```bash
-npx hardhat verify --network base-sepolia <BOOZTORY_ADDRESS> "<USDC_ADDRESS>"
+npx hardhat verify --network base <BOOZTORY_ADDRESS> "<USDC_ADDRESS>"
 ```
 
 **BooztoryToken** — requires the deployer address as constructor argument:
 ```bash
-npx hardhat verify --network base-sepolia <TOKEN_ADDRESS> "<DEPLOYER_ADDRESS>"
+npx hardhat verify --network base <TOKEN_ADDRESS> "<DEPLOYER_ADDRESS>"
 ```
 
 **BooztoryRaffle:**
 ```bash
-npx hardhat verify --network base-sepolia <RAFFLE_ADDRESS> \
+npx hardhat verify --network base <RAFFLE_ADDRESS> \
   "<VRF_COORDINATOR>" \
   "<BOOZTORY_ADDRESS>" \
   "<USDC_ADDRESS>" \
@@ -278,7 +278,7 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 
 | Network | VRF Coordinator | Key Hash |
 |---|---|---|
-| Base Mainnet | `0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634` | `0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71` |
+| Base Mainnet | `0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634` | `0xdc2f87677b01473c763cb0aee938ed3341512f6057324a584e5944e786144d70` |
 | Base Sepolia | `0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE` | `0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71` |
 
 > **Tip:** The deploy script output also prints the exact verify commands for all three contracts with the correct arguments filled in.
@@ -286,15 +286,6 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 ---
 
 ## Deployed Addresses
-
-### Base Sepolia (Testnet)
-
-| Contract | Address |
-|---|---|
-| Booztory | `0xb73E5f05222f829397202bb2d9C2C15eE4a24132` |
-| BooztoryToken (BOOZ) | `0xb1E1B92CD95DaAb5E15756A383BeFEF7593F8db1` |
-| BooztoryRaffle | `0xE018C70AB3eC93848Fad52dbC66A433DBCC1d9Af` |
-| USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
 ### Base Mainnet ✅ Live
 
@@ -460,7 +451,7 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
 - [ ] World Chain deployment (World Mini App)
 - [ ] Superchain expansion (OP Mainnet, etc.)
-- [ ] Creator analytics dashboard
+- [x] Creator profile & analytics dashboard (`/profile/[address]`)
 
 ---
 
