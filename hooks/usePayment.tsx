@@ -128,13 +128,21 @@ export function usePayment() {
       try {
         await ensureChain()
 
+        let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await sendBatchWithAttribution([
-            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, slotPriceRef.current] },
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlot", args: SLOT_ARGS(slotData) },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-        } else {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, slotPriceRef.current] },
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlot", args: SLOT_ARGS(slotData) },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch (e) {
+            if (parseReject(e)) throw e
+            // Paymaster rejected (policy, simulation failure) — fall through to EOA
+          }
+        }
+        if (!ranPaymaster) {
           const approveTx = await writeContractAsync({
             address: USDC_ADDRESS,
             abi: ERC20_ABI,
@@ -178,13 +186,20 @@ export function usePayment() {
         // Approve discounted USDC amount (no BOOZ approve needed — burnFrom bypasses allowance)
         const discountedPrice = slotPriceRef.current - discountAmountRef.current
 
+        let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await sendBatchWithAttribution([
-            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithDiscount", args: SLOT_ARGS(slotData) },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-        } else {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithDiscount", args: SLOT_ARGS(slotData) },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch (e) {
+            if (parseReject(e)) throw e
+          }
+        }
+        if (!ranPaymaster) {
           const approveUSDCTx = await writeContractAsync({
             address: USDC_ADDRESS,
             abi: ERC20_ABI,
@@ -225,12 +240,19 @@ export function usePayment() {
         await ensureChain()
 
         // No BOOZ approve needed — burnFrom bypasses allowance
+        let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await sendBatchWithAttribution([
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithTokens", args: SLOT_ARGS(slotData) },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-        } else {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithTokens", args: SLOT_ARGS(slotData) },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch (e) {
+            if (parseReject(e)) throw e
+          }
+        }
+        if (!ranPaymaster) {
           const mintTx = await writeContractAsync({
             address: BOOZTORY_ADDRESS,
             abi: BOOZTORY_ABI,
@@ -263,13 +285,20 @@ export function usePayment() {
 
         const discountedPrice = slotPriceRef.current / 2n
 
+        let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await sendBatchWithAttribution([
-            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithNFTDiscount", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-        } else {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithNFTDiscount", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch (e) {
+            if (parseReject(e)) throw e
+          }
+        }
+        if (!ranPaymaster) {
           const approveTx = await writeContractAsync({
             address: USDC_ADDRESS,
             abi: ERC20_ABI,
@@ -309,12 +338,19 @@ export function usePayment() {
       try {
         await ensureChain()
 
+        let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await sendBatchWithAttribution([
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotFreeWithNFT", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-        } else {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotFreeWithNFT", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch (e) {
+            if (parseReject(e)) throw e
+          }
+        }
+        if (!ranPaymaster) {
           const mintTx = await writeContractAsync({
             address: BOOZTORY_ADDRESS,
             abi: BOOZTORY_ABI,

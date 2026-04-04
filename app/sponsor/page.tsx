@@ -415,12 +415,20 @@ function ApplicationRow({
   async function handleClaimRefund() {
     setIsRefunding(true)
     try {
+      let ranPaymaster = false
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await sendBatchWithAttribution([
-          { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
-        ], PAYMASTER_URL!)
-        await waitForPaymasterCalls(callsId)
-      } else {
+        try {
+          const callsId = await sendBatchWithAttribution([
+            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
+          ], PAYMASTER_URL!)
+          await waitForPaymasterCalls(callsId)
+          ranPaymaster = true
+        } catch (e) {
+          const msg = e instanceof Error ? e.message.toLowerCase() : ""
+          if (msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")) throw e
+        }
+      }
+      if (!ranPaymaster) {
         const tx = await writeContractAsync({
           address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
           functionName: "claimRefund", args: [BigInt(appId)],
@@ -919,13 +927,21 @@ export default function SponsorPage() {
 
       const adLinkJson = serializeLinks(links)
 
+      let ranPaymaster = false
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await sendBatchWithAttribution([
-          { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
-          { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
-        ], PAYMASTER_URL!)
-        await waitForPaymasterCalls(callsId)
-      } else {
+        try {
+          const callsId = await sendBatchWithAttribution([
+            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
+            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
+          ], PAYMASTER_URL!)
+          await waitForPaymasterCalls(callsId)
+          ranPaymaster = true
+        } catch (e) {
+          const msg = e instanceof Error ? e.message.toLowerCase() : ""
+          if (msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")) throw e
+        }
+      }
+      if (!ranPaymaster) {
         const approveTx = await writeContractAsync({
           address: USDC_ADDRESS, abi: ERC20_ABI,
           functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],

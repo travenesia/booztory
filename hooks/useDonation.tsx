@@ -55,14 +55,24 @@ export function useDonation() {
 
         const tokenAmount = parseUnits(amount.toString(), 6)
 
+        let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          // Batch approve + donate in one user op (gas-free for Smart Wallet users)
-          const callsId = await sendBatchWithAttribution([
-            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, tokenAmount] },
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "donate", args: [tokenId, tokenAmount] },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-        } else {
+          try {
+            // Batch approve + donate in one user op (gas-free for Smart Wallet users)
+            const callsId = await sendBatchWithAttribution([
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, tokenAmount] },
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "donate", args: [tokenId, tokenAmount] },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch (e) {
+            const msg = e instanceof Error ? e.message.toLowerCase() : ""
+            const isReject = msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")
+            if (isReject) throw e
+            // Paymaster rejected — fall through to EOA path
+          }
+        }
+        if (!ranPaymaster) {
           // Step 1: Approve Booztory contract to pull the donation amount
           const approveTx = await writeContractAsync({
             address: USDC_ADDRESS,

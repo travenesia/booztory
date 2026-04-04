@@ -370,12 +370,20 @@ function ActiveRaffleCard({
     setIsEntering(true)
     try {
       await ensureChain()
+      let ranPaymaster = false
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await sendBatchWithAttribution([
-          { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
-        ], PAYMASTER_URL!)
-        await waitForPaymasterCalls(callsId)
-      } else {
+        try {
+          const callsId = await sendBatchWithAttribution([
+            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
+          ], PAYMASTER_URL!)
+          await waitForPaymasterCalls(callsId)
+          ranPaymaster = true
+        } catch (e) {
+          const msg = e instanceof Error ? e.message.toLowerCase() : ""
+          if (msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")) throw e
+        }
+      }
+      if (!ranPaymaster) {
         const tx = await writeContractAsync({
           address: RAFFLE_ADDRESS,
           abi: RAFFLE_ABI,
@@ -1147,12 +1155,20 @@ export default function RewardPage() {
     setIsConverting(true)
     try {
       await ensureRewardChain()
+      let ranPaymaster = false
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await sendBatchWithAttribution([
-          { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },
-        ], PAYMASTER_URL!)
-        await waitForPaymasterCalls(callsId)
-      } else {
+        try {
+          const callsId = await sendBatchWithAttribution([
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },
+          ], PAYMASTER_URL!)
+          await waitForPaymasterCalls(callsId)
+          ranPaymaster = true
+        } catch (e) {
+          const msg = e instanceof Error ? e.message.toLowerCase() : ""
+          if (msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")) throw e
+        }
+      }
+      if (!ranPaymaster) {
         const tx = await writeContractAsync({
           address: BOOZTORY_ADDRESS,
           abi: BOOZTORY_ABI,
