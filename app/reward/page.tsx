@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient, useChainId, useSwitchChain } from "wagmi"
+import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
+import { isMiniApp } from "@/lib/miniapp-flag"
 import { formatUnits, parseAbiItem } from "viem"
 import Link from "next/link"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
@@ -28,6 +30,23 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { GMContent } from "@/components/modals/gmModal"
 import { useWalletName } from "@/hooks/useWalletName"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
+
+async function waitForPaymasterCalls(callsId: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const status = await (window as any).ethereum?.request({
+        method: "wallet_getCallsStatus",
+        params: [callsId],
+      })
+      if (status?.status === "CONFIRMED") return
+    } catch {}
+    await new Promise<void>((r) => setTimeout(r, 1000))
+  }
+  throw new Error("Transaction timed out")
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const MILESTONES = [
@@ -145,6 +164,7 @@ function ActiveRaffleCard({
   const [nftGatedMap, setNftGatedMap] = useState<Record<number, string>>({})
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const { writeContractsAsync } = useWriteContracts()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
   async function ensureChain() {
@@ -367,15 +387,25 @@ function ActiveRaffleCard({
     setIsEntering(true)
     try {
       await ensureChain()
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "enterRaffle",
-        args: [selectedId, BigInt(amount)],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      if (isMiniApp() && PAYMASTER_URL) {
+        const callsId = await writeContractsAsync({
+          contracts: [
+            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
+          ],
+          capabilities: { paymasterService: { url: PAYMASTER_URL } },
+        })
+        await waitForPaymasterCalls(callsId)
+      } else {
+        const tx = await writeContractAsync({
+          address: RAFFLE_ADDRESS,
+          abi: RAFFLE_ABI,
+          functionName: "enterRaffle",
+          args: [selectedId, BigInt(amount)],
+          chainId: APP_CHAIN.id,
+          ...DATA_SUFFIX_PARAM,
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      }
       setTicketInput("")
       refetchRaffle()
       refetchUserTickets()
@@ -915,6 +945,7 @@ export default function RewardPage() {
   const [isConverting, setIsConverting] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const { writeContractsAsync } = useWriteContracts()
   const rewardChainId = useChainId()
   const { switchChainAsync: rewardSwitchChain } = useSwitchChain()
   async function ensureRewardChain() {
@@ -1137,15 +1168,25 @@ export default function RewardPage() {
     setIsConverting(true)
     try {
       await ensureRewardChain()
-      const tx = await writeContractAsync({
-        address: BOOZTORY_ADDRESS,
-        abi: BOOZTORY_ABI,
-        functionName: "convertToTickets",
-        args: [BigInt(amount)],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      if (isMiniApp() && PAYMASTER_URL) {
+        const callsId = await writeContractsAsync({
+          contracts: [
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },
+          ],
+          capabilities: { paymasterService: { url: PAYMASTER_URL } },
+        })
+        await waitForPaymasterCalls(callsId)
+      } else {
+        const tx = await writeContractAsync({
+          address: BOOZTORY_ADDRESS,
+          abi: BOOZTORY_ABI,
+          functionName: "convertToTickets",
+          args: [BigInt(amount)],
+          chainId: APP_CHAIN.id,
+          ...DATA_SUFFIX_PARAM,
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      }
       setConvertAmount("")
       refetchPoints()
       refetchTickets()

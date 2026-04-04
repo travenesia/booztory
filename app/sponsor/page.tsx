@@ -2,8 +2,10 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
+import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
+import { isMiniApp } from "@/lib/miniapp-flag"
 import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { FaYoutube, FaTiktok, FaXTwitter, FaVimeo, FaSpotify, FaTwitch } from "react-icons/fa6"
@@ -17,6 +19,23 @@ import { HiClipboardDocument } from "react-icons/hi2"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { usePriceTiers } from "@/hooks/usePriceTiers"
+
+const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
+
+async function waitForPaymasterCalls(callsId: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const status = await (window as any).ethereum?.request({
+        method: "wallet_getCallsStatus",
+        params: [callsId],
+      })
+      if (status?.status === "CONFIRMED") return
+    } catch {}
+    await new Promise<void>((r) => setTimeout(r, 1000))
+  }
+  throw new Error("Transaction timed out")
+}
 
 const AD_TYPES = [
   { id: "image", label: "Image",   description: "Banner or logo (jpeg, png, webp)" },
@@ -350,6 +369,7 @@ function ApplicationRow({
   const [refundCountdown, setRefundCountdown] = useState("")
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const { writeContractsAsync } = useWriteContracts()
 
   const { data: refundTimeoutRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -412,13 +432,23 @@ function ApplicationRow({
   async function handleClaimRefund() {
     setIsRefunding(true)
     try {
-      const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
-        functionName: "claimRefund", args: [BigInt(appId)],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      if (isMiniApp() && PAYMASTER_URL) {
+        const callsId = await writeContractsAsync({
+          contracts: [
+            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
+          ],
+          capabilities: { paymasterService: { url: PAYMASTER_URL } },
+        })
+        await waitForPaymasterCalls(callsId)
+      } else {
+        const tx = await writeContractAsync({
+          address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+          functionName: "claimRefund", args: [BigInt(appId)],
+          chainId: APP_CHAIN.id,
+          ...DATA_SUFFIX_PARAM,
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      }
       refetchAppData()
       onAction()
       toast({ title: "Refunded", description: "Payment returned to your wallet.", variant: "success" })
@@ -786,6 +816,7 @@ export default function SponsorPage() {
   const { address } = useAccount()
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const { writeContractsAsync } = useWriteContracts()
 
   const [adType,       setAdType]       = useState<AdTypeId>("image")
   const [sponsorName,  setSponsorName]  = useState("")
@@ -900,15 +931,6 @@ export default function SponsorPage() {
     setIsSubmitting(true)
     setSubmitStep(1)
     try {
-      const approveTx = await writeContractAsync({
-        address: USDC_ADDRESS, abi: ERC20_ABI,
-        functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
-      setSubmitStep(2)
-
       const adContent =
         adType === "image"
           ? JSON.stringify({ sponsorName: sponsorName.trim(), imageUrl: imageUrl.trim(), ratio, tagline: tagline.trim() })
@@ -918,14 +940,34 @@ export default function SponsorPage() {
 
       const adLinkJson = serializeLinks(links)
 
-      const submitTx = await writeContractAsync({
-        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
-        functionName: "submitApplication",
-        args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
-      })
-      await waitForTransactionReceipt(wagmiConfig, { hash: submitTx })
+      if (isMiniApp() && PAYMASTER_URL) {
+        const callsId = await writeContractsAsync({
+          contracts: [
+            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
+            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
+          ],
+          capabilities: { paymasterService: { url: PAYMASTER_URL } },
+        })
+        await waitForPaymasterCalls(callsId)
+      } else {
+        const approveTx = await writeContractAsync({
+          address: USDC_ADDRESS, abi: ERC20_ABI,
+          functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],
+          chainId: APP_CHAIN.id,
+          ...DATA_SUFFIX_PARAM,
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+        setSubmitStep(2)
+
+        const submitTx = await writeContractAsync({
+          address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+          functionName: "submitApplication",
+          args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)],
+          chainId: APP_CHAIN.id,
+          ...DATA_SUFFIX_PARAM,
+        })
+        await waitForTransactionReceipt(wagmiConfig, { hash: submitTx })
+      }
 
       setSponsorName(""); setImageUrl(""); setEmbedUrl(""); setAdText(""); setTagline("")
       setLinks({ website: "", x: "", discord: "", telegram: "" })

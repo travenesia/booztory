@@ -2,12 +2,31 @@
 
 import { useState, useCallback, useRef } from "react"
 import { useReadContract, useWriteContract, useSwitchChain, useChainId } from "wagmi"
+import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
 import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { useToast } from "@/hooks/use-toast"
 import confetti from "canvas-confetti"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
+import { isMiniApp } from "@/lib/miniapp-flag"
+
+const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
+
+async function waitForPaymasterCalls(callsId: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const status = await (window as any).ethereum?.request({
+        method: "wallet_getCallsStatus",
+        params: [callsId],
+      })
+      if (status?.status === "CONFIRMED") return
+    } catch {}
+    await new Promise<void>((r) => setTimeout(r, 1000))
+  }
+  throw new Error("Transaction timed out")
+}
 
 export interface SlotData {
   contentUrl: string
@@ -47,6 +66,7 @@ export function usePayment() {
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const { writeContractsAsync } = useWriteContracts()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
 
@@ -125,24 +145,35 @@ export function usePayment() {
       try {
         await ensureChain()
 
-        const approveTx = await writeContractAsync({
-          address: USDC_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [BOOZTORY_ADDRESS, slotPriceRef.current],
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
-        setPaymentStep(2)
+        if (isMiniApp() && PAYMASTER_URL) {
+          const callsId = await writeContractsAsync({
+            contracts: [
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, slotPriceRef.current] },
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlot", args: SLOT_ARGS(slotData) },
+            ],
+            capabilities: { paymasterService: { url: PAYMASTER_URL } },
+          })
+          await waitForPaymasterCalls(callsId)
+        } else {
+          const approveTx = await writeContractAsync({
+            address: USDC_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [BOOZTORY_ADDRESS, slotPriceRef.current],
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+          setPaymentStep(2)
 
-        const mintTx = await writeContractAsync({
-          address: BOOZTORY_ADDRESS,
-          abi: BOOZTORY_ABI,
-          functionName: "mintSlot",
-          args: SLOT_ARGS(slotData),
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+          const mintTx = await writeContractAsync({
+            address: BOOZTORY_ADDRESS,
+            abi: BOOZTORY_ABI,
+            functionName: "mintSlot",
+            args: SLOT_ARGS(slotData),
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        }
 
         toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points.", variant: "success" })
         fireConfetti()
@@ -152,7 +183,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotWithDiscount (0.9 USDC + burn 1,000 BOOZ) ────────────────────────
@@ -166,25 +197,36 @@ export function usePayment() {
 
         // Approve discounted USDC amount (no BOOZ approve needed — burnFrom bypasses allowance)
         const discountedPrice = slotPriceRef.current - discountAmountRef.current
-        const approveUSDCTx = await writeContractAsync({
-          address: USDC_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [BOOZTORY_ADDRESS, discountedPrice],
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: approveUSDCTx })
-        setPaymentStep(2)
 
-        // Step 3: Mint with discount
-        const mintTx = await writeContractAsync({
-          address: BOOZTORY_ADDRESS,
-          abi: BOOZTORY_ABI,
-          functionName: "mintSlotWithDiscount",
-          args: SLOT_ARGS(slotData),
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        if (isMiniApp() && PAYMASTER_URL) {
+          const callsId = await writeContractsAsync({
+            contracts: [
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithDiscount", args: SLOT_ARGS(slotData) },
+            ],
+            capabilities: { paymasterService: { url: PAYMASTER_URL } },
+          })
+          await waitForPaymasterCalls(callsId)
+        } else {
+          const approveUSDCTx = await writeContractAsync({
+            address: USDC_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [BOOZTORY_ADDRESS, discountedPrice],
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveUSDCTx })
+          setPaymentStep(2)
+
+          const mintTx = await writeContractAsync({
+            address: BOOZTORY_ADDRESS,
+            abi: BOOZTORY_ABI,
+            functionName: "mintSlotWithDiscount",
+            args: SLOT_ARGS(slotData),
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        }
 
         toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1,000 $BOOZ and 15 points.", variant: "success" })
         fireConfetti()
@@ -194,7 +236,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotWithTokens (free — burn 10,000 BOOZ) ──────────────────────────────
@@ -206,15 +248,24 @@ export function usePayment() {
         await ensureChain()
 
         // No BOOZ approve needed — burnFrom bypasses allowance
-        // Mint free slot (no USDC needed)
-        const mintTx = await writeContractAsync({
-          address: BOOZTORY_ADDRESS,
-          abi: BOOZTORY_ABI,
-          functionName: "mintSlotWithTokens",
-          args: SLOT_ARGS(slotData),
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        if (isMiniApp() && PAYMASTER_URL) {
+          const callsId = await writeContractsAsync({
+            contracts: [
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithTokens", args: SLOT_ARGS(slotData) },
+            ],
+            capabilities: { paymasterService: { url: PAYMASTER_URL } },
+          })
+          await waitForPaymasterCalls(callsId)
+        } else {
+          const mintTx = await writeContractAsync({
+            address: BOOZTORY_ADDRESS,
+            abi: BOOZTORY_ABI,
+            functionName: "mintSlotWithTokens",
+            args: SLOT_ARGS(slotData),
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        }
 
         toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 15 points.", variant: "success" })
         fireConfetti()
@@ -224,7 +275,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotWithNFTDiscount (0.5 USDC, no BOOZ, 1 raffle ticket) ─────────────
@@ -237,24 +288,36 @@ export function usePayment() {
         await ensureChain()
 
         const discountedPrice = slotPriceRef.current / 2n
-        const approveTx = await writeContractAsync({
-          address: USDC_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [BOOZTORY_ADDRESS, discountedPrice],
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
-        setPaymentStep(2)
 
-        const mintTx = await writeContractAsync({
-          address: BOOZTORY_ADDRESS,
-          abi: BOOZTORY_ABI,
-          functionName: "mintSlotWithNFTDiscount",
-          args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        if (isMiniApp() && PAYMASTER_URL) {
+          const callsId = await writeContractsAsync({
+            contracts: [
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithNFTDiscount", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
+            ],
+            capabilities: { paymasterService: { url: PAYMASTER_URL } },
+          })
+          await waitForPaymasterCalls(callsId)
+        } else {
+          const approveTx = await writeContractAsync({
+            address: USDC_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [BOOZTORY_ADDRESS, discountedPrice],
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+          setPaymentStep(2)
+
+          const mintTx = await writeContractAsync({
+            address: BOOZTORY_ADDRESS,
+            abi: BOOZTORY_ABI,
+            functionName: "mintSlotWithNFTDiscount",
+            args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        }
 
         toast({ title: "Slot Minted!", description: "Your content has been scheduled. You earned 1 raffle ticket.", variant: "success" })
         fireConfetti()
@@ -264,7 +327,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotFreeWithNFT (free, no BOOZ, 1 raffle ticket) ──────────────────────
@@ -275,14 +338,24 @@ export function usePayment() {
       try {
         await ensureChain()
 
-        const mintTx = await writeContractAsync({
-          address: BOOZTORY_ADDRESS,
-          abi: BOOZTORY_ABI,
-          functionName: "mintSlotFreeWithNFT",
-          args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        if (isMiniApp() && PAYMASTER_URL) {
+          const callsId = await writeContractsAsync({
+            contracts: [
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotFreeWithNFT", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
+            ],
+            capabilities: { paymasterService: { url: PAYMASTER_URL } },
+          })
+          await waitForPaymasterCalls(callsId)
+        } else {
+          const mintTx = await writeContractAsync({
+            address: BOOZTORY_ADDRESS,
+            abi: BOOZTORY_ABI,
+            functionName: "mintSlotFreeWithNFT",
+            args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
+        }
 
         toast({ title: "Free Slot Minted!", description: "Your content has been scheduled. You earned 1 raffle ticket.", variant: "success" })
         fireConfetti()
@@ -292,7 +365,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   return {

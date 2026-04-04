@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi"
+import { useWriteContracts, useCallsStatus } from "wagmi/experimental"
 import { useQueryClient } from "@tanstack/react-query"
 import { HiBolt } from "react-icons/hi2"
 import { FaCoins } from "react-icons/fa6"
@@ -10,6 +11,9 @@ import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
+import { isMiniApp } from "@/lib/miniapp-flag"
+
+const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
 import {
   Dialog,
   DialogContent,
@@ -55,8 +59,22 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     query: { enabled: !!address },
   })
 
+  // Standard EOA path
   const { writeContractAsync, data: txHash, isPending: isWritePending, reset } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
+
+  // Paymaster path (mini app Smart Wallet users)
+  const { writeContractsAsync, data: callsId } = useWriteContracts()
+  const { data: callsStatus } = useCallsStatus({
+    id: callsId as string,
+    query: {
+      enabled: !!callsId,
+      refetchInterval: (query) => query.state.data?.status === "CONFIRMED" ? false : 1000,
+    },
+  })
+  const isCallsSuccess = callsStatus?.status === "CONFIRMED"
+  const isCallsPending = !!callsId && !isCallsSuccess
+
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
   const queryClient = useQueryClient()
@@ -101,31 +119,37 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     return () => clearInterval(id)
   }, [claimedToday])
 
-  // Confetti + refetch on success, then auto-dismiss
+  // Confetti + refetch on success (both paths), then auto-dismiss
   useEffect(() => {
-    if (!isSuccess) return
+    if (!isSuccess && !isCallsSuccess) return
     confetti({ particleCount: 140, spread: 90, origin: { y: 0.55 } })
     reset()
-    // Delay refetch slightly — mainnet RPCs may not reflect new state immediately after receipt
     setTimeout(() => {
       queryClient.invalidateQueries({ predicate: (q) => q.queryKey.some((k) => typeof k === "object" && k !== null && "functionName" in k && (k as any).functionName === "gmStreaks") })
       refetchStreak()
     }, 2000)
-    // Auto-dismiss after confetti has had time to shine
     setTimeout(() => onClose?.(), 3000)
-  }, [isSuccess, refetchStreak, reset, queryClient, onClose])
+  }, [isSuccess, isCallsSuccess, refetchStreak, reset, queryClient, onClose])
 
   const handleClaim = async () => {
     if (!address) return
     try {
       if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
-      await writeContractAsync({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", ...DATA_SUFFIX_PARAM })
+      if (isMiniApp() && PAYMASTER_URL) {
+        // Sponsored path — gas free for Farcaster/mini app Smart Wallet users
+        await writeContractsAsync({
+          contracts: [{ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", args: [] }],
+          capabilities: { paymasterService: { url: PAYMASTER_URL } },
+        })
+      } else {
+        await writeContractAsync({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", ...DATA_SUFFIX_PARAM })
+      }
     } catch {
       // user rejected or chain switch failed — button reverts naturally
     }
   }
 
-  const isLoading = isWritePending || isConfirming
+  const isLoading = isWritePending || isConfirming || isCallsPending
 
   return (
     <div className="flex flex-col items-center w-full px-6 py-6">
