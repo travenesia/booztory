@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react"
 import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import {
   Dialog,
   DialogContent,
@@ -117,7 +117,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     if (!address) return
     try {
       if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
-      await writeContractAsync({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM" })
+      await writeContractAsync({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", ...DATA_SUFFIX_PARAM })
     } catch {
       // user rejected or chain switch failed — button reverts naturally
     }

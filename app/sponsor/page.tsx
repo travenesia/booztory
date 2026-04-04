@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { FaYoutube, FaTiktok, FaXTwitter, FaVimeo, FaSpotify, FaTwitch } from "react-icons/fa6"
@@ -416,6 +416,7 @@ function ApplicationRow({
         address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
         functionName: "claimRefund", args: [BigInt(appId)],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchAppData()
@@ -903,6 +904,7 @@ export default function SponsorPage() {
         address: USDC_ADDRESS, abi: ERC20_ABI,
         functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
       setSubmitStep(2)
@@ -921,6 +923,7 @@ export default function SponsorPage() {
         functionName: "submitApplication",
         args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: submitTx })
 

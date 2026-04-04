@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient, useChainId, useSwitchChain } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig } from "@/lib/wagmi"
+import { wagmiConfig, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { formatUnits, parseAbiItem } from "viem"
 import Link from "next/link"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
@@ -373,6 +373,7 @@ function ActiveRaffleCard({
         functionName: "enterRaffle",
         args: [selectedId, BigInt(amount)],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setTicketInput("")
@@ -403,6 +404,7 @@ function ActiveRaffleCard({
         functionName: "triggerDraw",
         args: [selectedId],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -432,6 +434,7 @@ function ActiveRaffleCard({
         functionName: "resetDraw",
         args: [selectedId],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -455,6 +458,7 @@ function ActiveRaffleCard({
         functionName: "cancelRaffle",
         args: [selectedId],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -482,6 +486,7 @@ function ActiveRaffleCard({
         functionName: "setRaffleThresholds",
         args: [selectedId, rtThreshold ? BigInt(t) : drawThreshold, rtMinUnique ? BigInt(u) : minUniqueEntrants],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -1138,6 +1143,7 @@ export default function RewardPage() {
         functionName: "convertToTickets",
         args: [BigInt(amount)],
         chainId: APP_CHAIN.id,
+        ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       setConvertAmount("")

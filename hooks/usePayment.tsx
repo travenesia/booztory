@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from "react"
 import { useReadContract, useWriteContract, useSwitchChain, useChainId } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
-import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { useToast } from "@/hooks/use-toast"
 import confetti from "canvas-confetti"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
@@ -130,6 +130,7 @@ export function usePayment() {
           abi: ERC20_ABI,
           functionName: "approve",
           args: [BOOZTORY_ADDRESS, slotPriceRef.current],
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
         setPaymentStep(2)
@@ -139,6 +140,7 @@ export function usePayment() {
           abi: BOOZTORY_ABI,
           functionName: "mintSlot",
           args: SLOT_ARGS(slotData),
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
@@ -169,6 +171,7 @@ export function usePayment() {
           abi: ERC20_ABI,
           functionName: "approve",
           args: [BOOZTORY_ADDRESS, discountedPrice],
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveUSDCTx })
         setPaymentStep(2)
@@ -179,6 +182,7 @@ export function usePayment() {
           abi: BOOZTORY_ABI,
           functionName: "mintSlotWithDiscount",
           args: SLOT_ARGS(slotData),
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
@@ -208,6 +212,7 @@ export function usePayment() {
           abi: BOOZTORY_ABI,
           functionName: "mintSlotWithTokens",
           args: SLOT_ARGS(slotData),
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
@@ -237,6 +242,7 @@ export function usePayment() {
           abi: ERC20_ABI,
           functionName: "approve",
           args: [BOOZTORY_ADDRESS, discountedPrice],
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
         setPaymentStep(2)
@@ -246,6 +252,7 @@ export function usePayment() {
           abi: BOOZTORY_ABI,
           functionName: "mintSlotWithNFTDiscount",
           args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 
@@ -273,6 +280,7 @@ export function usePayment() {
           abi: BOOZTORY_ABI,
           functionName: "mintSlotFreeWithNFT",
           args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData),
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: mintTx })
 

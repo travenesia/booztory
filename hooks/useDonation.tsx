@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { useWriteContract, useSwitchChain, useChainId, useAccount } from "wagmi"
 import { readContract, waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
-import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
 import confetti from "canvas-confetti"
 
@@ -58,6 +58,7 @@ export function useDonation() {
           abi: ERC20_ABI,
           functionName: "approve",
           args: [BOOZTORY_ADDRESS, tokenAmount],
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
         setDonationStep(2)
@@ -68,6 +69,7 @@ export function useDonation() {
           abi: BOOZTORY_ABI,
           functionName: "donate",
           args: [tokenId, tokenAmount],
+          ...DATA_SUFFIX_PARAM,
         })
         await waitForTransactionReceipt(wagmiConfig, { hash: donateTx })
 

@@ -1,37 +1,60 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit"
 import { http, fallback } from "wagmi"
-import { base, baseSepolia, mainnet } from "wagmi/chains"
+import { base } from "wagmi/chains"
+import { Attribution } from "ox/erc8021"
 
-// Toggle this to switch between testnet and mainnet.
-// Change to `APP_CHAIN = base` when deploying to production.
+// ==============================
+// ENV VALIDATION
+// ==============================
+const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+
+if (!alchemyKey) {
+  throw new Error("Missing NEXT_PUBLIC_ALCHEMY_API_KEY")
+}
+
+if (!projectId) {
+  throw new Error("Missing NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID")
+}
+
+// ==============================
+// CHAIN CONFIG (BASE MAINNET)
+// ==============================
 export const APP_CHAIN = base
 
-// NFT Pass collections are always read from Base Mainnet regardless of APP_CHAIN.
-// At mainnet deployment this will equal APP_CHAIN.id automatically.
+// Always use Base Mainnet for NFT reads
 export const NFT_CHAIN_ID = base.id
 
-
-const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
-
+// ==============================
+// BUILDER CODE ATTRIBUTION (ERC-8021)
+// ==============================
 // Base Builder Code: bc_qaqhzzqp
-// Appended to all transaction calldata for on-chain attribution
-const DATA_SUFFIX = "0x62635f716171687a7a71700b0080218021802180218021802180218021" as `0x${string}`
+// Viem 2.45.0+ supports dataSuffix on writeContract/sendTransaction.
+// Wagmi doesn't expose it at config level — add to each writeContractAsync call.
+// Export and spread DATA_SUFFIX_PARAM into every writeContractAsync call.
+export const DATA_SUFFIX_PARAM = {
+  dataSuffix: Attribution.toDataSuffix({ codes: ["bc_qaqhzzqp"] }),
+} as const
 
+// ==============================
+// WAGMI CONFIG
+// ==============================
 export const wagmiConfig = getDefaultConfig({
   appName: "Booztory",
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-  chains: [APP_CHAIN, mainnet],
+  projectId,
+
+  // Base-only (clean + accurate attribution)
+  chains: [base],
+
   transports: {
-    [baseSepolia.id]: fallback([
-      http(`https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`),
-      http("https://sepolia.base.org"),
-    ]),
     [base.id]: fallback([
+      // Primary RPC (Alchemy)
       http(`https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+
+      // Fallback RPC (Base public)
       http("https://mainnet.base.org"),
     ]),
-    [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`),
   },
+
   ssr: true,
-  dataSuffix: DATA_SUFFIX,
 })
