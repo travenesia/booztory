@@ -378,9 +378,8 @@ function ActiveRaffleCard({
           ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
           ranPaymaster = true
-        } catch (e) {
-          const msg = e instanceof Error ? e.message.toLowerCase() : ""
-          if (msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")) throw e
+        } catch {
+          // fall through to EOA
         }
       }
       if (!ranPaymaster) {
@@ -1163,9 +1162,8 @@ export default function RewardPage() {
           ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
           ranPaymaster = true
-        } catch (e) {
-          const msg = e instanceof Error ? e.message.toLowerCase() : ""
-          if (msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")) throw e
+        } catch {
+          // fall through to EOA
         }
       }
       if (!ranPaymaster) {

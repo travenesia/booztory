@@ -137,9 +137,8 @@ export function usePayment() {
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
-          } catch (e) {
-            if (parseReject(e)) throw e
-            // Paymaster rejected (policy, simulation failure) — fall through to EOA
+          } catch {
+            // Any paymaster failure (policy rejection, simulation failure, user cancel) — fall through to EOA
           }
         }
         if (!ranPaymaster) {
@@ -195,8 +194,8 @@ export function usePayment() {
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
-          } catch (e) {
-            if (parseReject(e)) throw e
+          } catch {
+            // fall through to EOA
           }
         }
         if (!ranPaymaster) {
@@ -248,8 +247,8 @@ export function usePayment() {
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
-          } catch (e) {
-            if (parseReject(e)) throw e
+          } catch {
+            // fall through to EOA
           }
         }
         if (!ranPaymaster) {
@@ -294,8 +293,8 @@ export function usePayment() {
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
-          } catch (e) {
-            if (parseReject(e)) throw e
+          } catch {
+            // fall through to EOA
           }
         }
         if (!ranPaymaster) {
@@ -346,8 +345,8 @@ export function usePayment() {
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
-          } catch (e) {
-            if (parseReject(e)) throw e
+          } catch {
+            // fall through to EOA
           }
         }
         if (!ranPaymaster) {

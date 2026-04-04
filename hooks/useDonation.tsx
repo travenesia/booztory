@@ -65,11 +65,8 @@ export function useDonation() {
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
-          } catch (e) {
-            const msg = e instanceof Error ? e.message.toLowerCase() : ""
-            const isReject = msg.includes("user rejected") || msg.includes("rejected the request") || msg.includes("user denied")
-            if (isReject) throw e
-            // Paymaster rejected — fall through to EOA path
+          } catch {
+            // Any paymaster failure — fall through to EOA path
           }
         }
         if (!ranPaymaster) {
