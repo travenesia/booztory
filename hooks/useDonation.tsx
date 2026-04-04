@@ -7,7 +7,7 @@ import { readContract, waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
 import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { canUsePaymaster } from "@/lib/miniapp-flag"
 import confetti from "canvas-confetti"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
@@ -72,7 +72,7 @@ export function useDonation() {
 
         const tokenAmount = parseUnits(amount.toString(), 6)
 
-        if (isMiniApp() && PAYMASTER_URL) {
+        if (await canUsePaymaster(PAYMASTER_URL)) {
           // Batch approve + donate in one user op (gas-free for Smart Wallet users)
           const callsId = await writeContractsAsync({
             contracts: [

@@ -9,7 +9,7 @@ import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { useToast } from "@/hooks/use-toast"
 import confetti from "canvas-confetti"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { canUsePaymaster } from "@/lib/miniapp-flag"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
 
@@ -145,7 +145,7 @@ export function usePayment() {
       try {
         await ensureChain()
 
-        if (isMiniApp() && PAYMASTER_URL) {
+        if (await canUsePaymaster(PAYMASTER_URL)) {
           const callsId = await writeContractsAsync({
             contracts: [
               { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, slotPriceRef.current] },
@@ -198,7 +198,7 @@ export function usePayment() {
         // Approve discounted USDC amount (no BOOZ approve needed — burnFrom bypasses allowance)
         const discountedPrice = slotPriceRef.current - discountAmountRef.current
 
-        if (isMiniApp() && PAYMASTER_URL) {
+        if (await canUsePaymaster(PAYMASTER_URL)) {
           const callsId = await writeContractsAsync({
             contracts: [
               { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
@@ -248,7 +248,7 @@ export function usePayment() {
         await ensureChain()
 
         // No BOOZ approve needed — burnFrom bypasses allowance
-        if (isMiniApp() && PAYMASTER_URL) {
+        if (await canUsePaymaster(PAYMASTER_URL)) {
           const callsId = await writeContractsAsync({
             contracts: [
               { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithTokens", args: SLOT_ARGS(slotData) },
@@ -289,7 +289,7 @@ export function usePayment() {
 
         const discountedPrice = slotPriceRef.current / 2n
 
-        if (isMiniApp() && PAYMASTER_URL) {
+        if (await canUsePaymaster(PAYMASTER_URL)) {
           const callsId = await writeContractsAsync({
             contracts: [
               { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
@@ -338,7 +338,7 @@ export function usePayment() {
       try {
         await ensureChain()
 
-        if (isMiniApp() && PAYMASTER_URL) {
+        if (await canUsePaymaster(PAYMASTER_URL)) {
           const callsId = await writeContractsAsync({
             contracts: [
               { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotFreeWithNFT", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },

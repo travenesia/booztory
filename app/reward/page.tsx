@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract, usePub
 import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { canUsePaymaster } from "@/lib/miniapp-flag"
 import { formatUnits, parseAbiItem } from "viem"
 import Link from "next/link"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
@@ -387,7 +387,7 @@ function ActiveRaffleCard({
     setIsEntering(true)
     try {
       await ensureChain()
-      if (isMiniApp() && PAYMASTER_URL) {
+      if (await canUsePaymaster(PAYMASTER_URL)) {
         const callsId = await writeContractsAsync({
           contracts: [
             { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
@@ -1168,7 +1168,7 @@ export default function RewardPage() {
     setIsConverting(true)
     try {
       await ensureRewardChain()
-      if (isMiniApp() && PAYMASTER_URL) {
+      if (await canUsePaymaster(PAYMASTER_URL)) {
         const callsId = await writeContractsAsync({
           contracts: [
             { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },

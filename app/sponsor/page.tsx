@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract } from 
 import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { canUsePaymaster } from "@/lib/miniapp-flag"
 import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { FaYoutube, FaTiktok, FaXTwitter, FaVimeo, FaSpotify, FaTwitch } from "react-icons/fa6"
@@ -432,7 +432,7 @@ function ApplicationRow({
   async function handleClaimRefund() {
     setIsRefunding(true)
     try {
-      if (isMiniApp() && PAYMASTER_URL) {
+      if (await canUsePaymaster(PAYMASTER_URL)) {
         const callsId = await writeContractsAsync({
           contracts: [
             { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
@@ -940,7 +940,7 @@ export default function SponsorPage() {
 
       const adLinkJson = serializeLinks(links)
 
-      if (isMiniApp() && PAYMASTER_URL) {
+      if (await canUsePaymaster(PAYMASTER_URL)) {
         const callsId = await writeContractsAsync({
           contracts: [
             { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },

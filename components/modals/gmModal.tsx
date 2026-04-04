@@ -11,7 +11,7 @@ import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { canUsePaymaster } from "@/lib/miniapp-flag"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
 import {
@@ -135,7 +135,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     if (!address) return
     try {
       if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
-      if (isMiniApp() && PAYMASTER_URL) {
+      if (await canUsePaymaster(PAYMASTER_URL)) {
         // Sponsored path — gas free for Farcaster/mini app Smart Wallet users
         await writeContractsAsync({
           contracts: [{ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", args: [] }],
