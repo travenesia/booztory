@@ -101,7 +101,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     return () => clearInterval(id)
   }, [claimedToday])
 
-  // Confetti + refetch on success
+  // Confetti + refetch on success, then auto-dismiss
   useEffect(() => {
     if (!isSuccess) return
     confetti({ particleCount: 140, spread: 90, origin: { y: 0.55 } })
@@ -111,7 +111,9 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
       queryClient.invalidateQueries({ predicate: (q) => q.queryKey.some((k) => typeof k === "object" && k !== null && "functionName" in k && (k as any).functionName === "gmStreaks") })
       refetchStreak()
     }, 2000)
-  }, [isSuccess, refetchStreak, reset, queryClient])
+    // Auto-dismiss after confetti has had time to shine
+    setTimeout(() => onClose?.(), 3000)
+  }, [isSuccess, refetchStreak, reset, queryClient, onClose])
 
   const handleClaim = async () => {
     if (!address) return
@@ -274,10 +276,24 @@ function useGMClaimable() {
 
 const GM_NATURAL_H = 560
 
+const GM_SESSION_KEY = () => `gm_auto_shown_${getUtcDay()}`
+
 export function GMButton() {
   const [open, setOpen] = useState(false)
   const claimable = useGMClaimable()
   const [scale, setScale] = useState(1)
+  const [autoShown, setAutoShown] = useState(() =>
+    typeof window !== "undefined" && !!sessionStorage.getItem(GM_SESSION_KEY())
+  )
+
+  // Auto-open once per UTC day when GM is claimable
+  useEffect(() => {
+    if (claimable && !autoShown) {
+      setOpen(true)
+      setAutoShown(true)
+      sessionStorage.setItem(GM_SESSION_KEY(), "1")
+    }
+  }, [claimable, autoShown])
 
   useEffect(() => {
     const update = () => {
@@ -323,6 +339,18 @@ export function GMButton() {
 export function GMMobileButton() {
   const [open, setOpen] = useState(false)
   const claimable = useGMClaimable()
+  const [autoShown, setAutoShown] = useState(() =>
+    typeof window !== "undefined" && !!sessionStorage.getItem(GM_SESSION_KEY())
+  )
+
+  // Auto-open once per UTC day when GM is claimable
+  useEffect(() => {
+    if (claimable && !autoShown) {
+      setOpen(true)
+      setAutoShown(true)
+      sessionStorage.setItem(GM_SESSION_KEY(), "1")
+    }
+  }, [claimable, autoShown])
 
   return (
     <>

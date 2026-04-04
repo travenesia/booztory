@@ -33,6 +33,10 @@ dataSources:
           handler: handleFreeSlotMinted
         - event: DiscountSlotMinted(indexed uint256,indexed address,uint256,uint256)
           handler: handleDiscountSlotMinted
+        - event: NFTDiscountSlotMinted(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleNFTDiscountSlotMinted
+        - event: NFTFreeSlotMinted(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleNFTFreeSlotMinted
         - event: GMClaimed(indexed address,uint16,uint256)
           handler: handleGMClaimed
         - event: PointsEarned(indexed address,uint256,string)

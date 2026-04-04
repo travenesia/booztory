@@ -3,6 +3,8 @@ import {
   SlotMinted,
   FreeSlotMinted,
   DiscountSlotMinted,
+  NFTDiscountSlotMinted,
+  NFTFreeSlotMinted,
   GMClaimed,
   PointsEarned,
   DonationReceived,
@@ -79,6 +81,24 @@ export function handleDiscountSlotMinted(event: DiscountSlotMinted): void {
   const ev = SlotMintEvent.load(event.params.tokenId.toString())
   if (ev) {
     ev.mintType = "discount"
+    ev.save()
+  }
+}
+
+export function handleNFTDiscountSlotMinted(event: NFTDiscountSlotMinted): void {
+  // SlotMinted already fired — correct the mintType to nft-discount
+  const ev = SlotMintEvent.load(event.params.tokenId.toString())
+  if (ev) {
+    ev.mintType = "nft-discount"
+    ev.save()
+  }
+}
+
+export function handleNFTFreeSlotMinted(event: NFTFreeSlotMinted): void {
+  // SlotMinted already fired — correct the mintType to nft-free
+  const ev = SlotMintEvent.load(event.params.tokenId.toString())
+  if (ev) {
+    ev.mintType = "nft-free"
     ev.save()
   }
 }

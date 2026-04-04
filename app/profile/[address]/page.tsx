@@ -74,8 +74,10 @@ function timeAgo(ts: number): string {
 
 // ── Tx type config ────────────────────────────────────────────────────────────
 const MINT_TYPE_CONFIG: Record<string, { color: string; bg: string }> = {
-  free:     { color: "text-green-700", bg: "bg-green-50 border-green-200" },
-  discount: { color: "text-red-700",   bg: "bg-red-50 border-red-200"     },
+  free:         { color: "text-green-700",  bg: "bg-green-50 border-green-200"   },
+  discount:     { color: "text-red-700",    bg: "bg-red-50 border-red-200"       },
+  "nft-free":     { color: "text-violet-700", bg: "bg-violet-50 border-violet-200" },
+  "nft-discount": { color: "text-violet-700", bg: "bg-violet-50 border-violet-200" },
 }
 
 const TX_CONFIG: Record<TxType, { label: string; color: string; bg: string; icon: React.ElementType }> = {
@@ -95,8 +97,10 @@ function txDescription(tx: TxItem): React.ReactNode {
 
   switch (tx.type) {
     case "mint": {
-      if (tx.mintType === "discount") return `Discount Mint${tokenStr}`
-      if (tx.mintType === "free")     return `Free Mint${tokenStr}`
+      if (tx.mintType === "nft-free")     return `NFT Pass Free${tokenStr}`
+      if (tx.mintType === "nft-discount") return `NFT Pass Discount${tokenStr}`
+      if (tx.mintType === "discount")     return `Discount Mint${tokenStr}`
+      if (tx.mintType === "free")         return `Free Mint${tokenStr}`
       return `Normal Mint${tokenStr}`
     }
     case "gm":
@@ -137,7 +141,12 @@ function txAmounts(tx: TxItem): AmountLine[] {
 
   switch (tx.type) {
     case "mint":
-      if (tx.mintType === "free") {
+      if (tx.mintType === "nft-free") {
+        lines.push({ text: "+1 Raffle Ticket", positive: true })
+      } else if (tx.mintType === "nft-discount") {
+        lines.push({ text: "-0.5 USDC", positive: false })
+        lines.push({ text: "+1 Raffle Ticket", positive: true })
+      } else if (tx.mintType === "free") {
         lines.push({ text: "-10,000 $BOOZ", positive: false })
       } else if (tx.mintType === "discount") {
         lines.push({ text: "-0.9 USDC", positive: false })
