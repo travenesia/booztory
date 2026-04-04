@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract } from 
 import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
-import { canUsePaymaster } from "@/lib/miniapp-flag"
+import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
 import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { FaYoutube, FaTiktok, FaXTwitter, FaVimeo, FaSpotify, FaTwitch } from "react-icons/fa6"
@@ -21,21 +21,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { usePriceTiers } from "@/hooks/usePriceTiers"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
-
-async function waitForPaymasterCalls(callsId: string): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const status = await (window as any).ethereum?.request({
-        method: "wallet_getCallsStatus",
-        params: [callsId],
-      })
-      if (status?.status === "CONFIRMED") return
-    } catch {}
-    await new Promise<void>((r) => setTimeout(r, 1000))
-  }
-  throw new Error("Transaction timed out")
-}
 
 const AD_TYPES = [
   { id: "image", label: "Image",   description: "Banner or logo (jpeg, png, webp)" },

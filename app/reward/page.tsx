@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract, usePub
 import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
-import { canUsePaymaster } from "@/lib/miniapp-flag"
+import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
 import { formatUnits, parseAbiItem } from "viem"
 import Link from "next/link"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
@@ -32,21 +32,6 @@ import { useWalletName } from "@/hooks/useWalletName"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
-
-async function waitForPaymasterCalls(callsId: string): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const status = await (window as any).ethereum?.request({
-        method: "wallet_getCallsStatus",
-        params: [callsId],
-      })
-      if (status?.status === "CONFIRMED") return
-    } catch {}
-    await new Promise<void>((r) => setTimeout(r, 1000))
-  }
-  throw new Error("Transaction timed out")
-}
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const MILESTONES = [

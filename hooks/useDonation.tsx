@@ -7,25 +7,10 @@ import { readContract, waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
 import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
-import { canUsePaymaster } from "@/lib/miniapp-flag"
+import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
 import confetti from "canvas-confetti"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
-
-async function waitForPaymasterCalls(callsId: string): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const status = await (window as any).ethereum?.request({
-        method: "wallet_getCallsStatus",
-        params: [callsId],
-      })
-      if (status?.status === "CONFIRMED") return
-    } catch {}
-    await new Promise<void>((r) => setTimeout(r, 1000))
-  }
-  throw new Error("Transaction timed out")
-}
 
 export function useDonation() {
   const [isDonating, setIsDonating] = useState(false)

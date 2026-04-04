@@ -27,6 +27,32 @@ export async function canUsePaymaster(paymasterUrl: string | undefined): Promise
   }
 }
 
+/**
+ * Polls wallet_getCallsStatus until the batch is confirmed.
+ * Handles both EIP-5792 string status ("CONFIRMED") and older numeric codes (200),
+ * with a receipts-array fallback for wallets that populate receipts before updating status.
+ */
+export async function waitForPaymasterCalls(callsId: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await (window as any).ethereum?.request({
+        method: "wallet_getCallsStatus",
+        params: [callsId],
+      })
+      const s = res?.status
+      if (
+        s === "CONFIRMED" ||      // EIP-5792 current spec
+        s === 200 ||              // older Coinbase numeric code
+        s === "200" ||
+        (Array.isArray(res?.receipts) && res.receipts.length > 0)  // receipts-first wallets
+      ) return
+    } catch {}
+    await new Promise<void>((r) => setTimeout(r, 1000))
+  }
+  throw new Error("Transaction timed out")
+}
+
 // Call sdk.actions.ready() whenever running inside any mini app context
 // (Warpcast, Farcaster preview tool, Base App, etc).
 // Invoked from app/page.tsx after content finishes loading.
