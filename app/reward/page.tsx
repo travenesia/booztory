@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient, useChainId, useSwitchChain } from "wagmi"
-import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
+import { wagmiConfig, DATA_SUFFIX_PARAM, sendBatchWithAttribution } from "@/lib/wagmi"
 import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
 import { formatUnits, parseAbiItem } from "viem"
 import Link from "next/link"
@@ -149,7 +148,6 @@ function ActiveRaffleCard({
   const [nftGatedMap, setNftGatedMap] = useState<Record<number, string>>({})
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
-  const { writeContractsAsync } = useWriteContracts()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
   async function ensureChain() {
@@ -373,12 +371,9 @@ function ActiveRaffleCard({
     try {
       await ensureChain()
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await writeContractsAsync({
-          contracts: [
-            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
-          ],
-          capabilities: { paymasterService: { url: PAYMASTER_URL } },
-        })
+        const callsId = await sendBatchWithAttribution([
+          { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
+        ], PAYMASTER_URL!)
         await waitForPaymasterCalls(callsId)
       } else {
         const tx = await writeContractAsync({
@@ -930,7 +925,6 @@ export default function RewardPage() {
   const [isConverting, setIsConverting] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
-  const { writeContractsAsync } = useWriteContracts()
   const rewardChainId = useChainId()
   const { switchChainAsync: rewardSwitchChain } = useSwitchChain()
   async function ensureRewardChain() {
@@ -1154,12 +1148,9 @@ export default function RewardPage() {
     try {
       await ensureRewardChain()
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await writeContractsAsync({
-          contracts: [
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },
-          ],
-          capabilities: { paymasterService: { url: PAYMASTER_URL } },
-        })
+        const callsId = await sendBatchWithAttribution([
+          { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },
+        ], PAYMASTER_URL!)
         await waitForPaymasterCalls(callsId)
       } else {
         const tx = await writeContractAsync({

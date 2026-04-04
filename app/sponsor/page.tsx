@@ -2,9 +2,8 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
-import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM, sendBatchWithAttribution } from "@/lib/wagmi"
 import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
 import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
@@ -354,7 +353,6 @@ function ApplicationRow({
   const [refundCountdown, setRefundCountdown] = useState("")
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
-  const { writeContractsAsync } = useWriteContracts()
 
   const { data: refundTimeoutRaw } = useReadContract({
     address: RAFFLE_ADDRESS,
@@ -418,12 +416,9 @@ function ApplicationRow({
     setIsRefunding(true)
     try {
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await writeContractsAsync({
-          contracts: [
-            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
-          ],
-          capabilities: { paymasterService: { url: PAYMASTER_URL } },
-        })
+        const callsId = await sendBatchWithAttribution([
+          { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
+        ], PAYMASTER_URL!)
         await waitForPaymasterCalls(callsId)
       } else {
         const tx = await writeContractAsync({
@@ -801,7 +796,6 @@ export default function SponsorPage() {
   const { address } = useAccount()
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
-  const { writeContractsAsync } = useWriteContracts()
 
   const [adType,       setAdType]       = useState<AdTypeId>("image")
   const [sponsorName,  setSponsorName]  = useState("")
@@ -926,13 +920,10 @@ export default function SponsorPage() {
       const adLinkJson = serializeLinks(links)
 
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        const callsId = await writeContractsAsync({
-          contracts: [
-            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
-            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
-          ],
-          capabilities: { paymasterService: { url: PAYMASTER_URL } },
-        })
+        const callsId = await sendBatchWithAttribution([
+          { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
+          { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
+        ], PAYMASTER_URL!)
         await waitForPaymasterCalls(callsId)
       } else {
         const approveTx = await writeContractAsync({

@@ -2,10 +2,9 @@
 
 import { useState, useCallback } from "react"
 import { useWriteContract, useSwitchChain, useChainId, useAccount } from "wagmi"
-import { useWriteContracts } from "wagmi/experimental"
 import { readContract, waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
-import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM, sendBatchWithAttribution } from "@/lib/wagmi"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
 import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
 import confetti from "canvas-confetti"
@@ -16,7 +15,6 @@ export function useDonation() {
   const [isDonating, setIsDonating] = useState(false)
   const [donationStep, setDonationStep] = useState<1 | 2>(1)
   const { writeContractAsync } = useWriteContract()
-  const { writeContractsAsync } = useWriteContracts()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
   const { address } = useAccount()
@@ -59,13 +57,10 @@ export function useDonation() {
 
         if (await canUsePaymaster(PAYMASTER_URL)) {
           // Batch approve + donate in one user op (gas-free for Smart Wallet users)
-          const callsId = await writeContractsAsync({
-            contracts: [
-              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, tokenAmount] },
-              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "donate", args: [tokenId, tokenAmount] },
-            ],
-            capabilities: { paymasterService: { url: PAYMASTER_URL } },
-          })
+          const callsId = await sendBatchWithAttribution([
+            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, tokenAmount] },
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "donate", args: [tokenId, tokenAmount] },
+          ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
         } else {
           // Step 1: Approve Booztory contract to pull the donation amount
@@ -117,7 +112,7 @@ export function useDonation() {
         return { success: false, error: errorMessage }
       }
     },
-    [writeContractAsync, writeContractsAsync, chainId, switchChainAsync],
+    [writeContractAsync, chainId, switchChainAsync],
   )
 
   const resetDonationState = useCallback(() => {

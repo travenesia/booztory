@@ -2,10 +2,9 @@
 
 import { useState, useCallback, useRef } from "react"
 import { useReadContract, useWriteContract, useSwitchChain, useChainId } from "wagmi"
-import { useWriteContracts } from "wagmi/experimental"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { parseUnits } from "viem"
-import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM, sendBatchWithAttribution } from "@/lib/wagmi"
 import { useToast } from "@/hooks/use-toast"
 import confetti from "canvas-confetti"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
@@ -51,7 +50,6 @@ export function usePayment() {
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
-  const { writeContractsAsync } = useWriteContracts()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
 
@@ -131,13 +129,10 @@ export function usePayment() {
         await ensureChain()
 
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await writeContractsAsync({
-            contracts: [
-              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, slotPriceRef.current] },
-              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlot", args: SLOT_ARGS(slotData) },
-            ],
-            capabilities: { paymasterService: { url: PAYMASTER_URL } },
-          })
+          const callsId = await sendBatchWithAttribution([
+            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, slotPriceRef.current] },
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlot", args: SLOT_ARGS(slotData) },
+          ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
         } else {
           const approveTx = await writeContractAsync({
@@ -168,7 +163,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotWithDiscount (0.9 USDC + burn 1,000 BOOZ) ────────────────────────
@@ -184,13 +179,10 @@ export function usePayment() {
         const discountedPrice = slotPriceRef.current - discountAmountRef.current
 
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await writeContractsAsync({
-            contracts: [
-              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
-              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithDiscount", args: SLOT_ARGS(slotData) },
-            ],
-            capabilities: { paymasterService: { url: PAYMASTER_URL } },
-          })
+          const callsId = await sendBatchWithAttribution([
+            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithDiscount", args: SLOT_ARGS(slotData) },
+          ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
         } else {
           const approveUSDCTx = await writeContractAsync({
@@ -221,7 +213,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotWithTokens (free — burn 10,000 BOOZ) ──────────────────────────────
@@ -234,12 +226,9 @@ export function usePayment() {
 
         // No BOOZ approve needed — burnFrom bypasses allowance
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await writeContractsAsync({
-            contracts: [
-              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithTokens", args: SLOT_ARGS(slotData) },
-            ],
-            capabilities: { paymasterService: { url: PAYMASTER_URL } },
-          })
+          const callsId = await sendBatchWithAttribution([
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithTokens", args: SLOT_ARGS(slotData) },
+          ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
         } else {
           const mintTx = await writeContractAsync({
@@ -260,7 +249,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotWithNFTDiscount (0.5 USDC, no BOOZ, 1 raffle ticket) ─────────────
@@ -275,13 +264,10 @@ export function usePayment() {
         const discountedPrice = slotPriceRef.current / 2n
 
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await writeContractsAsync({
-            contracts: [
-              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
-              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithNFTDiscount", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
-            ],
-            capabilities: { paymasterService: { url: PAYMASTER_URL } },
-          })
+          const callsId = await sendBatchWithAttribution([
+            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithNFTDiscount", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
+          ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
         } else {
           const approveTx = await writeContractAsync({
@@ -312,7 +298,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   // ── mintSlotFreeWithNFT (free, no BOOZ, 1 raffle ticket) ──────────────────────
@@ -324,12 +310,9 @@ export function usePayment() {
         await ensureChain()
 
         if (await canUsePaymaster(PAYMASTER_URL)) {
-          const callsId = await writeContractsAsync({
-            contracts: [
-              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotFreeWithNFT", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
-            ],
-            capabilities: { paymasterService: { url: PAYMASTER_URL } },
-          })
+          const callsId = await sendBatchWithAttribution([
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotFreeWithNFT", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
+          ], PAYMASTER_URL!)
           await waitForPaymasterCalls(callsId)
         } else {
           const mintTx = await writeContractAsync({
@@ -350,7 +333,7 @@ export function usePayment() {
         return handleError(error)
       }
     },
-    [toast, isProcessing, writeContractAsync, writeContractsAsync, resetPaymentState, chainId, switchChainAsync],
+    [toast, isProcessing, writeContractAsync, resetPaymentState, chainId, switchChainAsync],
   )
 
   return {
