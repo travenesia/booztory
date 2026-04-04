@@ -56,11 +56,13 @@ export type BatchCall = {
 
 export async function sendBatchWithAttribution(calls: BatchCall[], paymasterUrl: string): Promise<string> {
   const client = await getConnectorClient(wagmiConfig)
-  const suffix = DATA_SUFFIX_PARAM.dataSuffix.slice(2) // strip 0x — appended raw
 
+  // Do NOT append dataSuffix to calldata here — CDP paymaster allowlist validates exact calldata
+  // format and extra bytes cause policy rejection. Attribution for the paymaster path is tracked
+  // at the CDP project/API key level, not in calldata.
   const encoded = calls.map(({ address, abi, functionName, args, value }) => ({
     to: address,
-    data: (encodeFunctionData({ abi: abi as Abi, functionName, args: args ?? [] }) + suffix) as `0x${string}`,
+    data: encodeFunctionData({ abi: abi as Abi, functionName, args: args ?? [] }),
     ...(value != null ? { value: `0x${value.toString(16)}` as `0x${string}` } : {}),
   }))
 
