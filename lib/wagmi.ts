@@ -50,7 +50,9 @@ export const DATA_SUFFIX_PARAM = {
 // BATCH SEND (PAYMASTER PATH)
 // ==============================
 // Uses wagmi/actions sendCalls — the correct abstraction over EIP-5792 wallet_sendCalls.
-// CDP paymaster attribution is tracked at the project/API key level, not in calldata.
+// Builder code attribution is passed as an EIP-5792 capability (attributionDataSuffix).
+// If the wallet supports it, the suffix is appended to callData. Otherwise it's silently
+// ignored and CDP tracks attribution at the project/API key level as fallback.
 export type BatchCall = {
   address: `0x${string}`
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,7 +64,7 @@ export type BatchCall = {
 }
 
 export async function sendBatchWithAttribution(calls: BatchCall[], paymasterUrl: string): Promise<string> {
-  const id = await sendCalls(wagmiConfig, {
+  const result = await sendCalls(wagmiConfig, {
     calls: calls.map(({ address, abi, functionName, args, value }) => ({
       to: address,
       abi: abi as Abi,
@@ -72,9 +74,10 @@ export async function sendBatchWithAttribution(calls: BatchCall[], paymasterUrl:
     })),
     capabilities: {
       paymasterService: { url: paymasterUrl },
+      dataSuffix: { value: DATA_SUFFIX_PARAM.dataSuffix },
     },
   })
-  return id
+  return result.id
 }
 
 // ==============================

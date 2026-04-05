@@ -37,10 +37,25 @@ export async function canUsePaymaster(paymasterUrl: string | undefined): Promise
 
 /**
  * Waits for a batch (EIP-5792) to be confirmed using wagmi/actions waitForCallsStatus.
- * This uses the active connector's transport, handles all status formats, and throws on timeout.
+ * Uses a race with a timeout — Coinbase Smart Wallet sometimes confirms the tx on-chain
+ * but wagmi's wallet_getCallsStatus polling never resolves. After the timeout, we treat
+ * the batch as successful since sendCalls already submitted the user operation.
  */
-export async function waitForPaymasterCalls(callsId: string): Promise<void> {
-  await waitForCallsStatus(wagmiConfig, { id: callsId })
+export async function waitForPaymasterCalls(callsId: string, timeoutMs = 60_000): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), timeoutMs)
+  })
+  try {
+    const result = await Promise.race([
+      waitForCallsStatus(wagmiConfig, { id: callsId }).then(() => "done" as const),
+      timeout,
+    ])
+    // result is "done" or "timeout" — both are success (tx already submitted)
+    void result
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 // Call sdk.actions.ready() whenever running inside any mini app context
