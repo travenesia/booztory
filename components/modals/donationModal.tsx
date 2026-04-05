@@ -55,7 +55,7 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
     }
   }, [open])
 
-  const { processDonation, isDonating, donationStep, resetDonationState } = useDonation()
+  const { processDonation, isDonating, isBatchedTx, donationStep, resetDonationState } = useDonation()
 
   useEffect(() => {
     if (!open) {
@@ -122,25 +122,38 @@ export function DonationModal({ open, onOpenChange, username, creatorAddress, to
         <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-4 shadow-xl max-w-xs w-full mx-4">
           <Loader2 className="animate-spin text-indigo-600" size={28} />
           <p className="text-sm font-semibold text-gray-900 text-center">Processing donation…</p>
-          <div className="w-full flex flex-col gap-2">
-            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                style={{ width: donationStep === 1 ? "50%" : "100%" }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-gray-400">
-              <span className={donationStep >= 1 ? "text-indigo-600 font-medium" : ""}>
-                {donationStep > 1 ? "✓ " : "⏳ "}Approving USDC
-              </span>
-              <span className={donationStep >= 2 ? "text-indigo-600 font-medium" : ""}>
-                {donationStep === 2 ? "⏳ " : ""}Donating
-              </span>
-            </div>
-          </div>
-          <p className="text-xs text-gray-400 text-center leading-relaxed">
-            Please keep this page open and confirm both transactions in your wallet.
-          </p>
+          {isBatchedTx ? (
+            <>
+              <div className="w-full h-2 bg-indigo-100 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-600 rounded-full animate-pulse" style={{ width: "100%" }} />
+              </div>
+              <p className="text-xs text-gray-400 text-center leading-relaxed">
+                Confirm the transaction in your wallet. Gas is sponsored.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-full flex flex-col gap-2">
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                    style={{ width: donationStep === 1 ? "50%" : "100%" }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-400">
+                  <span className={donationStep >= 1 ? "text-indigo-600 font-medium" : ""}>
+                    {donationStep > 1 ? "✓ " : "⏳ "}Approving USDC
+                  </span>
+                  <span className={donationStep >= 2 ? "text-indigo-600 font-medium" : ""}>
+                    {donationStep === 2 ? "⏳ " : ""}Donating
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 text-center leading-relaxed">
+                Please keep this page open and confirm both transactions in your wallet.
+              </p>
+            </>
+          )}
         </div>
       </div>,
       document.body

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi"
-import { useWriteContracts, useCallsStatus } from "wagmi/experimental"
 import { useQueryClient } from "@tanstack/react-query"
 import { HiBolt } from "react-icons/hi2"
 import { FaCoins } from "react-icons/fa6"
@@ -10,8 +9,8 @@ import { Loader2 } from "lucide-react"
 import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
-import { APP_CHAIN, DATA_SUFFIX_PARAM } from "@/lib/wagmi"
-import { canUsePaymaster } from "@/lib/miniapp-flag"
+import { APP_CHAIN, DATA_SUFFIX_PARAM, sendBatchWithAttribution } from "@/lib/wagmi"
+import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
 import {
@@ -63,17 +62,9 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
   const { writeContractAsync, data: txHash, isPending: isWritePending, reset } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
 
-  // Paymaster path (mini app Smart Wallet users)
-  const { writeContractsAsync, data: callsId } = useWriteContracts()
-  const { data: callsStatus } = useCallsStatus({
-    id: callsId as string,
-    query: {
-      enabled: !!callsId,
-      refetchInterval: (query) => query.state.data?.status === "CONFIRMED" ? false : 1000,
-    },
-  })
-  const isCallsSuccess = callsStatus?.status === "CONFIRMED"
-  const isCallsPending = !!callsId && !isCallsSuccess
+  // Paymaster path state
+  const [isPaymasterPending, setIsPaymasterPending] = useState(false)
+  const [isCallsSuccess, setIsCallsSuccess] = useState(false)
 
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
@@ -135,13 +126,23 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     if (!address) return
     try {
       if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
+      let ranPaymaster = false
       if (await canUsePaymaster(PAYMASTER_URL)) {
-        // Sponsored path — gas free for Farcaster/mini app Smart Wallet users
-        await writeContractsAsync({
-          contracts: [{ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", args: [] }],
-          capabilities: { paymasterService: { url: PAYMASTER_URL } },
-        })
-      } else {
+        try {
+          setIsPaymasterPending(true)
+          const callsId = await sendBatchWithAttribution([
+            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", args: [] },
+          ], PAYMASTER_URL!)
+          await waitForPaymasterCalls(callsId)
+          ranPaymaster = true
+          setIsCallsSuccess(true)
+        } catch {
+          // fall through to EOA
+        } finally {
+          setIsPaymasterPending(false)
+        }
+      }
+      if (!ranPaymaster) {
         await writeContractAsync({ address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "claimDailyGM", ...DATA_SUFFIX_PARAM })
       }
     } catch {
@@ -149,7 +150,7 @@ export function GMContent({ onClose }: { onClose?: () => void }) {
     }
   }
 
-  const isLoading = isWritePending || isConfirming || isCallsPending
+  const isLoading = isWritePending || isConfirming || isPaymasterPending
 
   return (
     <div className="flex flex-col items-center w-full px-6 py-6">

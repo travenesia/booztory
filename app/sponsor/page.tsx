@@ -817,6 +817,7 @@ export default function SponsorPage() {
   const [durationIdx,  setDurationIdx]  = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStep,   setSubmitStep]   = useState<1 | 2>(1)
+  const [isBatchedSubmit, setIsBatchedSubmit] = useState(false)
   const [submitDone,   setSubmitDone]   = useState(false)
   const adTextRef = useRef<HTMLTextAreaElement>(null)
 
@@ -929,6 +930,7 @@ export default function SponsorPage() {
       let ranPaymaster = false
       if (await canUsePaymaster(PAYMASTER_URL)) {
         try {
+          setIsBatchedSubmit(true)
           const callsId = await sendBatchWithAttribution([
             { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
             { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
@@ -936,7 +938,7 @@ export default function SponsorPage() {
           await waitForPaymasterCalls(callsId)
           ranPaymaster = true
         } catch {
-          // fall through to EOA
+          setIsBatchedSubmit(false)
         }
       }
       if (!ranPaymaster) {
@@ -1046,32 +1048,44 @@ export default function SponsorPage() {
     <main className="min-h-screen pt-12 pb-12">
       <PageTopbar title="Advertise" />
 
-      {/* Transaction lock overlay — blocks UI during the 2-step approve+submit flow */}
+      {/* Transaction lock overlay */}
       {isSubmitting && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl px-8 py-7 flex flex-col items-center gap-4 shadow-xl max-w-xs w-full mx-4">
             <Loader2 className="animate-spin text-indigo-600" size={28} />
             <p className="text-sm font-semibold text-gray-900 text-center">Submitting your application…</p>
-            {/* Progress bar */}
-            <div className="w-full flex flex-col gap-2">
-              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                  style={{ width: submitStep === 1 ? "50%" : "100%" }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-gray-400">
-                <span className={submitStep >= 1 ? "text-indigo-600 font-medium" : ""}>
-                  {submitStep === 1 ? "⏳ " : "✓ "}Approving USDC
-                </span>
-                <span className={submitStep >= 2 ? "text-indigo-600 font-medium" : ""}>
-                  {submitStep === 2 ? "⏳ " : ""}Signing application
-                </span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-400 text-center leading-relaxed">
-              Please keep this page open and confirm both transactions in your wallet.
-            </p>
+            {isBatchedSubmit ? (
+              <>
+                <div className="w-full h-2 bg-indigo-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-600 rounded-full animate-pulse" style={{ width: "100%" }} />
+                </div>
+                <p className="text-xs text-gray-400 text-center leading-relaxed">
+                  Confirm the transaction in your wallet. Gas is sponsored.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="w-full flex flex-col gap-2">
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                      style={{ width: submitStep === 1 ? "50%" : "100%" }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400">
+                    <span className={submitStep >= 1 ? "text-indigo-600 font-medium" : ""}>
+                      {submitStep === 1 ? "⏳ " : "✓ "}Approving USDC
+                    </span>
+                    <span className={submitStep >= 2 ? "text-indigo-600 font-medium" : ""}>
+                      {submitStep === 2 ? "⏳ " : ""}Signing application
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 text-center leading-relaxed">
+                  Please keep this page open and confirm both transactions in your wallet.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

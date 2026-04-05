@@ -14,6 +14,7 @@ const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
 export function useDonation() {
   const [isDonating, setIsDonating] = useState(false)
   const [donationStep, setDonationStep] = useState<1 | 2>(1)
+  const [isBatchedTx, setIsBatchedTx] = useState(false)
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
@@ -58,6 +59,7 @@ export function useDonation() {
         let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
           try {
+            setIsBatchedTx(true)
             // Batch approve + donate in one user op (gas-free for Smart Wallet users)
             const callsId = await sendBatchWithAttribution([
               { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, tokenAmount] },
@@ -66,7 +68,7 @@ export function useDonation() {
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
           } catch {
-            // Any paymaster failure — fall through to EOA path
+            setIsBatchedTx(false)
           }
         }
         if (!ranPaymaster) {
@@ -105,9 +107,11 @@ export function useDonation() {
         }, 250)
 
         setIsDonating(false)
+        setIsBatchedTx(false)
         return { success: true, earnedReward }
       } catch (error) {
         setIsDonating(false)
+        setIsBatchedTx(false)
         const errorMessage = error instanceof Error ? error.message : "Donation failed"
 
         const isRejected =
@@ -125,7 +129,8 @@ export function useDonation() {
   const resetDonationState = useCallback(() => {
     setIsDonating(false)
     setDonationStep(1)
+    setIsBatchedTx(false)
   }, [])
 
-  return { processDonation, isDonating, donationStep, resetDonationState }
+  return { processDonation, isDonating, isBatchedTx, donationStep, resetDonationState }
 }

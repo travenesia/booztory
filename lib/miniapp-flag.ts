@@ -1,6 +1,6 @@
 import { sdk } from "@farcaster/miniapp-sdk"
-import { getConnectorClient, getPublicClient, waitForCallsStatus } from "wagmi/actions"
-import { wagmiConfig } from "@/lib/wagmi"
+import { getCapabilities, getConnectorClient, getPublicClient, waitForCallsStatus } from "wagmi/actions"
+import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
 
 // Module-level flag set by MiniAppInit when the app runs inside Farcaster.
 // Set synchronously before connect() is called, so it is always readable
@@ -14,22 +14,20 @@ export const setMiniApp = (value: boolean) => {
 export const isMiniApp = () => _isMiniApp
 
 /**
- * Returns true if the connected wallet is a Smart Account (ERC-4337).
- * Detection: eth_getCode(address) — if the result is not "0x" or undefined,
- * the account has contract code deployed = smart account.
- * EOAs always return "0x" (no code). Works for any smart account type
- * (Coinbase Smart Wallet, Safe, etc.) without relying on wallet_getCapabilities.
+ * Returns true if the connected wallet explicitly supports EIP-5792 wallet_sendCalls
+ * with paymasterService on the app chain.
+ *
+ * Primary check: wallet_getCapabilities — the wallet declares support.
+ * Only wallets that implement EIP-5792 (e.g. Coinbase Smart Wallet) return this.
+ * EOAs and non-EIP-5792 smart wallets (Safe, Argent) return nothing or throw,
+ * so they correctly fall through to the EOA path.
  */
 export async function canUsePaymaster(paymasterUrl: string | undefined): Promise<boolean> {
   if (!paymasterUrl) return false
   try {
-    const connectorClient = await getConnectorClient(wagmiConfig)
-    const address = connectorClient.account?.address
-    if (!address) return false
-    const publicClient = getPublicClient(wagmiConfig)
-    if (!publicClient) return false
-    const code = await publicClient.getCode({ address })
-    return !!code && code !== "0x"
+    const capabilities = await getCapabilities(wagmiConfig)
+    const chainCaps = (capabilities as Record<number, { paymasterService?: { supported?: boolean } }>)[APP_CHAIN.id]
+    return chainCaps?.paymasterService?.supported === true
   } catch {
     return false
   }

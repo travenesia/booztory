@@ -48,6 +48,7 @@ function parseReject(error: unknown): boolean {
 export function usePayment() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1)
+  const [isBatchedTx, setIsBatchedTx] = useState(false)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
@@ -97,6 +98,7 @@ export function usePayment() {
   const resetPaymentState = useCallback(() => {
     setIsProcessing(false)
     setPaymentStep(1)
+    setIsBatchedTx(false)
   }, [])
 
   // ── Shared setup ──────────────────────────────────────────────────────────────
@@ -131,6 +133,7 @@ export function usePayment() {
         let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
           try {
+            setIsBatchedTx(true)
             const callsId = await sendBatchWithAttribution([
               { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, slotPriceRef.current] },
               { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlot", args: SLOT_ARGS(slotData) },
@@ -139,6 +142,7 @@ export function usePayment() {
             ranPaymaster = true
           } catch {
             // Any paymaster failure (policy rejection, simulation failure, user cancel) — fall through to EOA
+            setIsBatchedTx(false)
           }
         }
         if (!ranPaymaster) {
@@ -188,6 +192,7 @@ export function usePayment() {
         let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
           try {
+            setIsBatchedTx(true)
             const callsId = await sendBatchWithAttribution([
               { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
               { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithDiscount", args: SLOT_ARGS(slotData) },
@@ -195,7 +200,7 @@ export function usePayment() {
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
           } catch {
-            // fall through to EOA
+            setIsBatchedTx(false)
           }
         }
         if (!ranPaymaster) {
@@ -242,13 +247,14 @@ export function usePayment() {
         let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
           try {
+            setIsBatchedTx(true)
             const callsId = await sendBatchWithAttribution([
               { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithTokens", args: SLOT_ARGS(slotData) },
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
           } catch {
-            // fall through to EOA
+            setIsBatchedTx(false)
           }
         }
         if (!ranPaymaster) {
@@ -287,6 +293,7 @@ export function usePayment() {
         let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
           try {
+            setIsBatchedTx(true)
             const callsId = await sendBatchWithAttribution([
               { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [BOOZTORY_ADDRESS, discountedPrice] },
               { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotWithNFTDiscount", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
@@ -294,7 +301,7 @@ export function usePayment() {
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
           } catch {
-            // fall through to EOA
+            setIsBatchedTx(false)
           }
         }
         if (!ranPaymaster) {
@@ -340,13 +347,14 @@ export function usePayment() {
         let ranPaymaster = false
         if (await canUsePaymaster(PAYMASTER_URL)) {
           try {
+            setIsBatchedTx(true)
             const callsId = await sendBatchWithAttribution([
               { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "mintSlotFreeWithNFT", args: NFT_SLOT_ARGS(nftContract, nftTokenId, slotData) },
             ], PAYMASTER_URL!)
             await waitForPaymasterCalls(callsId)
             ranPaymaster = true
           } catch {
-            // fall through to EOA
+            setIsBatchedTx(false)
           }
         }
         if (!ranPaymaster) {
@@ -378,6 +386,7 @@ export function usePayment() {
     mintSlotWithNFTDiscount,
     mintSlotFreeWithNFT,
     isProcessing,
+    isBatchedTx,
     paymentStep,
     resetPaymentState,
     slotPrice,
