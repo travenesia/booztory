@@ -95,8 +95,11 @@ export function ConnectWalletButton() {
       isSigningInRef.current = true
       setIsLoading(true)
       try {
+        // Skip chain switch during sign-in — smart wallets (e.g. Base Account) may not
+        // support wallet_switchEthereumChain and can reject the request silently.
+        // SIWE chainId is informational; chain enforcement happens at tx time.
         if (currentChainId !== APP_CHAIN.id) {
-          await switchChainAsync({ chainId: APP_CHAIN.id })
+          try { await switchChainAsync({ chainId: APP_CHAIN.id }) } catch { /* ignore */ }
         }
 
         const res = await fetch("/api/nonce")
@@ -170,7 +173,11 @@ export function ConnectWalletButton() {
   // so by the time onConnect fires here, the flag is already correct.
   useAccountEffect({
     onConnect({ address, chainId }) {
-      if (status === "unauthenticated") {
+      const sessionAddress = session?.user?.walletAddress?.toLowerCase()
+      const connectingAddress = address.toLowerCase()
+      // Trigger sign-in when: (a) no session, or (b) a different address is connecting
+      // (e.g. user switched wallets). Skip when same address reconnects with a valid session.
+      if (status === "unauthenticated" || (status === "authenticated" && sessionAddress !== connectingAddress)) {
         if (isMiniApp()) {
           handleQuickAuth(address)
         } else {
@@ -179,7 +186,10 @@ export function ConnectWalletButton() {
       }
     },
     onDisconnect() {
-      signOut({ redirect: false })
+      // Do NOT auto-signout here — this fires on both explicit disconnect AND failed
+      // reconnects (e.g. Base Account failing to re-establish on hard refresh).
+      // Explicit sign-out is handled by WalletDropdownContent.handleDisconnect and
+      // the escape hatch button below.
     },
   })
 

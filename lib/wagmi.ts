@@ -1,9 +1,17 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit"
+import {
+  baseAccount,
+  coinbaseWallet,
+  metaMaskWallet,
+  rainbowWallet,
+  safeWallet,
+  walletConnectWallet,
+} from "@rainbow-me/rainbowkit/wallets"
 import { http, fallback } from "wagmi"
-import { getConnectorClient } from "wagmi/actions"
+import { sendCalls } from "wagmi/actions"
 import { base } from "wagmi/chains"
 import { Attribution } from "ox/erc8021"
-import { encodeFunctionData, type Abi } from "viem"
+import type { Abi } from "viem"
 
 // ==============================
 // ENV VALIDATION
@@ -39,11 +47,10 @@ export const DATA_SUFFIX_PARAM = {
 } as const
 
 // ==============================
-// BATCH SEND WITH ATTRIBUTION
+// BATCH SEND (PAYMASTER PATH)
 // ==============================
-// writeContractsAsync (wagmi experimental) doesn't support dataSuffix.
-// This helper encodes each call manually, appends the attribution suffix,
-// then sends via wallet_sendCalls directly on the active connector's transport.
+// Uses wagmi/actions sendCalls — the correct abstraction over EIP-5792 wallet_sendCalls.
+// CDP paymaster attribution is tracked at the project/API key level, not in calldata.
 export type BatchCall = {
   address: `0x${string}`
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,24 +62,19 @@ export type BatchCall = {
 }
 
 export async function sendBatchWithAttribution(calls: BatchCall[], paymasterUrl: string): Promise<string> {
-  const client = await getConnectorClient(wagmiConfig)
-
-  // Do NOT append dataSuffix to calldata here — CDP paymaster allowlist validates exact calldata
-  // format and extra bytes cause policy rejection. Attribution for the paymaster path is tracked
-  // at the CDP project/API key level, not in calldata.
-  const encoded = calls.map(({ address, abi, functionName, args, value }) => ({
-    to: address,
-    data: encodeFunctionData({ abi: abi as Abi, functionName, args: args ?? [] }),
-    ...(value != null ? { value: `0x${value.toString(16)}` as `0x${string}` } : {}),
-  }))
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const callsId = await (client as any).request({
-    method: "wallet_sendCalls",
-    params: [{ version: "2.0.0", calls: encoded, capabilities: { paymasterService: { url: paymasterUrl } } }],
+  const id = await sendCalls(wagmiConfig, {
+    calls: calls.map(({ address, abi, functionName, args, value }) => ({
+      to: address,
+      abi: abi as Abi,
+      functionName,
+      args: args ?? [],
+      ...(value != null ? { value } : {}),
+    })),
+    capabilities: {
+      paymasterService: { url: paymasterUrl },
+    },
   })
-
-  return callsId as string
+  return id
 }
 
 // ==============================
@@ -81,6 +83,15 @@ export async function sendBatchWithAttribution(calls: BatchCall[], paymasterUrl:
 export const wagmiConfig = getDefaultConfig({
   appName: "Booztory",
   projectId,
+
+  // Explicit wallet list — default only includes baseAccount (smart wallet).
+  // Adding coinbaseWallet shows the EOA browser extension option alongside it.
+  wallets: [
+    {
+      groupName: "Popular",
+      wallets: [safeWallet, rainbowWallet, coinbaseWallet, baseAccount, metaMaskWallet, walletConnectWallet],
+    },
+  ],
 
   // Base-only (clean + accurate attribution)
   chains: [base],

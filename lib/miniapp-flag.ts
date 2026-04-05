@@ -1,5 +1,5 @@
 import { sdk } from "@farcaster/miniapp-sdk"
-import { getConnectorClient } from "wagmi/actions"
+import { getConnectorClient, getPublicClient, waitForCallsStatus } from "wagmi/actions"
 import { wagmiConfig } from "@/lib/wagmi"
 
 // Module-level flag set by MiniAppInit when the app runs inside Farcaster.
@@ -14,54 +14,33 @@ export const setMiniApp = (value: boolean) => {
 export const isMiniApp = () => _isMiniApp
 
 /**
- * Returns true if the connected wallet is a Smart Account (ERC-4337) that supports
- * EIP-5792 batch calls + paymaster. EOAs throw on wallet_getCapabilities, so this
- * correctly excludes them even inside Base App or Warpcast.
+ * Returns true if the connected wallet is a Smart Account (ERC-4337).
+ * Detection: eth_getCode(address) — if the result is not "0x" or undefined,
+ * the account has contract code deployed = smart account.
+ * EOAs always return "0x" (no code). Works for any smart account type
+ * (Coinbase Smart Wallet, Safe, etc.) without relying on wallet_getCapabilities.
  */
 export async function canUsePaymaster(paymasterUrl: string | undefined): Promise<boolean> {
   if (!paymasterUrl) return false
   try {
-    const client = await getConnectorClient(wagmiConfig)
-    const caps = await client.transport.request({ method: "wallet_getCapabilities", params: [] })
-    return !!caps
+    const connectorClient = await getConnectorClient(wagmiConfig)
+    const address = connectorClient.account?.address
+    if (!address) return false
+    const publicClient = getPublicClient(wagmiConfig)
+    if (!publicClient) return false
+    const code = await publicClient.getCode({ address })
+    return !!code && code !== "0x"
   } catch {
     return false
   }
 }
 
 /**
- * Polls wallet_getCallsStatus until the batch is confirmed.
- * Uses the active connector's provider (same one used by writeContractsAsync) so it
- * works correctly when Coinbase Wallet is discovered via EIP-6963 rather than window.ethereum.
- * Handles both EIP-5792 string status ("CONFIRMED") and older numeric codes (200),
- * with a receipts-array fallback for wallets that populate receipts before updating status.
+ * Waits for a batch (EIP-5792) to be confirmed using wagmi/actions waitForCallsStatus.
+ * This uses the active connector's transport, handles all status formats, and throws on timeout.
  */
 export async function waitForPaymasterCalls(callsId: string): Promise<void> {
-  // Resolve the provider once — use the active connector's transport, fall back to window.ethereum
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let request: (args: { method: string; params: unknown[] }) => Promise<any>
-  try {
-    const client = await getConnectorClient(wagmiConfig)
-    request = (args) => client.transport.request(args)
-  } catch {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    request = (args) => (window as any).ethereum?.request(args)
-  }
-
-  for (let i = 0; i < 60; i++) {
-    try {
-      const res = await request({ method: "wallet_getCallsStatus", params: [callsId] })
-      const s = res?.status
-      if (
-        s === "CONFIRMED" ||      // EIP-5792 current spec
-        s === 200 ||              // older Coinbase numeric code
-        s === "200" ||
-        (Array.isArray(res?.receipts) && res.receipts.length > 0)  // receipts-first wallets
-      ) return
-    } catch {}
-    await new Promise<void>((r) => setTimeout(r, 1000))
-  }
-  throw new Error("Transaction timed out")
+  await waitForCallsStatus(wagmiConfig, { id: callsId })
 }
 
 // Call sdk.actions.ready() whenever running inside any mini app context

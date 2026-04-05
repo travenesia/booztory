@@ -1,6 +1,22 @@
 import { SiweMessage } from "siwe"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { createPublicClient, http } from "viem"
+import { base } from "viem/chains"
+
+// Public client used for SIWE signature verification.
+// verifySiweMessage handles all account types:
+//   - EOA: standard ECDSA recovery
+//   - Deployed smart wallet: EIP-1271 isValidSignature() call
+//   - Counterfactual smart wallet: ERC-6492 universal verifier (Base Account before first tx)
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+      ? `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+      : "https://mainnet.base.org"
+  ),
+})
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -24,24 +40,21 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const siweMessage = new SiweMessage(JSON.parse(credentials.message))
-          const result = await siweMessage.verify({
-            signature: credentials.signature,
+
+          // verifySiweMessage validates all SIWE fields (domain, nonce, expiry) AND the
+          // signature — using ERC-6492 universal verifier so it works for:
+          //   EOA, deployed smart wallets (EIP-1271), and counterfactual smart wallets.
+          const isValid = await publicClient.verifySiweMessage({
+            message: siweMessage.prepareMessage(),
+            signature: credentials.signature as `0x${string}`,
             nonce: credentials.nonce,
           })
 
-          if (!result.success || !result.data.address) {
-            return null
-          }
+          if (!isValid) return null
 
-          const address = result.data.address.toLowerCase()
+          const address = siweMessage.address.toLowerCase()
           const displayName = `${address.slice(0, 6)}...${address.slice(-4)}`
-
-          // Wallet address is the user identity — no DB required
-          return {
-            id: address,
-            walletAddress: address,
-            username: displayName,
-          }
+          return { id: address, walletAddress: address, username: displayName }
         } catch (error) {
           console.error("SIWE verification error:", error)
           return null
