@@ -3,13 +3,17 @@
 import { useState } from "react"
 import { useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig, APP_CHAIN } from "@/lib/wagmi"
+import { wagmiConfig, APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
 import { cn } from "@/lib/utils"
 import { Copy, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useWalletName } from "@/hooks/useWalletName"
 import { usePriceTiers } from "@/hooks/usePriceTiers"
 import { RAFFLE_ADDRESS, RAFFLE_ABI } from "@/lib/contract"
+import { WORLD_RAFFLE_ADDRESS, WORLD_RAFFLE_ABI } from "@/lib/contractWorld"
+import { MiniKit } from "@worldcoin/minikit-js"
+import { isWorldApp } from "@/lib/miniapp-flag"
+import { encodeFunctionData } from "viem"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -61,6 +65,10 @@ function renderFormattedText(text: string): React.ReactNode {
 function ApplicationRow({ appId, onAction }: { appId: number; onAction: () => void }) {
   const [isActing, setIsActing] = useState(false)
   const [copied,   setCopied]   = useState(false)
+  const inWorldApp = isWorldApp()
+  const rAddr   = inWorldApp ? WORLD_RAFFLE_ADDRESS : RAFFLE_ADDRESS
+  const rAbi    = inWorldApp ? WORLD_RAFFLE_ABI     : RAFFLE_ABI
+  const chainId = inWorldApp ? WORLD_CHAIN.id       : APP_CHAIN.id
 
   function copyAddress() {
     if (!sponsor) return
@@ -72,9 +80,9 @@ function ApplicationRow({ appId, onAction }: { appId: number; onAction: () => vo
   const { writeContractAsync } = useWriteContract()
 
   const { data: appRaw, refetch } = useReadContract({
-    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+    address: rAddr, abi: rAbi,
     functionName: "applications", args: [BigInt(appId)],
-    chainId: APP_CHAIN.id,
+    chainId,
     query: { refetchInterval: 30_000, refetchOnWindowFocus: true },
   })
 
@@ -103,8 +111,16 @@ function ApplicationRow({ appId, onAction }: { appId: number; onAction: () => vo
   async function act(fn: "acceptApplication" | "rejectApplication") {
     setIsActing(true)
     try {
-      const tx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: fn, args: [BigInt(appId)], chainId: APP_CHAIN.id })
-      await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      if (inWorldApp) {
+        const result = await MiniKit.sendTransaction({
+          transactions: [{ to: rAddr, data: encodeFunctionData({ abi: rAbi, functionName: fn, args: [BigInt(appId)] }) }],
+          chainId,
+        })
+        if (!result?.data?.userOpHash) throw new Error("No userOpHash")
+      } else {
+        const tx = await writeContractAsync({ address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: fn, args: [BigInt(appId)], chainId: APP_CHAIN.id })
+        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+      }
       refetch(); onAction()
       toast({ title: fn === "acceptApplication" ? "Accepted" : "Rejected", description: `Application #${appId} updated.`, variant: fn === "acceptApplication" ? "success" : "default" })
     } catch (e) {
@@ -387,10 +403,14 @@ const PER_PAGE = 3
 
 export default function AdminSponsorsPage() {
   const [page, setPage] = useState(0)
+  const inWorldApp = isWorldApp()
+  const rAddr   = inWorldApp ? WORLD_RAFFLE_ADDRESS : RAFFLE_ADDRESS
+  const rAbi    = inWorldApp ? WORLD_RAFFLE_ABI     : RAFFLE_ABI
+  const chainId = inWorldApp ? WORLD_CHAIN.id       : APP_CHAIN.id
 
   const { data: nextAppIdRaw, refetch: refetchAppCount } = useReadContract({
-    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "nextApplicationId",
-    chainId: APP_CHAIN.id, query: { refetchInterval: 30_000 },
+    address: rAddr, abi: rAbi, functionName: "nextApplicationId",
+    chainId, query: { refetchInterval: 30_000 },
   })
 
   const appCount = Number(nextAppIdRaw ?? 0n)
@@ -398,9 +418,9 @@ export default function AdminSponsorsPage() {
   // Lightweight status read for sorting pending to top
   const { data: statusesRaw } = useReadContracts({
     contracts: Array.from({ length: appCount }, (_, i) => ({
-      address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+      address: rAddr, abi: rAbi,
       functionName: "applications" as const, args: [BigInt(i)] as const,
-      chainId: APP_CHAIN.id,
+      chainId,
     })),
     query: { enabled: appCount > 0, refetchInterval: 60_000 },
   })

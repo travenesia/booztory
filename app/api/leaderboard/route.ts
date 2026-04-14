@@ -2,9 +2,8 @@ import { NextResponse } from "next/server"
 import { dataLimiter, getIp } from "@/lib/ratelimit"
 
 // ── Config ────────────────────────────────────────────────────────────────────
-// Set SUBGRAPH_URL in .env.local after deploying to Subgraph Studio:
-// SUBGRAPH_URL=https://api.studio.thegraph.com/query/<id>/booztory/version/latest
-const SUBGRAPH_URL = process.env.SUBGRAPH_URL
+const SUBGRAPH_URL       = process.env.SUBGRAPH_URL
+const WORLD_SUBGRAPH_URL = process.env.WORLD_SUBGRAPH_URL
 
 const CACHE_SECONDS = 1800 // 30 minutes
 const SEVEN_DAYS_SECONDS  = 7  * 24 * 60 * 60
@@ -133,8 +132,8 @@ function aggregateNetPoints(
 }
 
 // ── Subgraph fetch ─────────────────────────────────────────────────────────────
-async function querySubgraph(query: string): Promise<Record<string, unknown>> {
-  const res = await fetch(SUBGRAPH_URL!, {
+async function querySubgraph(query: string, url: string): Promise<Record<string, unknown>> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
@@ -150,9 +149,13 @@ export async function GET(request: Request) {
   const { success } = await dataLimiter.limit(getIp(request))
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  if (!SUBGRAPH_URL) {
+  const url = new URL(request.url)
+  const isWorld = url.searchParams.get("chain") === "world"
+  const subgraphUrl = isWorld ? WORLD_SUBGRAPH_URL : SUBGRAPH_URL
+
+  if (!subgraphUrl) {
     return NextResponse.json(
-      { error: "SUBGRAPH_URL not configured" },
+      { error: isWorld ? "WORLD_SUBGRAPH_URL not configured" : "SUBGRAPH_URL not configured" },
       { status: 503 }
     )
   }
@@ -163,9 +166,9 @@ export async function GET(request: Request) {
 
   try {
     const [allTime, sevenDay, thirtyDay] = await Promise.all([
-      querySubgraph(ALL_TIME_QUERY),
-      querySubgraph(thirtyDayQuery(since7d)),
-      querySubgraph(thirtyDayQuery(since30d)),
+      querySubgraph(ALL_TIME_QUERY, subgraphUrl),
+      querySubgraph(thirtyDayQuery(since7d), subgraphUrl),
+      querySubgraph(thirtyDayQuery(since30d), subgraphUrl),
     ])
 
     // ── All Time ──

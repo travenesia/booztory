@@ -197,8 +197,9 @@ contract BooztoryToken is ERC20, Ownable, IERC7802 {
     /**
      * @notice Mint tokens when bridging in from another OP Stack chain.
      *         Called by the Superchain bridge predeploy only.
-     *         Allowed during soulbound phase — bridge moves tokens between
-     *         chains without changing ownership.
+     *         Intentionally allowed during soulbound phase: crosschainBurn on the
+     *         source chain is blocked while soulbound, so a bridge can never be
+     *         initiated — this mint path is unreachable. No soulbound check needed.
      * @param to      Recipient address on this chain.
      * @param amount  Token amount (18 decimals).
      */

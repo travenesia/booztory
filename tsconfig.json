@@ -2,7 +2,8 @@
   "ts-node": {
     "compilerOptions": {
       "module": "CommonJS",
-      "moduleResolution": "node"
+      "moduleResolution": "node",
+      "ignoreDeprecations": "5.0"
     }
   },
   "compilerOptions": {
@@ -27,7 +28,7 @@
         "name": "next"
       }
     ],
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
       "@/*": [

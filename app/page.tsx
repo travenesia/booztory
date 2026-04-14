@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { callReady } from "@/lib/miniapp-flag"
+import { callReady, isWorldApp } from "@/lib/miniapp-flag"
+import { useAccount } from "wagmi"
 import { Topbar } from "@/components/layout/topbar"
 import { Navbar } from "@/components/layout/navbar"
 import { ContentCard } from "@/components/content/contentCard"
@@ -13,7 +14,8 @@ import { useSession } from "next-auth/react"
 import { useCurrentSlot } from "@/hooks/useContractContent"
 import { useReadContracts } from "wagmi"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
+import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI } from "@/lib/contractWorld"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,6 +23,7 @@ import { SponsorAdFloatingBar, useSponsorAd, useAdCountdown, LiveBadge } from "@
 
 export default function Home() {
   const { data: session, status } = useSession()
+  const { address } = useAccount()
   const { setIsOpen: setDrawerOpen } = useSubmitDrawer()
   const { toast } = useToast()
   const isMobile = useIsMobile()
@@ -36,10 +39,15 @@ export default function Home() {
 
   const { content, isPlaceholder, isLoading, refetch, contractUsdcBalance } = useCurrentSlot()
 
+  const inWorldApp = isWorldApp()
+  const pAddress = inWorldApp ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS
+  const pAbi     = inWorldApp ? WORLD_BOOZTORY_ABI     : BOOZTORY_ABI
+  const pChain   = inWorldApp ? WORLD_CHAIN.id          : APP_CHAIN.id
+
   const { data: contractInfo } = useReadContracts({
     contracts: [
-      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotPrice", chainId: APP_CHAIN.id },
-      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotDuration", chainId: APP_CHAIN.id },
+      { address: pAddress, abi: pAbi, functionName: "slotPrice", chainId: pChain },
+      { address: pAddress, abi: pAbi, functionName: "slotDuration", chainId: pChain },
     ],
   })
   const slotPriceDisplay = contractInfo?.[0].result
@@ -150,6 +158,7 @@ export default function Home() {
           ) : (
             !isDesktop && cardNode
           )}
+
         </div>
       </div>
 
@@ -192,18 +201,27 @@ export default function Home() {
             <br />
             Every <span className="font-bold text-gray-900">{slotDurationDisplay}</span>
             {isDurationPromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
-            , one creator owns the spotlight on Base.
+            , one creator owns the spotlight on Base &amp; World.
             <br />
             <span className="font-bold text-gray-900">{slotPriceDisplay} USDC</span>
             {isPricePromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
             . Your moment. On-chain, forever.
           </p>
-          <Button
-            onClick={handleFabClick}
-            className="w-fit px-6 py-3 text-white font-semibold elegance-button shadow-custom-sm hover:shadow-custom-sm"
-          >
-            Submit Content
-          </Button>
+          {(
+            <Button
+              onClick={handleFabClick}
+              className="w-fit px-6 py-3 text-white font-semibold elegance-button shadow-custom-sm hover:shadow-custom-sm"
+            >
+              Submit Content
+            </Button>
+          )}
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-400">Available on</span>
+            <div className="flex items-center gap-2">
+              <img src="/baselogo.svg" alt="Base" className="h-3.5 opacity-60" />
+              <img src="/worldlogo.svg" alt="World" className="h-3.5 opacity-60" />
+            </div>
+          </div>
         </div>
 
         {/* Right: content card */}

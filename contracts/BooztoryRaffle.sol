@@ -478,6 +478,7 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus, Pausable {
 
     /**
      * @notice Cancel an active raffle (e.g. threshold not met after duration ends).
+     *         Refunds tickets to all entrants automatically.
      *         Any deposited ERC-20 prizes can be recovered via withdraw().
      */
     function cancelRaffle(uint256 raffleId) external onlyOwner {
@@ -485,6 +486,14 @@ contract BooztoryRaffle is VRFConsumerBaseV2Plus, Pausable {
         Raffle storage r = _raffles[raffleId];
         if (r.status != RaffleStatus.Active) revert RaffleNotActive();
         r.status = RaffleStatus.Cancelled;
+
+        // Refund tickets to all entrants
+        address[] storage entrants = _raffleEntrants[raffleId];
+        for (uint256 i = 0; i < entrants.length; i++) {
+            address user = entrants[i];
+            tickets[user] += raffleTickets[raffleId][user];
+        }
+
         emit RaffleCancelled(raffleId);
     }
 

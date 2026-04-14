@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAccount } from "wagmi"
+import { isWorldApp } from "@/lib/miniapp-flag"
 import { useIdentity } from "@/hooks/useIdentity"
 import { cn } from "@/lib/utils"
 import { PageTopbar } from "@/components/layout/pageTopbar"
@@ -11,6 +12,8 @@ import { Navbar } from "@/components/layout/navbar"
 import { HiCube, HiFire, HiBolt, HiStar, HiHeart, HiTrophy } from "react-icons/hi2"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SparklesText } from "@/components/ui/sparkles-text"
+import { WorldVerifiedBadge } from "@/components/world/WorldVerifiedBadge"
+import { ScrollReveal } from "@/components/layout/scrollReveal"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Period = "7d" | "30d" | "all"
@@ -83,9 +86,13 @@ const PODIUM_CONFIG: Record<1 | 2 | 3, { avatarSize: number; cardPb: string; bad
   3: { avatarSize: 104, cardPb: "pb-8",  badgeBg: "#06b6d4", sparkleColors: { first: "#cd7f32", second: "#d97706" } },
 }
 
+const isRawAddress = (s: string) => /^0x[0-9a-fA-F]{3,6}\.\.\./.test(s)
+const safeDisplay = (displayName: string) =>
+  isWorldApp() && isRawAddress(displayName) ? "World User" : displayName
+
 function PodiumCard({ entry, rank, category }: { entry: LeaderEntry; rank: number; category: CategoryId }) {
   const identity = useIdentity(entry.address)
-  const display = identity.displayName
+  const display = safeDisplay(identity.displayName)
   const isFirst = rank === 1
   const cfg = PODIUM_CONFIG[rank as 1 | 2 | 3]
   const router = useRouter()
@@ -129,7 +136,8 @@ function PodiumCard({ entry, rank, category }: { entry: LeaderEntry; rank: numbe
           background: "linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.55) 100%)",
         }}
       >
-        <span className={cn("font-semibold text-white text-center w-full truncate px-2", isFirst ? "text-sm" : "text-xs")}>
+        <span className={cn("font-semibold text-white text-center w-full truncate px-2 flex items-center justify-center gap-1", isFirst ? "text-sm" : "text-xs")}>
+          {isWorldApp() && <WorldVerifiedBadge verified={identity.isWorldVerified} />}
           {display}
         </span>
         <div className="relative">
@@ -268,7 +276,7 @@ function LeaderRow({
   isYou: boolean
 }) {
   const identity = useIdentity(entry.address)
-  const display = identity.displayName
+  const display = safeDisplay(identity.displayName)
   const router = useRouter()
 
   return (
@@ -281,13 +289,14 @@ function LeaderRow({
       <Identicon address={entry.address} pfpUrl={identity.avatarUrl} />
       <div className="flex-1 min-w-0">
         <span className={cn(
-          "text-sm font-bold truncate block",
+          "text-sm font-bold truncate flex items-center gap-1",
           isYou ? "text-indigo-700" :
           rank === 1 ? "text-amber-700" :
           rank === 2 ? "text-sky-700" :
           rank === 3 ? "text-pink-700" :
           "text-gray-900"
         )}>
+          {isWorldApp() && <WorldVerifiedBadge verified={identity.isWorldVerified} />}
           {display}
           {isYou && <span className="text-xs font-normal text-indigo-400 ml-1">(you)</span>}
         </span>
@@ -316,7 +325,7 @@ function LeaderRow({
 // ── YourRow — sticky bottom row when you're outside top 10 ────────────────────
 function YourRow({ address, category }: { address: string; category: CategoryId }) {
   const identity = useIdentity(address)
-  const display = identity.displayName
+  const display = safeDisplay(identity.displayName)
   const router = useRouter()
 
   return (
@@ -324,7 +333,8 @@ function YourRow({ address, category }: { address: string; category: CategoryId 
       <RankDisplay rank={null} isYou />
       <Identicon address={address} pfpUrl={identity.avatarUrl} />
       <div className="flex-1 min-w-0">
-        <span className="text-sm font-semibold truncate block text-indigo-700">
+        <span className="text-sm font-semibold truncate flex items-center gap-1 text-indigo-700">
+          {isWorldApp() && <WorldVerifiedBadge verified={identity.isWorldVerified} />}
           {display}
           <span className="text-xs font-normal text-indigo-400 ml-1">(you)</span>
         </span>
@@ -515,16 +525,20 @@ export default function LeaderboardPage() {
   // Live data — falls back to MOCK_DATA while loading or if subgraph not configured
   const [data, setData] = useState<LeaderboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  // Track World App detection as state so the fetch re-runs if detection changes
+  // (child useEffects fire before MiniKitClientProvider's parent effect on first mount)
+  const [inWorldApp, setInWorldApp] = useState(() => isWorldApp())
+  useEffect(() => { setInWorldApp(isWorldApp()) }, [])
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetch("/api/leaderboard")
+    fetch(inWorldApp ? "/api/leaderboard?chain=world" : "/api/leaderboard")
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then((json: LeaderboardData) => { if (!cancelled) { setData(json); setLoading(false) } })
       .catch(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [])
+  }, [inWorldApp])
 
   const liveOrMock = data ?? { allTime: MOCK_DATA.all, "7d": MOCK_DATA["7d"], "30d": MOCK_DATA["30d"] }
   const entries = period === "all" ? liveOrMock.allTime[category] : liveOrMock[period][category]
@@ -569,7 +583,9 @@ export default function LeaderboardPage() {
 
         {/* Static: podium + tabs */}
         <div>
+          <ScrollReveal>
           <PodiumTop3 entries={entries.slice(0, 3)} category={category} />
+          </ScrollReveal>
 
           {/* Category tabs — below podium */}
           <div className="px-4 overflow-hidden">
@@ -649,13 +665,14 @@ export default function LeaderboardPage() {
           {entries.length > 3 && (
             <div className="px-4 pb-[80px] md:pb-[56px] mt-4 space-y-1.5">
               {entries.slice(3).map((entry, i) => (
-                <LeaderRow
-                  key={entry.address}
-                  entry={entry}
-                  rank={i + 4}
-                  category={category}
-                  isYou={entry.address.toLowerCase() === (connectedAddress?.toLowerCase() ?? "")}
-                />
+                <ScrollReveal key={entry.address} delay={Math.min(i * 0.04, 0.2)}>
+                  <LeaderRow
+                    entry={entry}
+                    rank={i + 4}
+                    category={category}
+                    isYou={entry.address.toLowerCase() === (connectedAddress?.toLowerCase() ?? "")}
+                  />
+                </ScrollReveal>
               ))}
             </div>
           )}

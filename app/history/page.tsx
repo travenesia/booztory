@@ -8,7 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAllPastSlots } from "@/hooks/useContractContent"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { ScrollToTopButton } from "@/components/layout/scrollToTopButton"
+import { ScrollReveal } from "@/components/layout/scrollReveal"
 import { useAccount } from "wagmi"
+import { useSession } from "next-auth/react"
+import { MiniKit } from "@worldcoin/minikit-js"
+import { isWorldApp } from "@/lib/miniapp-flag"
 import { HiAdjustmentsHorizontal } from "react-icons/hi2"
 import {
   DEFAULT_HISTORY_FILTERS,
@@ -26,7 +30,12 @@ function HistoryPage() {
   useEffect(() => { setMounted(true) }, [])
 
   const { items: allItems, isLoading, isFetchingMore, fetchMore, hasMore } = useAllPastSlots()
-  const { address } = useAccount()
+  const { address: wagmiAddress } = useAccount()
+  const { data: session } = useSession()
+  const inWorldApp = isWorldApp()
+  const address = wagmiAddress
+    ?? (session?.user?.walletAddress as `0x${string}` | undefined)
+    ?? (inWorldApp ? (MiniKit.user?.walletAddress as `0x${string}` | undefined) : undefined)
 
   const [appliedFilters, setAppliedFilters] = useState<SlotFilterState>(DEFAULT_HISTORY_FILTERS)
   const [draftFilters, setDraftFilters] = useState<SlotFilterState>(DEFAULT_HISTORY_FILTERS)
@@ -160,16 +169,12 @@ function HistoryPage() {
         ) : (
           <div className="space-y-4">
             {displayedContent.map((content, index) => (
-              <div
-                key={content.id + "-" + index}
-                className="animate-fadeIn"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
+              <ScrollReveal key={content.id + "-" + index} delay={Math.min(index * 0.05, 0.25)}>
                 <HistoryCard
                   content={content}
                   isOwn={!!address && content.submittedBy.toLowerCase() === address.toLowerCase()}
                 />
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         )}

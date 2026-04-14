@@ -32,9 +32,16 @@ export async function GET(request: Request) {
   const { success } = await dataLimiter.limit(getIp(request))
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  const subgraphUrl = process.env.SUBGRAPH_URL
+  const url = new URL(request.url)
+  const isWorld = url.searchParams.get("chain") === "world"
+  const subgraphUrl = isWorld
+    ? process.env.WORLD_SUBGRAPH_URL
+    : process.env.SUBGRAPH_URL
   if (!subgraphUrl) {
-    return NextResponse.json({ error: "SUBGRAPH_URL not configured" }, { status: 503 })
+    return NextResponse.json(
+      { error: isWorld ? "WORLD_SUBGRAPH_URL not configured" : "SUBGRAPH_URL not configured" },
+      { status: 503 }
+    )
   }
 
   try {

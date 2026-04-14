@@ -23,7 +23,7 @@ const nextConfig = {
   allowedDevOrigins: [
     'e736-180-252-163-69.ngrok-free.app',
     '*.ngrok.io',
-    '*.ngrok-free.app', 
+    '*.ngrok-free.app',
     '*.ngrok.app',
     '*.localhost.run',
     '*.loca.lt',

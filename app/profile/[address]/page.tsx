@@ -4,7 +4,10 @@ import React, { useState, useEffect, useCallback } from "react"
 import { useParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { useAccount, useReadContract } from "wagmi"
+import { useSession } from "next-auth/react"
 import { Copy, Check, ExternalLink, Ticket } from "lucide-react"
+import { WorldVerifiedBadge } from "@/components/world/WorldVerifiedBadge"
+import { ScrollReveal } from "@/components/layout/scrollReveal"
 import { HiBolt, HiCube, HiFire, HiTrophy } from "react-icons/hi2"
 import { RiExchangeFundsLine } from "react-icons/ri"
 import { FaDonate } from "react-icons/fa"
@@ -13,9 +16,10 @@ import { Navbar } from "@/components/layout/navbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { useIdentity } from "@/hooks/useIdentity"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
+import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI, WORLD_TOKEN_ADDRESS, WORLD_USDC_ADDRESS, WORLD_WLD_ADDRESS } from "@/lib/contractWorld"
 import { sdk } from "@farcaster/miniapp-sdk"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { isMiniApp, isWorldApp } from "@/lib/miniapp-flag"
 import { cn } from "@/lib/utils"
 import { ERC20_ABI, USDC_ADDRESS, TOKEN_ADDRESS, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import type { ProfileData, TxItem, TxType } from "@/app/api/profile/[address]/route"
@@ -45,6 +49,18 @@ function formatBooz(raw: string | undefined): string {
 function formatBoozBigint(raw: bigint | undefined): string {
   if (raw === undefined) return "—"
   return (Number(raw) / 1e18).toLocaleString("en-US", { maximumFractionDigits: 0 })
+}
+
+function formatWldBigint(raw: bigint | undefined): string {
+  if (raw === undefined) return "—"
+  const val = Number(raw) / 1e18
+  return val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatWldStr(raw: string | undefined): string {
+  if (!raw) return "0.00"
+  const val = Number(BigInt(raw)) / 1e18
+  return val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function formatUsdcBigint(raw: bigint | undefined): string {
@@ -119,6 +135,8 @@ function txDescription(tx: TxItem): React.ReactNode {
       const tickets = tx.ticketAmount ?? "?"
       const statusLabel = tx.wonAmount
         ? <span className="ml-1.5 text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 rounded-full px-1.5 py-0.5">Won</span>
+        : tx.raffleCancelled
+        ? <span className="ml-1 text-xs font-semibold text-zinc-400">Cancelled</span>
         : tx.raffleDrawn
         ? <span className="ml-1 text-xs font-semibold text-red-500">Lost</span>
         : null
@@ -148,6 +166,12 @@ function txAmounts(tx: TxItem): AmountLine[] {
         lines.push({ text: "+1 Raffle Ticket", positive: true })
       } else if (tx.mintType === "free") {
         lines.push({ text: "-10,000 $BOOZ", positive: false })
+      } else if (tx.mintType === "wld-discount") {
+        lines.push({ text: `-${formatWldStr(tx.wldAmount)} $WLD`, positive: false })
+        // net BOOZ = 0 (burn 1000, earn 1000) — omit
+      } else if (tx.mintType === "wld") {
+        lines.push({ text: `-${formatWldStr(tx.wldAmount)} $WLD`, positive: false })
+        lines.push({ text: "+1,000 $BOOZ", positive: true })
       } else if (tx.mintType === "discount") {
         lines.push({ text: "-0.9 USDC", positive: false })
         // net BOOZ = 0 (burn 1000, earn 1000) — omit
@@ -164,13 +188,19 @@ function txAmounts(tx: TxItem): AmountLine[] {
     case "points":
       if (pts) lines.push({ text: `+${formatPoints(pts)} pts`, positive: true })
       break
-    case "donated":
-      if (tx.usdcAmount) lines.push({ text: `-${formatUsdc(tx.usdcAmount)}`, positive: false })
+    case "donated": {
+      const wldAddr = WORLD_WLD_ADDRESS.toLowerCase()
+      const isWldDon = tx.paymentToken === wldAddr
+      if (tx.usdcAmount) lines.push({ text: `-${formatUsdc(tx.usdcAmount)}${isWldDon ? " (WLD)" : ""}`, positive: false })
       if (pts) lines.push({ text: `+${formatPoints(pts)} pts`, positive: true })
       break
-    case "received":
-      if (tx.usdcAmount) lines.push({ text: `+${formatUsdc(tx.usdcAmount)}`, positive: true })
+    }
+    case "received": {
+      const wldAddr = WORLD_WLD_ADDRESS.toLowerCase()
+      const isWldRec = tx.paymentToken === wldAddr
+      if (tx.usdcAmount) lines.push({ text: `+${formatUsdc(tx.usdcAmount)}${isWldRec ? " (WLD)" : ""}`, positive: true })
       break
+    }
     case "won":
       if (tx.usdcAmount) lines.push({ text: `+${formatUsdc(tx.usdcAmount)}`, positive: true })
       break
@@ -181,6 +211,9 @@ function txAmounts(tx: TxItem): AmountLine[] {
     case "entered":
       if (tx.wonAmount) {
         lines.push({ text: `+${formatUsdc(tx.wonAmount)}`, positive: true })
+      } else if (tx.raffleCancelled) {
+        // tickets were refunded via TicketsCredited — no net change to show
+        break
       } else if (tx.raffleDrawn) {
         const t = tx.ticketAmount ?? "?"
         lines.push({ text: `-${t} ticket${Number(t) !== 1 ? "s" : ""}`, positive: false })
@@ -231,7 +264,8 @@ function DonationDesc({ tx, connectedAddress }: { tx: TxItem; connectedAddress?:
   const short = tx.counterparty
     ? `${tx.counterparty.slice(0, 6)}...${tx.counterparty.slice(-4)}`
     : "—"
-  const display = isYou ? "you" : (identity.walletName || short)
+  const resolved = identity.walletName || short
+  const display = isYou ? "you" : (isWorldApp() && resolved === short ? "World User" : resolved)
   const prefix = tx.type === "donated" ? "to" : "from"
   return (
     <span className="text-xs text-gray-500 truncate">
@@ -274,7 +308,7 @@ function TxRow({ tx, connectedAddress }: { tx: TxItem; connectedAddress?: string
         <div className="flex items-center gap-1">
           <span className="text-[11px] text-gray-400">{timeAgo(tx.timestamp)}</span>
           <a
-            href={`https://${basescanHost}/tx/${tx.txHash}`}
+            href={`https://${isWorldApp() ? "worldscan.org" : basescanHost}/tx/${tx.txHash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-300 hover:text-gray-500 transition-colors"
@@ -295,37 +329,58 @@ export default function ProfilePage() {
   const rawAddress = params.address as string
   const address = rawAddress?.toLowerCase() as `0x${string}` | undefined
 
-  const { address: connectedAddress } = useAccount()
+  const { address: wagmiConnected } = useAccount()
+  const { data: session } = useSession()
+  // Use state so the component re-renders (and fetchProfile re-runs) if World App
+  // detection changes after mount — child effects fire before MiniKitClientProvider.
+  const [inWorldApp, setInWorldApp] = useState(() => isWorldApp())
+  useEffect(() => { setInWorldApp(isWorldApp()) }, [])
+  const connectedAddress = wagmiConnected ?? (inWorldApp ? (session?.user?.walletAddress as `0x${string}` | undefined) : undefined)
   const isOwn = !!(connectedAddress && address && connectedAddress.toLowerCase() === address)
+
+  const pChain  = inWorldApp ? WORLD_CHAIN.id          : APP_CHAIN.id
+  const pUsdc   = inWorldApp ? WORLD_USDC_ADDRESS      : USDC_ADDRESS
+  const pToken  = inWorldApp ? WORLD_TOKEN_ADDRESS     : TOKEN_ADDRESS
+  const pBoozt  = inWorldApp ? WORLD_BOOZTORY_ADDRESS  : BOOZTORY_ADDRESS
+  const pBabi   = inWorldApp ? WORLD_BOOZTORY_ABI      : BOOZTORY_ABI
 
   const identity = useIdentity(address)
   const displayName = identity.displayName
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ""
 
-  const { data: usdcBalance } = useReadContract({
-    address: USDC_ADDRESS,
+  const { data: wldBalance } = useReadContract({
+    address: WORLD_WLD_ADDRESS,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: WORLD_CHAIN.id,
+    query: { enabled: !!address && inWorldApp },
+  })
+
+  const { data: usdcBalance } = useReadContract({
+    address: pUsdc,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: pChain,
     query: { enabled: !!address },
   })
 
   const { data: boozBalance } = useReadContract({
-    address: TOKEN_ADDRESS,
+    address: pToken,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
-    query: { enabled: !!address && TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" },
+    chainId: pChain,
+    query: { enabled: !!address && pToken !== "0x0000000000000000000000000000000000000000" },
   })
 
   const { data: pointsOnChain } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: pBoozt,
+    abi: pBabi,
     functionName: "points",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { enabled: !!address },
   })
 
@@ -337,10 +392,13 @@ export default function ProfilePage() {
 
   const fetchProfile = useCallback(async () => {
     if (!address) return
+    // inWorldApp is now reactive state (updated after mount via useEffect),
+    // and included in deps — but also call isWorldApp() fresh here as a belt-and-suspenders guard.
+    const inWorldAppNow = isWorldApp()
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/profile/${address}`)
+      const res = await fetch(`/api/profile/${address}${inWorldAppNow ? "?chain=world" : ""}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json() as ProfileData
       setData(json)
@@ -350,7 +408,7 @@ export default function ProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [address])
+  }, [address, inWorldApp])
 
   useEffect(() => { fetchProfile() }, [fetchProfile])
 
@@ -363,7 +421,9 @@ export default function ProfilePage() {
 
   const handleVisitProfile = () => {
     if (!address) return
-    if (isMiniApp()) {
+    if (isWorldApp()) {
+      window.open(`https://worldscan.org/address/${address}`, "_blank")
+    } else if (isMiniApp()) {
       // Farcaster/Warpcast — use sdk.actions.openUrl
       const target = identity.farcasterUsername
         ? `https://farcaster.xyz/${identity.farcasterUsername}`
@@ -415,9 +475,11 @@ export default function ProfilePage() {
                 className="w-16 h-16 rounded-full border-2 border-white/30 shadow-md object-cover flex-shrink-0"
               />
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-base md:text-lg font-black text-white truncate leading-tight">
-                  {displayName || shortAddress}
+                <span className={cn("text-base md:text-lg font-black text-white flex items-center gap-1.5 leading-tight", inWorldApp && "mb-2")}>
+                  {inWorldApp && <WorldVerifiedBadge verified={identity.isWorldVerified} />}
+                  <span className="truncate">{displayName || shortAddress}</span>
                 </span>
+                {!inWorldApp && (
                 <div className="flex items-center gap-1.5 mt-0.5 mb-2">
                   <span className="text-xs md:text-sm text-blue-200 font-mono">{shortAddress}</span>
                   <button
@@ -435,11 +497,18 @@ export default function ProfilePage() {
                     <ExternalLink className="w-3 h-3" />
                   </button>
                 </div>
+                )}
                 <div className="flex items-center gap-2">
+                  {inWorldApp && (
+                    <div className="flex items-center gap-1 bg-white/10 border border-white/15 rounded-lg px-2 py-1">
+                      <img src="/world.svg" alt="WLD" width={13} height={13} className="opacity-90" />
+                      <span className="text-[11px] md:text-sm font-bold text-white leading-none">{formatWldBigint(wldBalance as bigint | undefined)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1 bg-white/10 border border-white/15 rounded-lg px-2 py-1">
                     <img src="/usdc.svg" alt="USDC" width={13} height={13} className="opacity-90" />
                     <span className="text-[11px] md:text-sm font-bold text-white leading-none">{formatUsdcBigint(usdcBalance as bigint | undefined)}</span>
-                    <span className="text-[9px] md:text-xs font-semibold text-blue-200 leading-none">$USDC</span>
+                    {!inWorldApp && <span className="text-[9px] md:text-xs font-semibold text-blue-200 leading-none">$USDC</span>}
                   </div>
                   <div className="flex items-center gap-1 bg-white/10 border border-white/15 rounded-lg px-2 py-1">
                     <img src="/booz.svg" alt="BOOZ" width={13} height={13} className="opacity-90" />
@@ -523,11 +592,17 @@ export default function ProfilePage() {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-center px-4">
               <span className="text-3xl mb-2">📭</span>
-              <p className="text-gray-500 text-sm">{EMPTY_MSG[tab]}</p>
+              <p className="text-gray-500 text-sm">
+                {EMPTY_MSG[tab]}
+              </p>
             </div>
           ) : (
             <div>
-              {paginated.map(tx => <TxRow key={`${tx.type}-${tx.id}`} tx={tx} connectedAddress={connectedAddress} />)}
+              {paginated.map((tx, i) => (
+                <ScrollReveal key={`${tx.type}-${tx.id}`} delay={Math.min(i * 0.04, 0.2)}>
+                  <TxRow tx={tx} connectedAddress={connectedAddress} />
+                </ScrollReveal>
+              ))}
             </div>
           )}
         </div>

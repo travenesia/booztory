@@ -5,10 +5,12 @@ import { ContentEmbed } from "./contentEmbed"
 import { ContentStats } from "./contentStats"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { DonationModal } from "@/components/modals/donationModal"
-import { useWalletName } from "@/hooks/useWalletName"
+import { useIdentity } from "@/hooks/useIdentity"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
 import { useReadContracts } from "wagmi"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
+import { isWorldApp } from "@/lib/miniapp-flag"
+import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI } from "@/lib/contractWorld"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { UsersOnline } from "@/components/layout/usersOnline"
 
@@ -50,10 +52,15 @@ export function ContentCard({
   const [containerWidth, setContainerWidth] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
+  const inWorldApp = isWorldApp()
+  const pAddress = inWorldApp ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS
+  const pAbi     = inWorldApp ? WORLD_BOOZTORY_ABI     : BOOZTORY_ABI
+  const pChain   = inWorldApp ? WORLD_CHAIN.id          : APP_CHAIN.id
+
   const { data: contractInfo } = useReadContracts({
     contracts: [
-      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotPrice", chainId: APP_CHAIN.id },
-      { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "slotDuration", chainId: APP_CHAIN.id },
+      { address: pAddress, abi: pAbi, functionName: "slotPrice", chainId: pChain },
+      { address: pAddress, abi: pAbi, functionName: "slotDuration", chainId: pChain },
     ],
     query: { enabled: isPlaceholder },
   })
@@ -67,7 +74,7 @@ export function ContentCard({
   const isDurationPromo = slotDurationSecs !== 900
   const isPricePromo = Number(contractInfo?.[0].result ?? 1_000_000n) !== 1_000_000
 
-  const resolvedWalletName = useWalletName(submittedBy)
+  const { displayName: resolvedWalletName } = useIdentity(submittedBy)
 
   useEffect(() => {
     const el = containerRef.current
@@ -204,7 +211,6 @@ export function ContentCard({
   }
 
   const creatorAddress = (isPlaceholder ? BOOZTORY_ADDRESS : (submittedBy || BOOZTORY_ADDRESS)) as `0x${string}`
-  const donationTokenId = tokenId ?? 0n
 
   return (
     <div ref={containerRef} className="flex flex-col items-center w-full">
@@ -237,15 +243,21 @@ export function ContentCard({
                 {isPlaceholder ? (
                   <>
                     <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
-                    <div className="text-center p-4 space-y-2">
-                      <h1 className="text-xl font-black text-gray-900">Welcome to Booztory</h1>
-                      <p className="text-sm text-gray-600 italic">The on-chain content spotlight on Base</p>
-                      <p className="text-sm text-gray-700">
+                    <div className="text-center p-3 md:p-4 space-y-1.5 md:space-y-2 w-full max-w-full overflow-hidden">
+                      <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight">Welcome to Booztory</h1>
+                      <p className="text-xs md:text-sm text-gray-600 flex items-center justify-center flex-wrap gap-x-1">
+                        The on-chain content spotlight on{" "}
+                        <span className="inline-flex items-center gap-1 font-bold"><img src="/base.svg" alt="" className="h-[1em] w-auto" />Base</span>
+                        {" "}
+                        <span className="inline-flex items-center gap-1 font-bold"><img src="/world.svg" alt="" className="h-[1em] w-auto" />World</span>
+                      </p>
+                      <p className="text-[10px] md:text-sm text-gray-700 whitespace-nowrap md:whitespace-normal">
                         Pay <span className="font-bold">{slotPriceDisplay} USDC</span>
                         {isPricePromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}{" "}
-                        to feature your content
+                        to feature your content for <span className="font-bold">{slotDurationDisplay}</span>
+                        {isDurationPromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
                       </p>
-                      <div className="flex items-center justify-center gap-3 py-1">
+                      <div className="flex items-center justify-center flex-wrap gap-2 md:gap-3 py-2 md:py-3">
                         {[
                           { src: "/social/youtube.svg",       alt: "YouTube"        },
                           { src: "/social/youtubeshorts.svg", alt: "YouTube Shorts" },
@@ -255,14 +267,10 @@ export function ContentCard({
                           { src: "/social/vimeo.svg",         alt: "Vimeo"          },
                           { src: "/social/twitch.svg",        alt: "Twitch"         },
                         ].map(({ src, alt }) => (
-                          <img key={alt} src={src} alt={alt} title={alt} className="w-5 h-5 object-contain" />
+                          <img key={alt} src={src} alt={alt} title={alt} className="w-4 h-4 md:w-5 md:h-5 object-contain" />
                         ))}
                       </div>
-                      <p className="text-sm text-gray-700">
-                        for <span className="font-bold">{slotDurationDisplay}</span>
-                        {isDurationPromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
-                      </p>
-                      <p className="text-xs text-gray-500 italic">
+                      <p className="text-[11px] md:text-xs text-gray-500 italic">
                         No queue? Your content goes live <span className="font-semibold not-italic">instantly</span>.
                       </p>
                     </div>
@@ -292,7 +300,7 @@ export function ContentCard({
         onOpenChange={setIsDonationModalOpen}
         username={displayUsername}
         creatorAddress={creatorAddress}
-        tokenId={donationTokenId}
+        tokenId={tokenId}
       />
     </div>
   )

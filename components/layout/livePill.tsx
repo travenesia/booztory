@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useReadContract } from "wagmi"
 import { RAFFLE_ADDRESS, RAFFLE_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
+import { isWorldApp } from "@/lib/miniapp-flag"
 import {
   useSponsorAd,
   AdContent,
@@ -91,7 +92,7 @@ export function LivePill() {
     abi: RAFFLE_ABI,
     functionName: "getActiveRaffles",
     chainId: APP_CHAIN.id,
-    query: { refetchInterval: 30_000 },
+    query: { enabled: !isWorldApp(), refetchInterval: 30_000 },
   })
   const hasLiveRaffle = ((activeRaffleIdsRaw as bigint[] | undefined) ?? []).length > 0
   const hasLiveAd = !!ad

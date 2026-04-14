@@ -7,6 +7,7 @@ import { useReadContract, useReadContracts } from "wagmi"
 import { usePathname } from "next/navigation"
 import { RAFFLE_ADDRESS, RAFFLE_ABI } from "@/lib/contract"
 import { APP_CHAIN } from "@/lib/wagmi"
+import { isWorldApp } from "@/lib/miniapp-flag"
 import { ContentEmbed } from "@/components/content/contentEmbed"
 import { cn } from "@/lib/utils"
 
@@ -83,6 +84,8 @@ const LINK_LABELS: Record<string, string> = {
 // ── Hook — finds the most recent accepted sponsor application ─────────────────
 
 export function useSponsorAd(): ActiveAd | null {
+  const inWorldApp = isWorldApp()
+
   // Tick every minute so the expiry check re-evaluates without a hard refresh
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000))
   useEffect(() => {
@@ -95,7 +98,8 @@ export function useSponsorAd(): ActiveAd | null {
     abi: RAFFLE_ABI,
     functionName: "nextApplicationId",
     chainId: APP_CHAIN.id,
-    query: { refetchInterval: 30_000, refetchOnWindowFocus: true },
+    // World App uses World Chain — no sponsor applications there yet
+    query: { enabled: !inWorldApp, refetchInterval: 30_000, refetchOnWindowFocus: true },
   })
 
   const count = Number(countRaw ?? 0n)
@@ -108,11 +112,11 @@ export function useSponsorAd(): ActiveAd | null {
       args: [BigInt(i)] as const,
       chainId: APP_CHAIN.id,
     })),
-    query: { enabled: count > 0, refetchInterval: 30_000, refetchOnWindowFocus: true },
+    query: { enabled: !inWorldApp && count > 0, refetchInterval: 30_000, refetchOnWindowFocus: true },
   })
 
   return useMemo((): ActiveAd | null => {
-    if (!appsRaw) return null
+    if (inWorldApp || !appsRaw) return null
 
     // Walk backwards — most recent accepted application wins
     for (let i = appsRaw.length - 1; i >= 0; i--) {

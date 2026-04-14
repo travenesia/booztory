@@ -9,9 +9,12 @@ import { Toaster } from "@/components/ui/toaster"
 import { SessionProvider } from "@/providers/session-provider"
 import { WagmiClientWrapper } from "@/providers/wagmi-client-wrapper"
 import { MiniAppInit } from "@/components/miniapp-init"
+import { MiniKitClientProvider } from "@/providers/minikit-client-provider"
 import { FlickeringGrid } from "@/components/ui/flickering-grid"
 import { SubmitDrawerProvider } from "@/providers/submit-drawer-provider"
-import { ContentSubmissionDrawer, SponsorAdSidebar, LivePill } from "@/providers/lazy-ui"
+import { ContentSubmissionDrawer } from "@/providers/lazy-ui"
+import { AdGuard } from "@/components/layout/adGuard"
+import { PageTransition } from "@/components/layout/pageTransition"
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -106,21 +109,22 @@ export default function RootLayout({
           squareSize={4}
           gridGap={6}
         />
+        <MiniKitClientProvider appId={process.env.NEXT_PUBLIC_WORLD_APP_ID!}>
         <SessionProvider>
           <WagmiClientWrapper>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
               <SubmitDrawerProvider>
                 <MiniAppInit />
                 <ScrollToTop />
-                <div className="mx-auto max-w-[650px] min-h-screen relative z-10">{children}</div>
-                <SponsorAdSidebar />
-                <LivePill />
+                <div className="mx-auto max-w-[650px] min-h-screen relative z-10"><PageTransition>{children}</PageTransition></div>
+                <AdGuard />
                 <ContentSubmissionDrawer />
                 <Toaster />
               </SubmitDrawerProvider>
             </ThemeProvider>
           </WagmiClientWrapper>
         </SessionProvider>
+        </MiniKitClientProvider>
       </body>
       <GoogleAnalytics gaId="G-G7CY80LZ3W" />
     </html>

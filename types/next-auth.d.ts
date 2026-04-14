@@ -13,6 +13,7 @@ declare module "next-auth" {
       id: string
       walletAddress: string
       username: string
+      worldVerified?: boolean
     } & DefaultSession["user"]
   }
 }
@@ -22,5 +23,6 @@ declare module "next-auth/jwt" {
     userId: string
     walletAddress: string
     username: string
+    worldVerified?: boolean
   }
 }

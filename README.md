@@ -1,8 +1,8 @@
 # Booztory
 
-**Booztory** is a decentralized content spotlight built on [Base](https://base.org). Pay 1 USDC to feature your content — YouTube, TikTok, X, Spotify, Vimeo, or Twitch — in a live 15-minute slot. Each slot is minted as an ERC-721 token. Fans can support creators directly through on-chain USDC donations. Minters earn **BOOZ** reward tokens, build daily GM streaks, and are entered into a weekly **Chainlink VRF raffle**. No algorithms. No gatekeepers. No database.
+**Booztory** is a decentralized content spotlight built on [Base](https://base.org) and [World Chain](https://world.org). Pay 1 USDC to feature your content — YouTube, TikTok, X, Spotify, Vimeo, or Twitch — in a live 15-minute slot. Each slot is minted as an ERC-721 token. Fans can support creators directly through on-chain USDC donations. Minters earn **BOOZ** reward tokens, build daily GM streaks, and are entered into a weekly raffle. No algorithms. No gatekeepers. No database.
 
-> **Live on Base Mainnet** · [booztory.com](https://www.booztory.com)
+> **Live on Base Mainnet** · **Live as World Mini App** · [booztory.com](https://www.booztory.com)
 
 ---
 
@@ -23,7 +23,8 @@ Viewers donate USDC directly to creator (on-chain split)
     ↓
 Claim daily GM streak → earn more BOOZ
     ↓
-Weekly Chainlink VRF raffle → USDC prizes paid on-chain
+Weekly raffle → USDC prizes paid on-chain
+    (Base: Chainlink VRF v2.5 · World Chain: commit-reveal randomness)
 ```
 
 ---
@@ -50,12 +51,13 @@ Everything core to the product:
 |---|---|
 | Frontend | Next.js 16 · React 19 · TypeScript · Tailwind CSS |
 | Wallet | wagmi v2 · RainbowKit · viem |
-| Auth | NextAuth 4 · SIWE (Sign-In with Ethereum) |
-| Mini App | Farcaster Mini App SDK (`@farcaster/miniapp-sdk`) · Farcaster QuickAuth |
+| Auth | NextAuth 4 · SIWE · Farcaster QuickAuth · World wallet auth |
+| Mini Apps | Farcaster Mini App SDK · World MiniKit (`@worldcoin/minikit-js`) |
 | Smart Contracts | Solidity 0.8.28 · OpenZeppelin · Hardhat 2.28.6 |
-| Randomness | Chainlink VRF v2.5 |
-| Chain | Base (8453) · Base Sepolia (84532) |
-| Identity | ENS · Basenames · Farcaster (`useIdentity`) |
+| Randomness | Chainlink VRF v2.5 (Base) · Commit-reveal (World Chain) |
+| Chain | Base (8453) · World Chain (480) |
+| Identity | ENS · Basenames · Farcaster · World ID (`useIdentity`) |
+| Subgraph | The Graph (Base) · Goldsky (World Chain) |
 
 ---
 
@@ -88,22 +90,45 @@ booztory/
 │   ├── stats/page.tsx      # Platform-wide stats
 │   ├── profile/[address]/page.tsx # Per-wallet profile and activity feed
 │   ├── faq/page.tsx        # FAQ accordion
-│   └── api/                # API routes (nonce, SIWE, tweet data, TikTok resolver)
+│   ├── admin/
+│   │   ├── base/           # Base Mainnet admin (owner-gated, auto chain switch to 8453)
+│   │   │   ├── page.tsx    # Overview
+│   │   │   ├── raffle/     # Raffle management + sponsor accept/reject (Base)
+│   │   │   ├── sponsors/   # Sponsor applications (Base)
+│   │   │   ├── nft/        # NFT Pass management
+│   │   │   ├── token/      # BOOZ token admin
+│   │   │   └── contract/   # All Base contract setters
+│   │   └── world/          # World Chain admin (owner-gated, auto chain switch to 480)
+│   │       ├── page.tsx    # Overview
+│   │       ├── raffle/     # Commit-reveal draw + createRaffle + sponsor accept/reject (World)
+│   │       ├── sponsors/   # Sponsor applications (World)
+│   │       ├── verification/ # World ID verification controls
+│   │       ├── token/      # BOOZ token admin (World Chain)
+│   │       └── contract/   # All World contract setters
+│   └── api/                # API routes (nonce, SIWE, tweet data, TikTok resolver, World ID verify)
 ├── components/
+│   ├── admin/              # AdminSidebar (Base admin)
 │   ├── content/            # ContentCard, ContentEmbed, HistoryCard, UpcomingCard
-│   ├── layout/             # Navbar, Topbar, PageTopbar, ScrollToTop, UsersOnline
+│   ├── layout/             # Navbar, Topbar, PageTopbar, AdGuard, ScrollToTop, UsersOnline
 │   ├── modals/             # SubmitContent drawer, DonationModal, GMModal
 │   ├── wallet/             # ConnectWallet button, WalletDropdown
+│   ├── world/              # WorldIDVerifyButton, WorldSidebar (World admin)
 │   └── embeds/             # YouTube, TikTok, Twitter, Vimeo, Spotify, Twitch embeds
 ├── contracts/
 │   ├── Booztory.sol        # ERC-721 slot contract with donation and reward hooks
 │   ├── BooztoryToken.sol   # BOOZ ERC-20 reward token (SuperchainERC20 / IERC7802)
-│   └── BooztoryRaffle.sol  # Weekly raffle powered by Chainlink VRF v2.5
-├── hooks/                  # useContractContent, usePayment, useDonation, useIdentity, useWalletName
-├── lib/                    # Contract ABI, wagmi config, cache, metadata fetchers
-├── providers/              # WagmiProvider, SessionProvider
+│   ├── BooztoryRaffle.sol  # Weekly raffle powered by Chainlink VRF v2.5
+│   └── world/              # BooztoryWorld.sol + BooztoryRaffleWorld.sol (World Chain)
+├── hooks/                  # useContractContent, usePayment, useDonation, usePaymentWorld,
+│                           # useDonationWorld, useVerifyHuman, useIdentity, useWalletName
+├── lib/                    # contract.ts (Base ABI), contractWorld.ts (World ABI), wagmi config, cache
+├── providers/              # WagmiProvider, SessionProvider, MiniKitClientProvider
+├── subgraph-world/         # Goldsky subgraph for World Chain indexing
 └── scripts/
-    └── deploy.ts           # Hardhat deploy script (all 3 contracts + wiring)
+    ├── deploy.ts           # Hardhat deploy (Base — all 3 contracts + wiring)
+    ├── redeployBase.ts     # Hardhat redeploy (Base — BooztoryRaffle only, keeps Booztory + token)
+    ├── deployWorld.ts      # Hardhat deploy (World Chain)
+    └── setupWorld.ts       # Post-deploy World Chain config
 ```
 
 ---
@@ -161,12 +186,22 @@ VRF_SUBSCRIPTION_ID=
 # Basescan API key — https://basescan.org/apis
 BASESCAN_API_KEY=
 
-# Upstash Redis — rate limiting on API endpoints (https://upstash.com)
+# Upstash Redis — rate limiting + World ID verified state (https://upstash.com)
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
-# The Graph subgraph endpoint
+# The Graph subgraph endpoint (Base)
 SUBGRAPH_URL=
+
+# ── World Mini App (optional — only needed for World Chain path) ──────────────
+NEXT_PUBLIC_WORLD_APP_ID=            # from developer.worldcoin.org (format: app_xxxxxxxx)
+NEXT_PUBLIC_WORLD_BOOZTORY_ADDRESS=  # BooztoryWorld on World Chain
+NEXT_PUBLIC_WORLD_RAFFLE_ADDRESS=    # BooztoryRaffleWorld on World Chain
+NEXT_PUBLIC_WORLD_TOKEN_ADDRESS=     # BOOZ on World Chain (CREATE2 — same address as Base)
+NEXT_PUBLIC_WORLD_USDC_ADDRESS=      # USDC on World Chain: 0x79A02482A880bCE3F13e09Da970dC34db4CD24d1
+WORLD_RP_ID=                         # RP identifier from developer.worldcoin.org (rp_...)
+WORLD_RP_SIGNING_KEY=                # ECDSA private key from Dev Portal (server-side only)
+WORLD_SUBGRAPH_URL=                  # Goldsky subgraph endpoint for World Chain
 ```
 
 ### 3. Run the dev server
@@ -181,13 +216,21 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Smart Contracts
 
-Three contracts deployed together and wired up:
+### Base Contracts
 
 | Contract | Description |
 |---|---|
 | `Booztory.sol` | ERC-721 slot minting, donations, reward wiring, GM streak |
 | `BooztoryToken.sol` | BOOZ ERC-20 reward token (soulbound Phase 1, SuperchainERC20-ready) |
 | `BooztoryRaffle.sol` | Weekly raffle with Chainlink VRF v2.5 randomness |
+
+### World Chain Contracts
+
+| Contract | Description |
+|---|---|
+| `contracts/world/BooztoryWorld.sol` | ERC-721 slot contract for World Chain — same core as Base + World ID cloud verification |
+| `contracts/world/BooztoryRaffleWorld.sol` | Raffle for World Chain — commit-reveal randomness (no Chainlink VRF) |
+| `BooztoryToken.sol` | Shared — same address on World Chain via CREATE2 |
 
 ### Compile
 
@@ -293,8 +336,18 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 |---|---|
 | Booztory | `0x59d764E631C3382cd89B104BF1e4846053Be5c35` |
 | BooztoryToken (BOOZ) | `0x749fd925485B70190f03afa8676Bb22b5060E990` |
-| BooztoryRaffle | `0xb10954830e0628C39c502a89C489a0e14734697c` |
+| BooztoryRaffle | `0x8AD73ba2C5a0BEa7E22B78081441ABA6c80A602a` |
 | USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+
+### World Chain Mainnet (480) ✅ Live
+
+| Contract | Address |
+|---|---|
+| BooztoryWorld | `0x14Fb9124b2E376c250DCf73336912eD6EB6e1219` |
+| BooztoryToken (BOOZ) | `0x48A7199f8ebFBFd108cE497cCe582c410D40d5D9` |
+| BooztoryRaffleWorld | `0x5DED6db77ea2C0476402145A984DD32bc6cAD89C` |
+| USDC | `0x79A02482A880bCE3F13e09Da970dC34db4CD24d1` |
+| WLD | `0x2cFc85d8E48F8EAB294be644d9E25C3030863003` |
 
 ---
 
@@ -338,7 +391,7 @@ VRF coordinator and key hash constants (30 gwei gas lane):
 | `createRaffle(tokens, amounts[][], winnerCount, duration)` | Owner — create raffle with per-winner prize breakdown |
 | `enterRaffle(raffleId, ticketAmount)` | User — burn tickets to enter, weighted draw |
 | `triggerDraw(raffleId)` | Owner — request Chainlink VRF randomness after endTime + thresholds met |
-| `cancelRaffle(raffleId)` | Owner — cancel active raffle (threshold not met) |
+| `cancelRaffle(raffleId)` | Owner — cancel active raffle; tickets auto-refunded to all entrants |
 | `depositPrize(token, amount)` | Anyone — deposit ERC-20 prize (not needed for BOOZ) |
 | `submitApplication(adType, content, link, duration)` | Sponsor — submit sponsorship application |
 | `acceptApplication(appId)` | Owner — accept sponsor, auto-chains ad schedule |
@@ -444,14 +497,30 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] Base Mainnet deployment ✅
 - [x] Farcaster Mini App published (Warpcast UA gating; splash screen fix via `sdk.isInMiniApp()`)
 - [x] Dynamic slot price + duration (LIMITED label when non-default)
-- [ ] Set content type images on-chain (`setContentTypeImage`)
-- [ ] Verify all 3 contracts on Basescan
-- [ ] Add BooztoryRaffle as Chainlink VRF consumer (Base Mainnet)
-- [ ] Fund raffle with initial prize (200,000 BOOZ)
-- [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
-- [ ] World Chain deployment (World Mini App)
-- [ ] Superchain expansion (OP Mainnet, etc.)
+- [x] CDP Paymaster — gas sponsored for all smart account transactions (Coinbase Smart Wallet / Base Account); EOA falls back gracefully
+- [x] ERC-8021 Builder Code attribution (`bc_qaqhzzqp`) — all 11 write functions covered on both EOA and smart account paths; verified on-chain
+- [x] World Chain deployment — BooztoryWorld + BooztoryRaffleWorld live on World Chain Mainnet (480)
+- [x] World Mini App — MiniKit auth, sendTransaction, World ID cloud verification, Goldsky subgraph
+- [x] World ID verification — cloud-only pattern (no on-chain ZK proof); session-gated via Redis nullifier
 - [x] Creator profile & analytics dashboard (`/profile/[address]`)
+- [x] Base admin panel (`/admin/base/*`) — owner-gated, full contract setter coverage, auto chain switch
+- [x] World admin panel (`/admin/world/*`) — full parity with Base admin; commit-reveal draw UI; createRaffle; verification controls; auto chain switch to World Chain (480)
+- [x] WLD payment paths — mint slot and donate with WLD via oracle-priced Permit2 flow (World App only)
+- [x] Oracle fix — BooztoryWorld redeployed with correct AggregatorV3 interface + 48h staleness window
+- [ ] Set content type images on-chain (`setContentTypeImage`)
+- [x] Verify all 3 Base contracts on Basescan ✅
+- [x] Verify World Chain contracts on Worldscan ✅ 2026-04-13
+- [x] Re-register BooztoryWorld `0x14Fb9124b2E376c250DCf73336912eD6EB6e1219` in Dev Portal allowlist ✅ 2026-04-13
+- [x] WLD mint/donation subgraph tracking — `WLDSlotMinted` event + `paymentToken` on `DonationReceived`; subgraph `booztory-world/v1.0.12` ✅ 2026-04-13
+- [x] BooztoryRaffle redeployed (Base) — `cancelRaffle` now refunds tickets to all entrants ✅ 2026-04-14
+- [x] Add BooztoryRaffle as Chainlink VRF consumer (Base Mainnet) ✅ 2026-04-14
+- [x] Fund raffle with initial prize (200,000 BOOZ) ✅ 2026-04-14
+- [x] GMMilestoneReached bonus BOOZ tracked in subgraphs — Base `v0.0.12` · World `v1.0.13` ✅ 2026-04-14
+- [x] RaffleCancelled indexed in subgraphs — Base `v0.0.13` · World `v1.0.13` ✅ 2026-04-14
+- [x] Dev Portal re-registered — BooztoryWorld + RaffleWorld + USDC + WLD + Permit2 entrypoints ✅ 2026-04-14
+- [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
+- [ ] Submit World Mini App to World App Store
+- [ ] Superchain expansion (OP Mainnet, etc.)
 
 ---
 

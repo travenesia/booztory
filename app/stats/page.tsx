@@ -5,8 +5,10 @@ import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
+import { ScrollReveal } from "@/components/layout/scrollReveal"
 import { cn } from "@/lib/utils"
 import { HiChartBar } from "react-icons/hi2"
+import { isWorldApp } from "@/lib/miniapp-flag"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface StatsData {
@@ -95,6 +97,7 @@ function LoadingState() {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function StatsPage() {
+  const inWorldApp = isWorldApp()
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,7 +106,7 @@ export default function StatsPage() {
   const fetchStats = () => {
     setLoading(true)
     setError(null)
-    fetch("/api/stats")
+    fetch(inWorldApp ? "/api/stats?chain=world" : "/api/stats")
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to fetch stats (${res.status})`)
         return res.json()
@@ -129,6 +132,7 @@ export default function StatsPage() {
       <PageTopbar title="Stats" />
 
       <section className="pt-6 pb-[80px] md:pb-[56px] px-6 max-w-[650px] mx-auto w-full">
+
 
         {loading && <LoadingState />}
 
@@ -190,6 +194,7 @@ export default function StatsPage() {
             </div>
 
             {/* ── Tab switcher ── */}
+
             <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
               {TABS.map((t, i) => (
                 <Fragment key={t.id}>
@@ -211,6 +216,7 @@ export default function StatsPage() {
 
             {/* ── All: one merged grid, no gaps ── */}
             {tab === "all" && (
+              <ScrollReveal>
               <div className={GRID}>
                 <StatCard value={stats.totalSlotsMinted.toLocaleString()}          label="Total Content Minted"      theme="blue"   />
                 <StatCard value={`${stats.totalContentHours.toFixed(1)} hrs`}      label="Content Hours Featured"    theme="blue"   />
@@ -231,10 +237,12 @@ export default function StatsPage() {
                 <StatCard value={`$${stats.totalPrizePoolPaid.toFixed(2)}`}        label="Prize Pool Paid Out"       theme="purple" />
                 <StatCard value={stats.totalUniqueWinners.toLocaleString()}        label="Unique Winners"            theme="purple" />
               </div>
+              </ScrollReveal>
             )}
 
             {/* ── Content tab ── */}
             {tab === "content" && (
+              <ScrollReveal>
               <div className={GRID}>
                 <StatCard value={stats.totalSlotsMinted.toLocaleString()}          label="Total Content Minted"      theme="blue" />
                 <StatCard value={`${stats.totalContentHours.toFixed(1)} hrs`}      label="Content Hours Featured"    theme="blue" />
@@ -243,20 +251,24 @@ export default function StatsPage() {
                 <StatCard value={stats.totalDiscountMints.toLocaleString()}        label="Discount Mints"            theme="blue" />
                 <StatCard value={stats.totalFreeMints.toLocaleString()}            label="Free Mints"                theme="blue" />
               </div>
+              </ScrollReveal>
             )}
 
             {/* ── Community tab ── */}
             {tab === "community" && (
+              <ScrollReveal>
               <div className={GRID}>
                 <StatCard value={stats.totalUsers.toLocaleString()}                label="Total Users"               theme="teal" />
                 <StatCard value={stats.totalGMClaims.toLocaleString()}             label="Total GM Claims"           theme="teal" />
                 <StatCard value={`$${stats.totalUSDCDonated.toFixed(2)}`}          label="USDC Donated to Creators"  theme="teal" />
                 <StatCard value={stats.totalDonationCount.toLocaleString()}        label="Total Donations Made"      theme="teal" />
               </div>
+              </ScrollReveal>
             )}
 
             {/* ── Rewards tab ── */}
             {tab === "rewards" && (
+              <ScrollReveal>
               <div className={GRID}>
                 <StatCard value={stats.totalBOOZEarned.toLocaleString()}           label="BOOZ Earned via GM"        theme="purple" />
                 <StatCard value={stats.totalPointsEarned.toLocaleString()}         label="Total Points Earned"       theme="purple" />
@@ -267,6 +279,7 @@ export default function StatsPage() {
                 <StatCard value={`$${stats.totalPrizePoolPaid.toFixed(2)}`}        label="Prize Pool Paid Out"       theme="purple" />
                 <StatCard value={stats.totalUniqueWinners.toLocaleString()}        label="Unique Winners"            theme="purple" />
               </div>
+              </ScrollReveal>
             )}
 
             <p className="text-xs text-gray-400 text-center py-6">Updated every 30 minutes</p>

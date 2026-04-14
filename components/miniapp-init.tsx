@@ -14,6 +14,12 @@ export function MiniAppInit() {
     if (initialized.current) return
     initialized.current = true
 
+    // Eruda — mobile console for debugging inside World App / mini app webviews.
+    // Only loads in development. Remove or guard with an env flag before production.
+    if (process.env.NODE_ENV === "development") {
+      import("eruda").then((eruda) => eruda.default.init()).catch(() => {})
+    }
+
     // Farcaster mini app path only.
     // Base App returns true from isInMiniApp() until April 9 2026, but its in-app browser
     // does NOT include "Warpcast" in the user agent — use that to distinguish real Farcaster.

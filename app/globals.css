@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent iOS rubber-band bounce in World App WebView and mobile browsers */
+html, body { overscroll-behavior: none; }
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
 @keyframes bounce-slow {

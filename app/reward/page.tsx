@@ -2,16 +2,21 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient, useChainId, useSwitchChain } from "wagmi"
+import { useSession } from "next-auth/react"
 import { waitForTransactionReceipt } from "wagmi/actions"
-import { wagmiConfig, DATA_SUFFIX_PARAM, sendBatchWithAttribution } from "@/lib/wagmi"
-import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
-import { formatUnits, parseAbiItem } from "viem"
+import { wagmiConfig, DATA_SUFFIX_PARAM, sendBatchWithAttribution, APP_CHAIN as _APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
+import { canUsePaymaster, waitForPaymasterCalls, isWorldApp } from "@/lib/miniapp-flag"
+import { MiniKit } from "@worldcoin/minikit-js"
+import { useVerifyHuman } from "@/hooks/useVerifyHuman"
+import { WorldIDVerifyButton } from "@/components/world/WorldIDVerifyButton"
+import { formatUnits, parseAbiItem, encodeFunctionData } from "viem"
 import Link from "next/link"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { HiBolt, HiTrophy } from "react-icons/hi2"
 import { FaCoins, FaRankingStar } from "react-icons/fa6"
 import { Ticket, BadgeCheck, Flame } from "lucide-react"
 import { APP_CHAIN, NFT_CHAIN_ID } from "@/lib/wagmi"
+import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI, WORLD_RAFFLE_ADDRESS, WORLD_RAFFLE_ABI, WORLD_TOKEN_ADDRESS, WORLD_USDC_ADDRESS, WORLD_WLD_ADDRESS } from "@/lib/contractWorld"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { PageTopbar } from "@/components/layout/pageTopbar"
@@ -27,7 +32,9 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { GMContent } from "@/components/modals/gmModal"
-import { useWalletName } from "@/hooks/useWalletName"
+import { useIdentity } from "@/hooks/useIdentity"
+import { WorldVerifiedBadge } from "@/components/world/WorldVerifiedBadge"
+import { ScrollReveal } from "@/components/layout/scrollReveal"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL
@@ -101,18 +108,36 @@ const ERC721_NFT_ABI = [
 const RAFFLE_DEPLOY_BLOCK = 38_200_000n
 
 // ── WinnerName ────────────────────────────────────────────────────────────────
-// Wrapper so useWalletName can be called per winner without violating Rules of Hooks
+// Wrapper so useIdentity can be called per winner without violating Rules of Hooks
 function WinnerName({ address, isYou }: { address: string; isYou: boolean }) {
-  const name = useWalletName(address)
+  const inWorldApp = isWorldApp()
+  const identity = useIdentity(address as `0x${string}`)
+  const isRawAddress = (s: string) => /^0x[0-9a-fA-F]{3,6}\.\.\./.test(s)
+  const name = inWorldApp
+    ? (identity.displayName && !isRawAddress(identity.displayName) ? identity.displayName : "World User")
+    : (identity.walletName ?? `${address.slice(0, 6)}...${address.slice(-4)}`)
   return (
     <span className={cn(
-      "font-mono text-xs truncate",
+      "font-mono text-xs truncate flex items-center gap-1",
       isYou ? "text-green-700 font-bold" : "text-gray-600"
     )}>
-      {name ?? `${address.slice(0, 6)}...${address.slice(-4)}`}{isYou ? " (you)" : ""}
+      {inWorldApp && <WorldVerifiedBadge verified={identity.isWorldVerified} />}
+      {name}{isYou ? " (you)" : ""}
     </span>
   )
 }
+
+// ── Chain-aware contract selectors (evaluated per render — "use client" is safe) ──
+function worldOr<T>(worldVal: T, baseVal: T): T {
+  return isWorldApp() ? worldVal : baseVal
+}
+const W_RAFFLE  = () => worldOr(WORLD_RAFFLE_ADDRESS,  RAFFLE_ADDRESS)
+const W_RABI    = () => worldOr(WORLD_RAFFLE_ABI,      RAFFLE_ABI)
+const W_BOOZT   = () => worldOr(WORLD_BOOZTORY_ADDRESS, BOOZTORY_ADDRESS)
+const W_BABI    = () => worldOr(WORLD_BOOZTORY_ABI,    BOOZTORY_ABI)
+const W_TOKEN   = () => worldOr(WORLD_TOKEN_ADDRESS,   TOKEN_ADDRESS)
+const W_USDC    = () => worldOr(WORLD_USDC_ADDRESS,    USDC_ADDRESS)
+const W_CHAIN   = () => worldOr(WORLD_CHAIN.id,        APP_CHAIN.id)
 
 // ── ActiveRaffleCard ───────────────────────────────────────────────────────────
 function ActiveRaffleCard({
@@ -150,16 +175,21 @@ function ActiveRaffleCard({
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
+  const inWorldApp = isWorldApp()
+  const rAddr = inWorldApp ? WORLD_RAFFLE_ADDRESS : RAFFLE_ADDRESS
+  const rAbi  = inWorldApp ? WORLD_RAFFLE_ABI     : RAFFLE_ABI
+  const aChain = inWorldApp ? WORLD_CHAIN.id       : APP_CHAIN.id
+  const { handleIDKitSuccess: raffleVerifySuccess, canProceed: raffleCanProceed, isVerifying: raffleIsVerifying } = useVerifyHuman(userAddress)
   async function ensureChain() {
-    if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
+    if (chainId !== aChain) await switchChainAsync({ chainId: aChain })
   }
 
   const { data: raffleRaw, refetch: refetchRaffle } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: rAddr,
+    abi: rAbi,
     functionName: "getRaffle",
     args: [selectedId],
-    chainId: APP_CHAIN.id,
+    chainId: aChain,
     query: { refetchInterval: 60_000 },
   })
 
@@ -172,37 +202,37 @@ function ActiveRaffleCard({
   }, [raffleRaw, selectedId])
 
   const { data: prizeAmountsRaw } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: rAddr,
+    abi: rAbi,
     functionName: "getRafflePrizeAmounts",
     args: [selectedId],
-    chainId: APP_CHAIN.id,
+    chainId: aChain,
   })
 
   const { data: userRaffleTicketsRaw, refetch: refetchUserTickets } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: rAddr,
+    abi: rAbi,
     functionName: "raffleTickets",
     args: userAddress ? [selectedId, userAddress] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: aChain,
     query: { enabled: !!userAddress, refetchInterval: 60_000 },
   })
 
   const { data: hasEnteredRaw, refetch: refetchHasEntered } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: rAddr,
+    abi: rAbi,
     functionName: "hasEntered",
     args: userAddress ? [selectedId, userAddress] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: aChain,
     query: { enabled: !!userAddress, refetchInterval: 60_000 },
   })
 
   const { data: winnersRaw } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: rAddr,
+    abi: rAbi,
     functionName: "getRaffleWinners",
     args: [selectedId],
-    chainId: APP_CHAIN.id,
+    chainId: aChain,
   })
 
   // getRaffle returns tuple: (prizeTokens, winnerCount, startTime, endTime, status,
@@ -218,27 +248,27 @@ function ActiveRaffleCard({
   const hasEntered = hasEnteredRaw as boolean | undefined
 
   const { data: raffleDrawBlockRaw } = useReadContract({
-    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+    address: rAddr, abi: rAbi,
     functionName: "raffleDrawBlock",
     args: [selectedId],
-    chainId: APP_CHAIN.id,
+    chainId: aChain,
     query: { enabled: winners.length > 0, refetchInterval: 60_000 },
   })
 
   const { data: winnerTicketsRaw } = useReadContracts({
     contracts: winners.map(addr => ({
-      address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+      address: rAddr, abi: rAbi,
       functionName: "raffleTickets" as const,
       args: [selectedId, addr as `0x${string}`] as const,
-      chainId: APP_CHAIN.id,
+      chainId: aChain,
     })),
     query: { enabled: winners.length > 0 },
   })
 
   // Draw tx hash — fetched via getLogs once drawBlock is known (must be before early return)
   const drawBlock = Number(raffleDrawBlockRaw ?? 0n)
-  const basescanHost = (APP_CHAIN.id as number) === 8453 ? "basescan.org" : "sepolia.basescan.org"
-  const publicClient = usePublicClient({ chainId: APP_CHAIN.id })
+  const basescanHost = inWorldApp ? "worldscan.org" : ((APP_CHAIN.id as number) === 8453 ? "basescan.org" : "sepolia.basescan.org")
+  const publicClient = usePublicClient({ chainId: aChain })
   const [drawTxHash, setDrawTxHash] = useState<string | undefined>()
   useEffect(() => {
     setDrawTxHash(undefined)
@@ -250,7 +280,7 @@ function ActiveRaffleCard({
     // the DrawCompleted event for this specific raffle, not all historical draws.
     const safeFrom = BigInt(Math.max(drawBlock, Number(RAFFLE_DEPLOY_BLOCK)))
     publicClient.getLogs({
-      address: RAFFLE_ADDRESS as `0x${string}`,
+      address: rAddr as `0x${string}`,
       event: parseAbiItem("event DrawCompleted(uint256 indexed raffleId, address[] winners)"),
       args: { raffleId: selectedId },
       fromBlock: safeFrom,
@@ -369,29 +399,32 @@ function ActiveRaffleCard({
     if (!amount || amount < 1 || !userAddress) return
     setIsEntering(true)
     try {
-      await ensureChain()
-      let ranPaymaster = false
-      if (await canUsePaymaster(PAYMASTER_URL)) {
-        try {
-          const callsId = await sendBatchWithAttribution([
-            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-          ranPaymaster = true
-        } catch {
-          // fall through to EOA
-        }
-      }
-      if (!ranPaymaster) {
-        const tx = await writeContractAsync({
-          address: RAFFLE_ADDRESS,
-          abi: RAFFLE_ABI,
-          functionName: "enterRaffle",
-          args: [selectedId, BigInt(amount)],
-          chainId: APP_CHAIN.id,
-          ...DATA_SUFFIX_PARAM,
+      if (inWorldApp) {
+        const result = await MiniKit.sendTransaction({
+          transactions: [{ to: rAddr, data: encodeFunctionData({ abi: rAbi, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] }) }],
+          chainId: aChain,
         })
-        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+        if (!result?.data?.userOpHash) throw new Error("No userOpHash")
+      } else {
+        await ensureChain()
+        let ranPaymaster = false
+        if (await canUsePaymaster(PAYMASTER_URL)) {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "enterRaffle", args: [selectedId, BigInt(amount)] },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch { /* fall through */ }
+        }
+        if (!ranPaymaster) {
+          const tx = await writeContractAsync({
+            address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+            functionName: "enterRaffle", args: [selectedId, BigInt(amount)],
+            chainId: APP_CHAIN.id, ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+        }
       }
       setTicketInput("")
       refetchRaffle()
@@ -416,12 +449,9 @@ function ActiveRaffleCard({
     try {
       await ensureChain()
       const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "triggerDraw",
-        args: [selectedId],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
+        address: rAddr, abi: rAbi,
+        functionName: "triggerDraw", args: [selectedId],
+        chainId: aChain, ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -436,9 +466,7 @@ function ActiveRaffleCard({
         : msg.includes("AlreadyDrawRequested") ? "Draw already requested."
         : "Transaction failed."
       toast({ title: "Draw Failed", description: clean, variant: "destructive" })
-    } finally {
-      setIsDrawing(false)
-    }
+    } finally { setIsDrawing(false) }
   }
 
   async function handleReset() {
@@ -446,12 +474,9 @@ function ActiveRaffleCard({
     try {
       await ensureChain()
       const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "resetDraw",
-        args: [selectedId],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
+        address: rAddr, abi: rAbi,
+        functionName: "resetDraw", args: [selectedId],
+        chainId: aChain, ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -460,9 +485,7 @@ function ActiveRaffleCard({
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return
       toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsResetting(false)
-    }
+    } finally { setIsResetting(false) }
   }
 
   async function handleCancel() {
@@ -470,12 +493,9 @@ function ActiveRaffleCard({
     try {
       await ensureChain()
       const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS,
-        abi: RAFFLE_ABI,
-        functionName: "cancelRaffle",
-        args: [selectedId],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
+        address: rAddr, abi: rAbi,
+        functionName: "cancelRaffle", args: [selectedId],
+        chainId: aChain, ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -484,9 +504,7 @@ function ActiveRaffleCard({
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return
       toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsCancelling(false)
-    }
+    } finally { setIsCancelling(false) }
   }
 
   async function handleSetThresholds() {
@@ -499,11 +517,10 @@ function ActiveRaffleCard({
     try {
       await ensureChain()
       const tx = await writeContractAsync({
-        address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+        address: rAddr, abi: rAbi,
         functionName: "setRaffleThresholds",
         args: [selectedId, rtThreshold ? BigInt(t) : drawThreshold, rtMinUnique ? BigInt(u) : minUniqueEntrants],
-        chainId: APP_CHAIN.id,
-        ...DATA_SUFFIX_PARAM,
+        chainId: aChain, ...DATA_SUFFIX_PARAM,
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
@@ -512,9 +529,7 @@ function ActiveRaffleCard({
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return
       toast({ title: "Failed", description: "Transaction failed.", variant: "destructive" })
-    } finally {
-      setIsSettingRt(false)
-    }
+    } finally { setIsSettingRt(false) }
   }
 
   return (<>
@@ -750,13 +765,24 @@ function ActiveRaffleCard({
                 </button>
               )}
             </div>
-            <button
-              onClick={handleEnter}
-              disabled={isEntering || !ticketInput || parseInt(ticketInput) < 1 || parseInt(ticketInput) > userTicketBalance}
-              className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-            >
-              {isEntering ? "Entering..." : hasEntered ? "Add More" : "Enter"}
-            </button>
+            {inWorldApp && !raffleCanProceed ? (
+              <WorldIDVerifyButton
+                onSuccess={raffleVerifySuccess}
+                isVerifying={raffleIsVerifying}
+                signal={userAddress}
+                className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+              >
+                Verify to Enter
+              </WorldIDVerifyButton>
+            ) : (
+              <button
+                onClick={handleEnter}
+                disabled={isEntering || !ticketInput || parseInt(ticketInput) < 1 || parseInt(ticketInput) > userTicketBalance}
+                className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                {isEntering ? "Entering..." : hasEntered ? "Add More" : "Enter"}
+              </button>
+            )}
           </div>
         )}
 
@@ -924,7 +950,21 @@ function ActiveRaffleCard({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function RewardPage() {
-  const { address } = useAccount()
+  const { address: wagmiAddress } = useAccount()
+  const { data: session } = useSession()
+  const inWorldApp = isWorldApp()
+  const address = wagmiAddress ?? (inWorldApp ? (session?.user?.walletAddress as `0x${string}` | undefined) : undefined)
+  const { handleIDKitSuccess: convertVerifySuccess, canProceed: convertCanProceed, isVerifying: convertIsVerifying } = useVerifyHuman(address)
+
+  // Chain-aware contract references
+  const pBoozt  = inWorldApp ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS
+  const pBabi   = inWorldApp ? WORLD_BOOZTORY_ABI     : BOOZTORY_ABI
+  const pRaffle = inWorldApp ? WORLD_RAFFLE_ADDRESS   : RAFFLE_ADDRESS
+  const pRabi   = inWorldApp ? WORLD_RAFFLE_ABI       : RAFFLE_ABI
+  const pToken  = inWorldApp ? WORLD_TOKEN_ADDRESS    : TOKEN_ADDRESS
+  const pUsdc   = inWorldApp ? WORLD_USDC_ADDRESS     : USDC_ADDRESS
+  const pChain  = inWorldApp ? WORLD_CHAIN.id         : APP_CHAIN.id
+
   const isMobile = useIsMobile()
   const [tab, setTab] = useState<"raffle" | "streak">("raffle")
   const [gmOpen, setGmOpen] = useState(false)
@@ -935,67 +975,75 @@ export default function RewardPage() {
   const rewardChainId = useChainId()
   const { switchChainAsync: rewardSwitchChain } = useSwitchChain()
   async function ensureRewardChain() {
-    if (rewardChainId !== APP_CHAIN.id) await rewardSwitchChain({ chainId: APP_CHAIN.id })
+    if (rewardChainId !== pChain) await rewardSwitchChain({ chainId: pChain })
   }
 
   // ── User balances ──────────────────────────────────────────────────────────
   const { data: boozBalanceRaw } = useReadContract({
-    address: TOKEN_ADDRESS,
+    address: pToken,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { enabled: !!address, refetchInterval: 60_000 },
   })
 
   const { data: usdcBalanceRaw } = useReadContract({
-    address: USDC_ADDRESS,
+    address: pUsdc,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { enabled: !!address, refetchInterval: 60_000 },
   })
 
+  const { data: wldBalanceRaw } = useReadContract({
+    address: WORLD_WLD_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: WORLD_CHAIN.id,
+    query: { enabled: !!address && inWorldApp, refetchInterval: 60_000 },
+  })
+
   const { data: pointsRaw, refetch: refetchPoints } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: pBoozt,
+    abi: pBabi,
     functionName: "points",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { enabled: !!address, refetchInterval: 60_000 },
   })
 
   const { data: ticketBalanceRaw, refetch: refetchTickets } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: pRaffle,
+    abi: pRabi,
     functionName: "tickets",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { enabled: !!address, refetchInterval: 60_000 },
   })
 
   const { data: pointsPerTicketRaw } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: pBoozt,
+    abi: pBabi,
     functionName: "pointsPerTicket",
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
   })
 
   // ── Raffle reads ────────────────────────────────────────────────────────────
-  // Read boozToken from contract directly — avoids env-var mismatch in token detection
   const { data: pageBoozToken } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: pRaffle,
+    abi: pRabi,
     functionName: "boozToken",
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
   })
 
   const { data: nextRaffleIdRaw, refetch: refetchNextRaffleId } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: pRaffle,
+    abi: pRabi,
     functionName: "nextRaffleId",
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { refetchInterval: 60_000, refetchOnWindowFocus: true },
   })
 
@@ -1006,11 +1054,11 @@ export default function RewardPage() {
   // ActiveRaffleCard (refetchUserTickets), so this display stat stays accurate enough.
   const { data: burnedTicketsRaw } = useReadContracts({
     contracts: Array.from({ length: _raffleCount }, (_, i) => ({
-      address: RAFFLE_ADDRESS,
-      abi: RAFFLE_ABI,
+      address: pRaffle,
+      abi: pRabi,
       functionName: "raffleTickets" as const,
       args: [BigInt(i), address!] as const,
-      chainId: APP_CHAIN.id,
+      chainId: pChain,
     })),
     query: { enabled: !!address && _raffleCount > 0 },
   })
@@ -1020,49 +1068,49 @@ export default function RewardPage() {
 
   const { data: allRafflesRaw } = useReadContracts({
     contracts: Array.from({ length: _recentCount }, (_, i) => ({
-      address: RAFFLE_ADDRESS,
-      abi: RAFFLE_ABI,
+      address: pRaffle,
+      abi: pRabi,
       functionName: "getRaffle" as const,
       args: [BigInt(_recentOffset + i)] as const,
-      chainId: APP_CHAIN.id,
+      chainId: pChain,
     })),
     query: { enabled: _recentCount > 0, refetchInterval: 60_000 },
   })
 
   const { data: allRafflePrizesRaw } = useReadContracts({
     contracts: Array.from({ length: _recentCount }, (_, i) => ({
-      address: RAFFLE_ADDRESS,
-      abi: RAFFLE_ABI,
+      address: pRaffle,
+      abi: pRabi,
       functionName: "getRafflePrizeAmounts" as const,
       args: [BigInt(_recentOffset + i)] as const,
-      chainId: APP_CHAIN.id,
+      chainId: pChain,
     })),
     query: { enabled: _recentCount > 0, refetchInterval: 60_000 },
   })
 
   const { data: activeRaffleIdsRaw, refetch: refetchActiveRaffles } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: pRaffle,
+    abi: pRabi,
     functionName: "getActiveRaffles",
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { refetchInterval: 30_000 },
   })
 
   // ── Owner reads ─────────────────────────────────────────────────────────────
   const { data: raffleOwnerRaw } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: pRaffle,
+    abi: pRabi,
     functionName: "owner",
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
   })
 
   // ── Streak reads ────────────────────────────────────────────────────────────
   const { data: streakRaw } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: pBoozt,
+    abi: pBabi,
     functionName: "gmStreaks",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { enabled: !!address, refetchInterval: 60_000 },
   })
 
@@ -1071,6 +1119,8 @@ export default function RewardPage() {
   const boozFormatted = boozNum.toLocaleString(undefined, { maximumFractionDigits: 0 })
   const usdcNum = usdcBalanceRaw ? Number(usdcBalanceRaw as bigint) / 1_000_000 : 0
   const usdcFormatted = usdcNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const wldNum = wldBalanceRaw ? Number(formatUnits(wldBalanceRaw as bigint, 18)) : 0
+  const wldFormatted = wldNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   const pointsBalance = Number(pointsRaw ?? 0n)
   const ticketBalance = Number(ticketBalanceRaw ?? 0n)
@@ -1088,20 +1138,20 @@ export default function RewardPage() {
   // ── Sponsor apps parsed ──────────────────────────────────────────────────────
   // acceptedSponsorApps: derived from accepted sponsor applications for ActiveRaffleCard sponsor matching
   const { data: nextAppIdRaw } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: pRaffle,
+    abi: pRabi,
     functionName: "nextApplicationId",
-    chainId: APP_CHAIN.id,
+    chainId: pChain,
     query: { refetchInterval: 60_000 },
   })
   const _appCount = Number(nextAppIdRaw ?? 0n)
   const { data: allAppsRaw } = useReadContracts({
     contracts: Array.from({ length: _appCount }, (_, i) => ({
-      address: RAFFLE_ADDRESS,
-      abi: RAFFLE_ABI,
+      address: pRaffle,
+      abi: pRabi,
       functionName: "applications" as const,
       args: [BigInt(i)] as const,
-      chainId: APP_CHAIN.id,
+      chainId: pChain,
     })),
     query: { enabled: _appCount > 0, refetchInterval: 5 * 60_000 },
   })
@@ -1153,29 +1203,32 @@ export default function RewardPage() {
     if (!amount || amount < 1 || amount > maxConvertible || !address) return
     setIsConverting(true)
     try {
-      await ensureRewardChain()
-      let ranPaymaster = false
-      if (await canUsePaymaster(PAYMASTER_URL)) {
-        try {
-          const callsId = await sendBatchWithAttribution([
-            { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-          ranPaymaster = true
-        } catch {
-          // fall through to EOA
-        }
-      }
-      if (!ranPaymaster) {
-        const tx = await writeContractAsync({
-          address: BOOZTORY_ADDRESS,
-          abi: BOOZTORY_ABI,
-          functionName: "convertToTickets",
-          args: [BigInt(amount)],
-          chainId: APP_CHAIN.id,
-          ...DATA_SUFFIX_PARAM,
+      if (inWorldApp) {
+        const result = await MiniKit.sendTransaction({
+          transactions: [{ to: pBoozt, data: encodeFunctionData({ abi: pBabi, functionName: "convertToTickets", args: [BigInt(amount)] }) }],
+          chainId: pChain,
         })
-        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+        if (!result?.data?.userOpHash) throw new Error("No userOpHash")
+      } else {
+        await ensureRewardChain()
+        let ranPaymaster = false
+        if (await canUsePaymaster(PAYMASTER_URL)) {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI, functionName: "convertToTickets", args: [BigInt(amount)] },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch { /* fall through */ }
+        }
+        if (!ranPaymaster) {
+          const tx = await writeContractAsync({
+            address: BOOZTORY_ADDRESS, abi: BOOZTORY_ABI,
+            functionName: "convertToTickets", args: [BigInt(amount)],
+            chainId: APP_CHAIN.id, ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+        }
       }
       setConvertAmount("")
       refetchPoints()
@@ -1230,6 +1283,7 @@ export default function RewardPage() {
 
         {/* ── RAFFLE TAB ──────────────────────────────────────────────────── */}
         {tab === "raffle" && (
+          <ScrollReveal>
           <div className="space-y-4">
 
             {/* Single raffle card — defaults to latest, dropdown inside to switch */}
@@ -1303,19 +1357,30 @@ export default function RewardPage() {
                     </button>
                   )}
                 </div>
-                <button
-                  onClick={handleConvert}
-                  disabled={
-                    isConverting ||
-                    maxConvertible === 0 ||
-                    !convertAmount ||
-                    parseInt(convertAmount) < 1 ||
-                    parseInt(convertAmount) > maxConvertible
-                  }
-                  className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                >
-                  {isConverting ? "Converting..." : "Convert"}
-                </button>
+                {inWorldApp && !convertCanProceed ? (
+                  <WorldIDVerifyButton
+                    onSuccess={convertVerifySuccess}
+                    isVerifying={convertIsVerifying}
+                    signal={address}
+                    className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+                  >
+                    Verify to Convert
+                  </WorldIDVerifyButton>
+                ) : (
+                  <button
+                    onClick={handleConvert}
+                    disabled={
+                      isConverting ||
+                      maxConvertible === 0 ||
+                      !convertAmount ||
+                      parseInt(convertAmount) < 1 ||
+                      parseInt(convertAmount) > maxConvertible
+                    }
+                    className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  >
+                    {isConverting ? "Converting..." : "Convert"}
+                  </button>
+                )}
               </div>
 
             </div>
@@ -1343,15 +1408,28 @@ export default function RewardPage() {
             </div>
 
           </div>
+          </ScrollReveal>
         )}
 
         {/* ── STREAK TAB ──────────────────────────────────────────────────── */}
         {tab === "streak" && (
+          <ScrollReveal>
           <div className="space-y-4">
 
-            {/* Balances — USDC + BOOZ + Points */}
+            {/* Balances — WLD+USDC+BOOZ (World) or USDC+BOOZ+Points (Base) */}
             {address && (
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {/* WLD — World App only */}
+                {inWorldApp && (
+                  <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/world.svg" alt="WLD" className="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
+                    <div className="flex flex-col">
+                      <span className="text-[9px] sm:text-[10px] font-semibold text-gray-600 uppercase tracking-wide leading-none mb-0.5">$WLD</span>
+                      <span className="text-sm sm:text-xl font-black text-gray-900 leading-tight">{wldFormatted}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/usdc.svg" alt="USDC" className="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
@@ -1368,13 +1446,16 @@ export default function RewardPage() {
                     <span className="text-sm sm:text-xl font-black text-red-900 leading-tight">{boozFormatted}</span>
                   </div>
                 </div>
-                <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
-                  <FaCoins className="text-orange-500 flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
-                  <div className="flex flex-col">
-                    <span className="text-[9px] sm:text-[10px] font-semibold text-orange-600 uppercase tracking-wide leading-none mb-0.5">Points</span>
-                    <span className="text-base sm:text-xl font-black text-orange-900 leading-tight">{pointsBalance.toLocaleString()}</span>
+                {/* Points — Base only */}
+                {!inWorldApp && (
+                  <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+                    <FaCoins className="text-orange-500 flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9" />
+                    <div className="flex flex-col">
+                      <span className="text-[9px] sm:text-[10px] font-semibold text-orange-600 uppercase tracking-wide leading-none mb-0.5">Points</span>
+                      <span className="text-base sm:text-xl font-black text-orange-900 leading-tight">{pointsBalance.toLocaleString()}</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -1526,6 +1607,7 @@ export default function RewardPage() {
               </div>
             </div>
           </div>
+          </ScrollReveal>
         )}
       </section>
 

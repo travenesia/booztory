@@ -10,7 +10,7 @@ import type { ContentItem } from "@/lib/contract"
 import { isYouTubeShort } from "@/lib/youtubeMetadata"
 import { TweetInfoPreview } from "@/components/tweet/tweet-info-preview"
 import { extractTwitterId } from "@/lib/youtubeMetadata"
-import { useWalletName } from "@/hooks/useWalletName"
+import { useIdentity } from "@/hooks/useIdentity"
 import { getTikTokMetadata } from "@/lib/tiktokMetadata"
 import { ShineBorder } from "@/components/ui/shine-border"
 
@@ -26,7 +26,7 @@ export function UpcomingCard({ content, isOwn = false }: UpcomingCardProps) {
   const [tiktokAuthor, setTiktokAuthor] = useState<string | null>(null)
   const [tiktokThumbnail, setTiktokThumbnail] = useState<string | null>(null)
 
-  const resolvedName = useWalletName(content.submittedBy)
+  const { displayName: resolvedName } = useIdentity(content.submittedBy)
   const displayUsername = resolvedName || content.username
 
   useEffect(() => {

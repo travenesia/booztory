@@ -1005,3 +1005,45 @@ export class DrawnRaffle extends Entity {
     this.set("id", Value.fromString(value));
   }
 }
+
+export class CancelledRaffle extends Entity {
+  constructor(id: string) {
+    super();
+    this.set("id", Value.fromString(id));
+  }
+
+  save(): void {
+    let id = this.get("id");
+    assert(id != null, "Cannot save CancelledRaffle entity without an ID");
+    if (id) {
+      assert(
+        id.kind == ValueKind.STRING,
+        `Entities of type CancelledRaffle must have an ID of type String but the id '${id.displayData()}' is of type ${id.displayKind()}`,
+      );
+      store.set("CancelledRaffle", id.toString(), this);
+    }
+  }
+
+  static loadInBlock(id: string): CancelledRaffle | null {
+    return changetype<CancelledRaffle | null>(
+      store.get_in_block("CancelledRaffle", id),
+    );
+  }
+
+  static load(id: string): CancelledRaffle | null {
+    return changetype<CancelledRaffle | null>(store.get("CancelledRaffle", id));
+  }
+
+  get id(): string {
+    let value = this.get("id");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set id(value: string) {
+    this.set("id", Value.fromString(value));
+  }
+}

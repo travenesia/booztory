@@ -6,6 +6,7 @@ import {
   NFTDiscountSlotMinted,
   NFTFreeSlotMinted,
   GMClaimed,
+  GMMilestoneReached,
   PointsEarned,
   DonationReceived,
   TicketsConverted,
@@ -104,6 +105,8 @@ export function handleNFTFreeSlotMinted(event: NFTFreeSlotMinted): void {
 }
 
 // ── GM streak ─────────────────────────────────────────────────────────────────
+// GMClaimed fires first, then GMMilestoneReached in the same tx on milestone days.
+// Use txHash as ID so the milestone handler can load and update boozAmount.
 export function handleGMClaimed(event: GMClaimed): void {
   const wallet = getOrCreateWallet(event.params.user)
   const streak = event.params.streakCount as i32
@@ -112,13 +115,25 @@ export function handleGMClaimed(event: GMClaimed): void {
   }
   wallet.save()
 
-  const ev = new GMClaimEvent(eventId(event.transaction.hash, event.logIndex))
+  const txHash = event.transaction.hash.toHexString()
+  const ev = new GMClaimEvent(txHash)
   ev.user = event.params.user
   ev.streakCount = streak
   ev.boozAmount = event.params.reward
-  ev.txHash = event.transaction.hash.toHexString()
+  ev.txHash = txHash
   ev.blockTimestamp = event.block.timestamp
   ev.save()
+}
+
+// GMMilestoneReached fires after GMClaimed in the same tx on milestone days (streak 7/14/30/60/90).
+// Load the GMClaimEvent by txHash and add the milestone bonus to boozAmount.
+export function handleGMMilestoneReached(event: GMMilestoneReached): void {
+  const txHash = event.transaction.hash.toHexString()
+  const ev = GMClaimEvent.load(txHash)
+  if (ev) {
+    ev.boozAmount = ev.boozAmount.plus(event.params.bonus)
+    ev.save()
+  }
 }
 
 // ── Points ─────────────────────────────────────────────────────────────────────

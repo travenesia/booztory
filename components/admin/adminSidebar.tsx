@@ -23,18 +23,19 @@ import {
   ExternalLink,
   BadgeCheck,
   Coins,
+  Globe,
 } from "lucide-react"
-import Image from "next/image"
+import { cn } from "@/lib/utils"
 import { useDisconnect } from "wagmi"
 import { signOut } from "next-auth/react"
 
 const NAV_ITEMS = [
-  { label: "Overview",  href: "/admin",           icon: LayoutDashboard },
-  { label: "Raffle",    href: "/admin/raffle",     icon: Ticket         },
-  { label: "Sponsors",  href: "/admin/sponsors",   icon: Megaphone      },
-  { label: "NFT Pass",  href: "/admin/nft",        icon: BadgeCheck     },
-  { label: "Token",     href: "/admin/token",      icon: Coins          },
-  { label: "Contract",  href: "/admin/contract",   icon: Settings       },
+  { label: "Overview",  href: "/admin/base",           icon: LayoutDashboard },
+  { label: "Raffle",    href: "/admin/base/raffle",     icon: Ticket         },
+  { label: "Sponsors",  href: "/admin/base/sponsors",   icon: Megaphone      },
+  { label: "NFT Pass",  href: "/admin/base/nft",        icon: BadgeCheck     },
+  { label: "Token",     href: "/admin/base/token",      icon: Coins          },
+  { label: "Contract",  href: "/admin/base/contract",   icon: Settings       },
 ]
 
 export function AdminSidebar() {
@@ -52,18 +53,24 @@ export function AdminSidebar() {
     <Sidebar collapsible="icon">
 
       {/* Header — logo + wordmark */}
-      <SidebarHeader className="border-b py-3">
+      <SidebarHeader className="border-b h-[72px] justify-center">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/admin" className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 shrink-0">
-                  <Image src="/logo-color.svg" alt="Booztory" width={18} height={18} />
+              <Link href="/admin/base" className="flex items-center gap-2">
+                <div className={cn(
+                  "flex items-center justify-center rounded-lg bg-white border border-gray-200 shrink-0 transition-all duration-200",
+                  collapsed ? "h-9 w-9" : "h-8 w-8"
+                )}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/base.svg" alt="Base" width={collapsed ? 22 : 18} height={collapsed ? 22 : 18} />
                 </div>
-                <div className="flex flex-col leading-none">
-                  <span className="font-bold text-sm text-gray-900">Booztory</span>
-                  <span className="text-[10px] text-amber-600 font-semibold">Admin</span>
-                </div>
+                {!collapsed && (
+                  <div className="flex flex-col leading-none">
+                    <span className="font-bold text-sm text-gray-900">Booztory</span>
+                    <span className="text-[10px] text-amber-600 font-semibold">Admin</span>
+                  </div>
+                )}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -76,8 +83,8 @@ export function AdminSidebar() {
           <SidebarGroupLabel>Management</SidebarGroupLabel>
           <SidebarMenu>
             {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-              const isActive = href === "/admin"
-                ? pathname === "/admin"
+              const isActive = href === "/admin/base"
+                ? pathname === "/admin/base"
                 : pathname.startsWith(href)
               return (
                 <SidebarMenuItem key={href}>
@@ -101,6 +108,14 @@ export function AdminSidebar() {
       {/* Footer — back to app + sign out */}
       <SidebarFooter className="border-t">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip={collapsed ? "World Admin" : undefined}>
+              <Link href="/admin/world" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                <Globe size={16} />
+                <span>World Admin</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip={collapsed ? "Back to App" : undefined}>
               <a href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">

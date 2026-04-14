@@ -1,7 +1,7 @@
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts"
-import { DrawCompleted, RaffleEntered } from "../generated/BooztoryRaffle/BooztoryRaffle"
+import { DrawCompleted, RaffleEntered, RaffleCancelled } from "../generated/BooztoryRaffle/BooztoryRaffle"
 import { BooztoryRaffle } from "../generated/BooztoryRaffle/BooztoryRaffle"
-import { Wallet, WinEvent, RaffleEnteredEvent, DrawnRaffle } from "../generated/schema"
+import { Wallet, WinEvent, RaffleEnteredEvent, DrawnRaffle, CancelledRaffle } from "../generated/schema"
 
 // USDC on Base Mainnet
 const USDC_ADDRESS = Address.fromString("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
@@ -20,6 +20,11 @@ function getOrCreateWallet(address: Bytes): Wallet {
     wallet.totalWinnings = BigInt.fromI32(0)
   }
   return wallet
+}
+
+export function handleRaffleCancelled(event: RaffleCancelled): void {
+  const cancelled = new CancelledRaffle(event.params.raffleId.toString())
+  cancelled.save()
 }
 
 export function handleRaffleEntered(event: RaffleEntered): void {

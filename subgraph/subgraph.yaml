@@ -40,6 +40,8 @@ dataSources:
           handler: handleNFTFreeSlotMinted
         - event: GMClaimed(indexed address,uint16,uint256)
           handler: handleGMClaimed
+        - event: GMMilestoneReached(indexed address,uint16,uint256)
+          handler: handleGMMilestoneReached
         - event: PointsEarned(indexed address,uint256,string)
           handler: handlePointsEarned
         - event: DonationReceived(indexed uint256,indexed address,uint256,uint256)
@@ -51,9 +53,9 @@ dataSources:
     name: BooztoryRaffle
     network: base
     source:
-      address: "0xb10954830e0628C39c502a89C489a0e14734697c"
+      address: "0x8AD73ba2C5a0BEa7E22B78081441ABA6c80A602a"
       abi: BooztoryRaffle
-      startBlock: 44138037
+      startBlock: 44680022
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -63,12 +65,15 @@ dataSources:
         - WinEvent
         - RaffleEnteredEvent
         - DrawnRaffle
+        - CancelledRaffle
       abis:
         - name: BooztoryRaffle
           file: ./abis/BooztoryRaffle.json
       eventHandlers:
         - event: DrawCompleted(indexed uint256,address[])
           handler: handleDrawCompleted
+        - event: RaffleCancelled(indexed uint256)
+          handler: handleRaffleCancelled
         - event: RaffleEntered(indexed uint256,indexed address,uint256,uint256)
           handler: handleRaffleEntered
       file: ./src/raffle.ts

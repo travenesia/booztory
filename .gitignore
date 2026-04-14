@@ -111,6 +111,9 @@ typechain-types/
 
 # Subgraph dependencies
 subgraph/node_modules/
+subgraph-world/node_modules/
+subgraph-world/build/
+subgraph-world/generated/
 
 # IDE & AI tooling (local only)
 .claude/

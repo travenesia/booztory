@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { createPublicClient, http } from "viem"
 import { base } from "viem/chains"
+import { redis } from "@/lib/ratelimit"
 
 // Public client used for SIWE signature verification.
 // verifySiweMessage handles all account types:
@@ -91,13 +92,46 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
+    CredentialsProvider({
+      id: "worldapp-wallet",
+      name: "World App Wallet",
+      credentials: {
+        payload: { label: "Payload", type: "text" }, // JSON: { address, message, signature }
+        nonce:   { label: "Nonce",   type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.payload || !credentials?.nonce) return null
+        try {
+          const { verifySiweMessage } = await import("@worldcoin/minikit-js/siwe")
+          const payload = JSON.parse(credentials.payload)
+          const verification = await verifySiweMessage(payload, credentials.nonce)
+          if (!verification.isValid) return null
+          const address = verification.siweMessageData.address.toLowerCase()
+          const displayName = `${address.slice(0, 6)}...${address.slice(-4)}`
+          return { id: address, walletAddress: address, username: displayName }
+        } catch (error) {
+          console.error("World App auth error:", error)
+          return null
+        }
+      },
+    }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.userId = user.id
         token.walletAddress = user.walletAddress
         token.username = user.username
+      }
+      // Persist worldVerified across sessions — check Redis once then bake into JWT.
+      // The nullifier stored during POST /api/worldid/verify is the source of truth.
+      if (token.walletAddress && !token.worldVerified) {
+        const nullifier = await redis.get(`worldVerified:${token.walletAddress}`)
+        if (nullifier) token.worldVerified = true
+      }
+      // Allow client to set worldVerified via useSession().update()
+      if (trigger === "update" && session?.worldVerified) {
+        token.worldVerified = true
       }
       return token
     },
@@ -106,6 +140,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.userId as string
         session.user.walletAddress = token.walletAddress as string
         session.user.username = token.username as string
+        session.user.worldVerified = token.worldVerified ?? false
       }
       return session
     },

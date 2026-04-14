@@ -2,7 +2,9 @@
 
 import { useReadContracts } from "wagmi"
 import { RAFFLE_ADDRESS, RAFFLE_ABI } from "@/lib/contract"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { WORLD_RAFFLE_ADDRESS, WORLD_RAFFLE_ABI } from "@/lib/contractWorld"
+import { APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
+import { isWorldApp } from "@/lib/miniapp-flag"
 
 export interface PriceTier {
   seconds: number
@@ -26,13 +28,18 @@ function formatDuration(seconds: number): string {
 }
 
 export function usePriceTiers() {
+  const inWorldApp = isWorldApp()
+  const rAddr   = inWorldApp ? WORLD_RAFFLE_ADDRESS : RAFFLE_ADDRESS
+  const rAbi    = inWorldApp ? WORLD_RAFFLE_ABI     : RAFFLE_ABI
+  const chainId = inWorldApp ? WORLD_CHAIN.id       : APP_CHAIN.id
+
   const { data: tiersRaw, refetch } = useReadContracts({
     contracts: STANDARD_SECONDS.map(s => ({
-      address: RAFFLE_ADDRESS,
-      abi: RAFFLE_ABI,
+      address: rAddr,
+      abi: rAbi,
       functionName: "priceTiers" as const,
       args: [BigInt(s)] as const,
-      chainId: APP_CHAIN.id,
+      chainId,
     })),
     query: { refetchInterval: 30_000 },
   })

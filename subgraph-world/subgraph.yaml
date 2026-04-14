@@ -1,0 +1,77 @@
+specVersion: 1.0.0
+description: Booztory World Chain subgraph v1.0.13
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: BooztoryWorld
+    network: worldchain
+    source:
+      address: "0x14Fb9124b2E376c250DCf73336912eD6EB6e1219"
+      abi: BooztoryWorld
+      startBlock: 28382487
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Wallet
+        - Slot
+        - SlotMintEvent
+        - GMClaimEvent
+        - PointsEarnedEvent
+        - DonationEvent
+        - TicketsConvertedEvent
+      abis:
+        - name: BooztoryWorld
+          file: ./abis/BooztoryWorld.json
+      eventHandlers:
+        - event: SlotMinted(indexed uint256,indexed address,uint256,uint256)
+          handler: handleSlotMinted
+        - event: FreeSlotMinted(indexed uint256,indexed address,uint256)
+          handler: handleFreeSlotMinted
+        - event: DiscountSlotMinted(indexed uint256,indexed address,uint256,uint256)
+          handler: handleDiscountSlotMinted
+        - event: WLDSlotMinted(indexed uint256,indexed address,uint256)
+          handler: handleWLDSlotMinted
+        - event: GMClaimed(indexed address,uint16,uint256)
+          handler: handleGMClaimed
+        - event: GMMilestoneReached(indexed address,uint16,uint256)
+          handler: handleGMMilestoneReached
+        - event: PointsEarned(indexed address,uint256,string)
+          handler: handlePointsEarned
+        - event: DonationReceived(indexed uint256,indexed address,uint256,uint256,address)
+          handler: handleDonationReceived
+        - event: TicketsConverted(indexed address,uint256,uint256)
+          handler: handleTicketsConverted
+      file: ./src/booztory.ts
+  - kind: ethereum
+    name: BooztoryRaffleWorld
+    network: worldchain
+    source:
+      address: "0x5DED6db77ea2C0476402145A984DD32bc6cAD89C"
+      abi: BooztoryRaffleWorld
+      startBlock: 28076392
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Wallet
+        - WinEvent
+        - RaffleEnteredEvent
+        - DrawnRaffle
+        - CancelledRaffle
+      abis:
+        - name: BooztoryRaffleWorld
+          file: ./abis/BooztoryRaffleWorld.json
+      eventHandlers:
+        - event: DrawCompleted(indexed uint256,address[])
+          handler: handleDrawCompleted
+        - event: RaffleEntered(indexed uint256,indexed address,uint256,uint256)
+          handler: handleRaffleEntered
+        - event: RaffleCancelled(indexed uint256)
+          handler: handleRaffleCancelled
+      file: ./src/raffle.ts

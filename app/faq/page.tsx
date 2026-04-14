@@ -35,7 +35,7 @@ export default function FAQPage() {
           <div className="text-center mb-4">
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
               <p className="text-sm text-gray-700 leading-relaxed text-left">
-                Booztory is a decentralized digital spotlight built on Base. Pay 1 USDC to feature your content in a live slot and get seen by the world. Support creators you love — or earn support from your audience — through on-chain donations.
+                Booztory is a decentralized digital spotlight built on Base and World Chain. Pay 1 USDC to feature your content in a live slot and get seen by the world. Support creators you love — or earn support from your audience — through on-chain donations.
               </p>
             </div>
           </div>
@@ -54,7 +54,26 @@ export default function FAQPage() {
                   <p>
                     <strong>Yes — Booztory is globally accessible.</strong>
                   </p>
-                  <p>Since it runs on Base, all you need is a Web3 wallet and some USDC to get started.</p>
+                  <p>It runs on <strong>Base</strong> and <strong>World Chain</strong>. On Base, all you need is a Web3 wallet and some USDC. On World Chain, open Booztory directly inside <strong>World App</strong> — no extra setup required.</p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="world-verify" className="bg-gray-0 rounded-lg border border-gray-300">
+              <AccordionTrigger className="text-left hover:no-underline py-4 px-4 text-sm">
+                <span className="font-bold text-gray-900">Do I need to verify my identity?</span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 pt-2 px-4">
+                <div className="text-xs text-gray-700 space-y-2">
+                  <p>
+                    <strong>Only if you&apos;re using Booztory inside World App.</strong> All other platforms (browser, Base App, Farcaster) have no verification requirement.
+                  </p>
+                  <p>
+                    In World App, a one-time <strong>World ID</strong> verification (Orb scan) is required to submit content, claim daily GM, convert tickets, and enter raffles. Donating and sponsoring are open to everyone — no verification needed.
+                  </p>
+                  <p>
+                    When the verify button appears, tap it and complete the World ID flow. It takes under a minute and is <strong>permanent</strong> — you will never be asked again.
+                  </p>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -79,7 +98,7 @@ export default function FAQPage() {
                     </li>
                     <li className="flex items-center space-x-2">
                       <span className="w-2 h-2 bg-red-700 rounded-full flex-shrink-0"></span>
-                      <span>Your slot is minted as an ERC-721 token on Base</span>
+                      <span>Your slot is minted as an ERC-721 token on Base or World Chain</span>
                     </li>
                   </ul>
                   <p className="text-teal-600 font-medium">
@@ -318,7 +337,7 @@ export default function FAQPage() {
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        <span>Winners selected by Chainlink VRF (verifiable randomness)</span>
+                        <span>Winners selected by verifiable randomness — Chainlink VRF on Base, commit-reveal on World Chain</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
@@ -412,11 +431,15 @@ export default function FAQPage() {
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-                        <span>Weekly raffle (Chainlink VRF) — USDC prizes</span>
+                        <span>Weekly raffle — USDC prizes (Chainlink VRF on Base · commit-reveal on World Chain)</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-green-600 rounded-full"></span>
                         <span>Base Mini App + Farcaster Mini App</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span>World Mini App — live on World Chain</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-green-600 rounded-full"></span>

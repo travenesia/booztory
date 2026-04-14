@@ -9,7 +9,7 @@ import {
 } from "@rainbow-me/rainbowkit/wallets"
 import { http, fallback } from "wagmi"
 import { sendCalls } from "wagmi/actions"
-import { base } from "wagmi/chains"
+import { base, worldchain } from "wagmi/chains"
 import { Attribution } from "ox/erc8021"
 import type { Abi } from "viem"
 
@@ -28,9 +28,10 @@ if (!projectId) {
 }
 
 // ==============================
-// CHAIN CONFIG (BASE MAINNET)
+// CHAIN CONFIG
 // ==============================
-export const APP_CHAIN = base
+export const APP_CHAIN   = base
+export const WORLD_CHAIN = worldchain  // chainId 480 — used by World App path
 
 // Always use Base Mainnet for NFT reads
 export const NFT_CHAIN_ID = base.id
@@ -96,16 +97,16 @@ export const wagmiConfig = getDefaultConfig({
     },
   ],
 
-  // Base-only (clean + accurate attribution)
-  chains: [base],
+  chains: [base, worldchain],
 
   transports: {
     [base.id]: fallback([
-      // Primary RPC (Alchemy)
       http(`https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`),
-
-      // Fallback RPC (Base public)
       http("https://mainnet.base.org"),
+    ]),
+    [worldchain.id]: fallback([
+      http(`https://worldchain-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+      http("https://worldchain-mainnet.g.alchemy.com/public"),
     ]),
   },
 

@@ -26,7 +26,7 @@ type SlotMintEvent @entity(immutable: true) {
   blockTimestamp: BigInt!
 }
 
-type GMClaimEvent @entity(immutable: true) {
+type GMClaimEvent @entity(immutable: false) {
   id: ID!
   user: Bytes!
   streakCount: Int!
@@ -82,5 +82,9 @@ type RaffleEnteredEvent @entity(immutable: true) {
 }
 
 type DrawnRaffle @entity(immutable: true) {
+  id: ID!   # raffleId as string
+}
+
+type CancelledRaffle @entity(immutable: true) {
   id: ID!   # raffleId as string
 }

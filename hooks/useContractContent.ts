@@ -4,24 +4,32 @@ import { useState, useEffect, useCallback } from "react"
 import { useReadContract } from "wagmi"
 import { readContract } from "wagmi/actions"
 import { BOOZTORY_ADDRESS, BOOZTORY_ABI, USDC_ADDRESS, ERC20_ABI, parseSlot, getPlaceholderContent, type ContentItem, type OnChainSlot } from "@/lib/contract"
-import { APP_CHAIN, wagmiConfig } from "@/lib/wagmi"
+import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI, WORLD_USDC_ADDRESS } from "@/lib/contractWorld"
+import { APP_CHAIN, WORLD_CHAIN, wagmiConfig } from "@/lib/wagmi"
+import { isWorldApp } from "@/lib/miniapp-flag"
 
 export function useCurrentSlot() {
+  const inWorldApp = isWorldApp()
+  const contractAddress = inWorldApp ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS
+  const contractAbi    = inWorldApp ? WORLD_BOOZTORY_ABI     : BOOZTORY_ABI
+  const usdcAddress    = inWorldApp ? WORLD_USDC_ADDRESS     : USDC_ADDRESS
+  const chainId        = inWorldApp ? WORLD_CHAIN.id         : APP_CHAIN.id
+
   const { data, isLoading, refetch } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: contractAddress,
+    abi: contractAbi,
     functionName: "getCurrentSlot",
-    chainId: APP_CHAIN.id,
-    query: { refetchInterval: 30_000 },
+    chainId,
+    query: { refetchInterval: 30_000, refetchOnWindowFocus: false },
   })
 
   const { data: usdcBalance } = useReadContract({
-    address: USDC_ADDRESS,
+    address: usdcAddress,
     abi: ERC20_ABI,
     functionName: "balanceOf",
-    args: [BOOZTORY_ADDRESS],
-    chainId: APP_CHAIN.id,
-    query: { refetchInterval: 60_000 },
+    args: [contractAddress],
+    chainId,
+    query: { refetchInterval: 60_000, refetchOnWindowFocus: false },
   })
 
   const content: ContentItem = data
@@ -37,12 +45,13 @@ export function useCurrentSlot() {
 }
 
 export function useUpcomingSlots() {
+  const inWorldApp = isWorldApp()
   const { data, isLoading, refetch } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: inWorldApp ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS,
+    abi: inWorldApp ? WORLD_BOOZTORY_ABI : BOOZTORY_ABI,
     functionName: "getUpcomingSlots",
-    chainId: APP_CHAIN.id,
-    query: { refetchInterval: 60_000 },
+    chainId: inWorldApp ? WORLD_CHAIN.id : APP_CHAIN.id,
+    query: { refetchInterval: 60_000, refetchOnWindowFocus: false },
   })
 
   const items: ContentItem[] = data
@@ -60,13 +69,14 @@ export function useAllPastSlots() {
   const [nextOffset, setNextOffset] = useState(PAGE_SIZE)
   const [isFetchingMore, setIsFetchingMore] = useState(false)
 
+  const inWorldApp = isWorldApp()
   // Fetch the first page via hook (benefits from wagmi cache)
   const { data, isLoading } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: inWorldApp ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS,
+    abi: inWorldApp ? WORLD_BOOZTORY_ABI : BOOZTORY_ABI,
     functionName: "getPastSlots",
     args: [0n, PAGE_SIZE],
-    chainId: APP_CHAIN.id,
+    chainId: inWorldApp ? WORLD_CHAIN.id : APP_CHAIN.id,
   })
 
   useEffect(() => {
@@ -86,11 +96,11 @@ export function useAllPastSlots() {
     setIsFetchingMore(true)
     try {
       const result = await readContract(wagmiConfig, {
-        address: BOOZTORY_ADDRESS,
-        abi: BOOZTORY_ABI,
+        address: inWorldApp ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS,
+        abi: inWorldApp ? WORLD_BOOZTORY_ABI : BOOZTORY_ABI,
         functionName: "getPastSlots",
         args: [nextOffset, PAGE_SIZE],
-        chainId: APP_CHAIN.id,
+        chainId: inWorldApp ? WORLD_CHAIN.id : APP_CHAIN.id,
       })
       const parsed = (result[0] as bigint[]).map((id, i) =>
         parseSlot(id, (result[1] as OnChainSlot[])[i])

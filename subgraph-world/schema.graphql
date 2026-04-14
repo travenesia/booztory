@@ -1,0 +1,93 @@
+# ── Aggregated per-wallet totals (used for All Time queries) ──────────────────
+type Wallet @entity(immutable: false) {
+  id: ID!               # lowercased hex address
+  totalSlots: BigInt!   # all mint paths combined
+  bestStreak: Int!      # highest GMClaimed streakCount ever
+  totalPoints: BigInt!  # sum of all PointsEarned
+  totalDonated: BigInt! # sum of (creatorAmount + feeAmount) as donor — 6-decimal USDC
+  totalReceived: BigInt! # sum of creatorAmount received — 6-decimal USDC
+  totalWins: Int!       # raffle wins
+  totalWinnings: BigInt! # cumulative USDC won in raffles — 6-decimal
+}
+
+# ── Slot entity — maps tokenId → creator for DonationReceived lookup ──────────
+type Slot @entity(immutable: false) {
+  id: ID!        # tokenId as string
+  creator: Bytes!
+  blockNumber: BigInt! # v1.0.3 — forces unique IPFS hash
+}
+
+# ── Timestamped events — used for leaderboard (30-day) and profile tx history ──
+type SlotMintEvent @entity(immutable: false) {
+  id: ID!
+  creator: Bytes!
+  tokenId: BigInt!
+  mintType: String!      # "standard" | "discount" | "free" | "wld" | "wld-discount"
+  wldAmount: BigInt      # set for wld / wld-discount mints (18-decimal WLD)
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type GMClaimEvent @entity(immutable: false) {
+  id: ID!           # txHash — one claim per tx, allows milestone handler to sum bonus in
+  user: Bytes!
+  streakCount: Int!
+  boozAmount: BigInt!   # reward + milestone bonus (if any) — summed by handleGMMilestoneReached
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type PointsEarnedEvent @entity(immutable: true) {
+  id: ID!
+  user: Bytes!
+  amount: BigInt!
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type DonationEvent @entity(immutable: true) {
+  id: ID!
+  donor: Bytes!
+  creator: Bytes!
+  tokenId: BigInt!
+  creatorAmount: BigInt!
+  totalAmount: BigInt!   # creatorAmount + feeAmount — always USD-equivalent (6 dec)
+  paymentToken: String!  # token address — USDC address = USDC, WLD address = WLD
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type WinEvent @entity(immutable: true) {
+  id: ID!
+  winner: Bytes!
+  raffleId: BigInt!
+  usdcAmount: BigInt!   # USDC prize for this winner — 6-decimal
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type TicketsConvertedEvent @entity(immutable: true) {
+  id: ID!
+  user: Bytes!
+  pointsBurned: BigInt!
+  ticketsMinted: BigInt!
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type RaffleEnteredEvent @entity(immutable: true) {
+  id: ID!
+  user: Bytes!
+  raffleId: BigInt!
+  ticketAmount: BigInt!
+  txHash: String!
+  blockTimestamp: BigInt!
+}
+
+type DrawnRaffle @entity(immutable: true) {
+  id: ID!   # raffleId as string
+}
+
+type CancelledRaffle @entity(immutable: true) {
+  id: ID!   # raffleId as string
+}

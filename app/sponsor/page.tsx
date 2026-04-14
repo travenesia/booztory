@@ -3,8 +3,10 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from "wagmi"
 import { waitForTransactionReceipt } from "wagmi/actions"
+import { useSession } from "next-auth/react"
+import { MiniKit } from "@worldcoin/minikit-js"
 import { wagmiConfig, APP_CHAIN, DATA_SUFFIX_PARAM, sendBatchWithAttribution } from "@/lib/wagmi"
-import { canUsePaymaster, waitForPaymasterCalls } from "@/lib/miniapp-flag"
+import { canUsePaymaster, waitForPaymasterCalls, isWorldApp } from "@/lib/miniapp-flag"
 import { Loader2, CheckCircle2, Image as ImageIcon, FileText, Clock } from "lucide-react"
 import { ProgressiveBlur } from "@/components/ui/progressive-blur"
 import { FaYoutube, FaTiktok, FaXTwitter, FaVimeo, FaSpotify, FaTwitch } from "react-icons/fa6"
@@ -13,6 +15,9 @@ import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { cn } from "@/lib/utils"
 import { RAFFLE_ADDRESS, RAFFLE_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contract"
+import { WORLD_RAFFLE_ADDRESS, WORLD_RAFFLE_ABI, WORLD_USDC_ADDRESS } from "@/lib/contractWorld"
+import { WORLD_CHAIN } from "@/lib/wagmi"
+import { encodeFunctionData } from "viem"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { HiClipboardDocument } from "react-icons/hi2"
 import { ContentEmbed } from "@/components/content/contentEmbed"
@@ -353,21 +358,25 @@ function ApplicationRow({
   const [refundCountdown, setRefundCountdown] = useState("")
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
+  const inWorldApp = isWorldApp()
+  const rAddr   = inWorldApp ? WORLD_RAFFLE_ADDRESS : RAFFLE_ADDRESS
+  const rAbi    = inWorldApp ? WORLD_RAFFLE_ABI     : RAFFLE_ABI
+  const chainId = inWorldApp ? WORLD_CHAIN.id       : APP_CHAIN.id
 
   const { data: refundTimeoutRaw } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: rAddr,
+    abi: rAbi,
     functionName: "refundTimeout",
-    chainId: APP_CHAIN.id,
+    chainId,
   })
   const refundTimeout = Number(refundTimeoutRaw ?? 30 * 86400)
 
   const { data: appRaw, refetch: refetchAppData } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: rAddr,
+    abi: rAbi,
     functionName: "applications",
     args: [BigInt(appId)],
-    chainId: APP_CHAIN.id,
+    chainId,
     query: { refetchInterval: 30_000, refetchOnWindowFocus: true },
   })
 
@@ -415,26 +424,34 @@ function ApplicationRow({
   async function handleClaimRefund() {
     setIsRefunding(true)
     try {
-      let ranPaymaster = false
-      if (await canUsePaymaster(PAYMASTER_URL)) {
-        try {
-          const callsId = await sendBatchWithAttribution([
-            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-          ranPaymaster = true
-        } catch {
-          // fall through to EOA
-        }
-      }
-      if (!ranPaymaster) {
-        const tx = await writeContractAsync({
-          address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
-          functionName: "claimRefund", args: [BigInt(appId)],
-          chainId: APP_CHAIN.id,
-          ...DATA_SUFFIX_PARAM,
+      if (inWorldApp) {
+        const result = await MiniKit.sendTransaction({
+          transactions: [{ to: rAddr, data: encodeFunctionData({ abi: rAbi, functionName: "claimRefund", args: [BigInt(appId)] }) }],
+          chainId,
         })
-        await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+        if (!result?.data?.userOpHash) throw new Error("No userOpHash")
+      } else {
+        let ranPaymaster = false
+        if (await canUsePaymaster(PAYMASTER_URL)) {
+          try {
+            const callsId = await sendBatchWithAttribution([
+              { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "claimRefund", args: [BigInt(appId)] },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch {
+            // fall through to EOA
+          }
+        }
+        if (!ranPaymaster) {
+          const tx = await writeContractAsync({
+            address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+            functionName: "claimRefund", args: [BigInt(appId)],
+            chainId: APP_CHAIN.id,
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+        }
       }
       refetchAppData()
       onAction()
@@ -800,7 +817,12 @@ function SponsorLinkInput({
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function SponsorPage() {
-  const { address } = useAccount()
+  const { address: wagmiAddress } = useAccount()
+  const { data: session } = useSession()
+  const inWorldApp = isWorldApp()
+  const address = wagmiAddress
+    ?? (session?.user?.walletAddress as `0x${string}` | undefined)
+    ?? (inWorldApp ? (MiniKit.user?.walletAddress as `0x${string}` | undefined) : undefined)
   const { toast } = useToast()
   const { writeContractAsync } = useWriteContract()
 
@@ -862,10 +884,25 @@ export default function SponsorPage() {
 
   const { tiers: priceTiers } = usePriceTiers()
 
+  const rAddr   = inWorldApp ? WORLD_RAFFLE_ADDRESS : RAFFLE_ADDRESS
+  const rAbi    = inWorldApp ? WORLD_RAFFLE_ABI     : RAFFLE_ABI
+  const rUsdc   = inWorldApp ? WORLD_USDC_ADDRESS   : USDC_ADDRESS
+  const chainId = inWorldApp ? WORLD_CHAIN.id       : APP_CHAIN.id
+
+  const { data: usdcBalanceRaw } = useReadContract({
+    address: rUsdc,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId,
+    query: { enabled: !!address },
+  })
+  const usdcBalance = usdcBalanceRaw ? Number(usdcBalanceRaw as bigint) : 0
+
   const { data: appCountRaw, refetch: refetchAppCount } = useReadContract({
-    address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+    address: rAddr, abi: rAbi,
     functionName: "nextApplicationId",
-    chainId: APP_CHAIN.id,
+    chainId,
     query: { refetchInterval: 30_000 },
   })
 
@@ -888,6 +925,7 @@ export default function SponsorPage() {
   const fee           = Number(feeBn) / 1_000_000
   const totalCost     = minPrize + fee
   const tierAvailable = totalCost > 0
+  const hasEnoughUsdc = usdcBalance >= Number(totalBn)
 
   const detectedPlatform = adType === "embed" ? detectPlatformName(embedUrl) : null
 
@@ -927,38 +965,50 @@ export default function SponsorPage() {
 
       const adLinkJson = serializeLinks(links)
 
-      let ranPaymaster = false
-      if (await canUsePaymaster(PAYMASTER_URL)) {
-        try {
-          setIsBatchedSubmit(true)
-          const callsId = await sendBatchWithAttribution([
-            { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
-            { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
-          ], PAYMASTER_URL!)
-          await waitForPaymasterCalls(callsId)
-          ranPaymaster = true
-        } catch {
-          setIsBatchedSubmit(false)
+      if (inWorldApp) {
+        setIsBatchedSubmit(true)
+        const result = await MiniKit.sendTransaction({
+          transactions: [
+            { to: rUsdc, data: encodeFunctionData({ abi: ERC20_ABI, functionName: "approve", args: [rAddr, totalBn] }) },
+            { to: rAddr, data: encodeFunctionData({ abi: rAbi, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] }) },
+          ],
+          chainId,
+        })
+        if (!result?.data?.userOpHash) throw new Error("No userOpHash")
+      } else {
+        let ranPaymaster = false
+        if (await canUsePaymaster(PAYMASTER_URL)) {
+          try {
+            setIsBatchedSubmit(true)
+            const callsId = await sendBatchWithAttribution([
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [RAFFLE_ADDRESS, totalBn] },
+              { address: RAFFLE_ADDRESS, abi: RAFFLE_ABI, functionName: "submitApplication", args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)] },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch {
+            setIsBatchedSubmit(false)
+          }
         }
-      }
-      if (!ranPaymaster) {
-        const approveTx = await writeContractAsync({
-          address: USDC_ADDRESS, abi: ERC20_ABI,
-          functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],
-          chainId: APP_CHAIN.id,
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
-        setSubmitStep(2)
+        if (!ranPaymaster) {
+          const approveTx = await writeContractAsync({
+            address: USDC_ADDRESS, abi: ERC20_ABI,
+            functionName: "approve", args: [RAFFLE_ADDRESS, totalBn],
+            chainId: APP_CHAIN.id,
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveTx })
+          setSubmitStep(2)
 
-        const submitTx = await writeContractAsync({
-          address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
-          functionName: "submitApplication",
-          args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)],
-          chainId: APP_CHAIN.id,
-          ...DATA_SUFFIX_PARAM,
-        })
-        await waitForTransactionReceipt(wagmiConfig, { hash: submitTx })
+          const submitTx = await writeContractAsync({
+            address: RAFFLE_ADDRESS, abi: RAFFLE_ABI,
+            functionName: "submitApplication",
+            args: [adType, adContent, adLinkJson, BigInt(selectedTier?.seconds ?? 0)],
+            chainId: APP_CHAIN.id,
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: submitTx })
+        }
       }
 
       setSponsorName(""); setImageUrl(""); setEmbedUrl(""); setAdText(""); setTagline("")
@@ -989,11 +1039,11 @@ export default function SponsorPage() {
   // Batch-read all applications in one multicall
   const { data: allAppsData } = useReadContracts({
     contracts: appIds.map(id => ({
-      address: RAFFLE_ADDRESS,
-      abi: RAFFLE_ABI,
+      address: rAddr,
+      abi: rAbi,
       functionName: "applications" as const,
       args: [BigInt(id)] as const,
-      chainId: APP_CHAIN.id,
+      chainId,
     })),
     query: { enabled: appCount > 0, refetchInterval: 60_000 },
   })
@@ -1515,9 +1565,14 @@ export default function SponsorPage() {
                 </div>
               )}
 
+              {!hasEnoughUsdc && tierAvailable && !isSubmitting && (
+                <p className="text-xs text-red-500 text-center">
+                  Insufficient USDC. Your balance: ${(usdcBalance / 1_000_000).toFixed(2)} USDC.
+                </p>
+              )}
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting || !isFormValid}
+                disabled={isSubmitting || !isFormValid || !hasEnoughUsdc}
                 className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
               >
                 {isSubmitting && <Loader2 className="animate-spin" size={16} />}

@@ -5,7 +5,8 @@ import { useEnsName, useAccount } from "wagmi"
 import { createPublicClient, http, toCoinType, getAddress } from "viem"
 import { base, mainnet } from "viem/chains"
 import { sdk } from "@farcaster/miniapp-sdk"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { MiniKit } from "@worldcoin/minikit-js"
+import { isMiniApp, isWorldApp } from "@/lib/miniapp-flag"
 
 const Q = { staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000, retry: 2 }
 
@@ -34,6 +35,8 @@ export interface Identity {
   baseName: string | null
   /** Full .eth name */
   ensName: string | null
+  /** World ID orb verification: true = orb verified (own address in World App), or has World username (others) */
+  isWorldVerified: boolean
 }
 
 /**
@@ -70,6 +73,21 @@ export function useIdentity(address?: string): Identity {
     staleTime: Infinity,
     gcTime: Infinity,
     retry: false,
+  })
+
+  // ── World ID (World App — any address) ───────────────────────────────────────
+  const inWorldApp = isWorldApp()
+  const { data: worldUser } = useQuery({
+    queryKey: ["world-user", addr],
+    queryFn: async () => {
+      // For own address, MiniKit.user is already populated after wallet auth
+      if (isOwn && MiniKit.user?.username) return MiniKit.user
+      return MiniKit.getUserByAddress(addr!)
+    },
+    enabled: !!addr && inWorldApp,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
   })
 
   // ── Basename (ENSIP-19) ──────────────────────────────────────────────────────
@@ -113,12 +131,26 @@ export function useIdentity(address?: string): Identity {
   const farcasterUsername = isOwn ? (farcasterCtx?.user?.username ?? null) : null
   const farcasterPfp = isOwn ? (farcasterCtx?.user?.pfpUrl ?? null) : null
 
+  // World ID identity — available for any address in World App
+  const worldUsername = worldUser?.username ?? null
+  const worldAvatarUrl = worldUser?.profilePictureUrl ?? null
+
+  // World ID orb verification:
+  // - Own address in World App: use MiniKit.user.verificationStatus.isOrbVerified
+  // - Other addresses: use presence of worldUsername as proxy (has World ID account)
+  const isWorldVerified = inWorldApp
+    ? (isOwn
+        ? !!(MiniKit.user?.verificationStatus?.isOrbVerified)
+        : !!worldUsername)
+    : false
+
   return {
-    displayName: farcasterUsername || strippedBase || strippedEns || shortAddr,
-    walletName: strippedBase || strippedEns || shortAddr,
-    avatarUrl: farcasterPfp || baseAvatar || ensAvatar || null,
+    displayName: worldUsername || farcasterUsername || strippedBase || strippedEns || shortAddr,
+    walletName: worldUsername || strippedBase || strippedEns || shortAddr,
+    avatarUrl: worldAvatarUrl || farcasterPfp || baseAvatar || ensAvatar || null,
     farcasterUsername,
     baseName: baseName ?? null,
     ensName: ensName ?? null,
+    isWorldVerified,
   }
 }

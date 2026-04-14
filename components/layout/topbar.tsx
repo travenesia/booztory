@@ -46,8 +46,10 @@ export function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [gmOpen, setGmOpen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const { address } = useAccount()
+  const { address: wagmiAddress } = useAccount()
   const { data: session } = useSession()
+  // In World App there is no injected wagmi provider — fall back to session wallet address
+  const address = wagmiAddress ?? (session?.user?.walletAddress as `0x${string}` | undefined)
   const { avatarUrl, displayName: identityName } = useIdentity(address)
   const sponsorAd = useSponsorAd()
   const adCountdown = useAdCountdown(sponsorAd?.endTime ?? 0)
@@ -62,13 +64,13 @@ export function Topbar() {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-gray-0 h-12 w-full z-50 border-b border-gray-200">
-      <div className="relative flex items-center h-full px-4 md:px-12">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 md:bg-transparent md:border-0 md:px-24">
+      <div className="relative flex items-center h-12 px-4 md:px-6 md:w-full md:rounded-b-2xl md:bg-white md:border md:border-gray-200 md:shadow-md">
 
-        {/* Hamburger — mobile only */}
+        {/* Hamburger — mobile + tablet */}
         <span
           onClick={() => setMenuOpen(true)}
-          className="md:hidden flex items-center justify-center w-8 h-8 mr-1 text-gray-900 hover:text-[#E63946] cursor-pointer transition-colors"
+          className="xl:hidden flex items-center justify-center w-8 h-8 mr-1 text-gray-900 hover:text-[#E63946] cursor-pointer transition-colors"
           aria-label="Open menu"
           role="button"
         >
@@ -83,11 +85,11 @@ export function Topbar() {
           </Link>
         </div>
 
-        {/* Center: mobile ad teaser — homepage only, hidden on desktop */}
+        {/* Center: mobile/tablet ad teaser — homepage only, hidden on desktop */}
         {sponsorAd && (
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("booztory:open-ad"))}
-            className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 text-[10px] group max-w-[180px]"
+            className="xl:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 text-[10px] group max-w-[180px]"
           >
             <LiveBadge />
             <span className="text-sky-600 flex-shrink-0">Ads by</span>
@@ -96,8 +98,8 @@ export function Topbar() {
           </button>
         )}
 
-        {/* Center: nav — desktop only */}
-        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center justify-evenly w-[650px]">
+        {/* Center: nav — desktop only (xl+) */}
+        <nav className="hidden xl:flex absolute left-1/2 -translate-x-1/2 items-center justify-evenly w-[650px]">
           {navItems.map((item) => (
             <Link
               key={item.name}
@@ -121,24 +123,24 @@ export function Topbar() {
 
         {/* Right: icons + wallet */}
         <div className="flex items-center gap-2">
-          {/* Stats icon — desktop only */}
+          {/* Stats icon — desktop only (xl+) */}
           <Link
             href="/stats"
-            className="hidden md:flex items-center justify-center w-7 h-7 transition-colors text-gray-500 hover:text-gray-900"
+            className="hidden xl:flex items-center justify-center w-7 h-7 transition-colors text-gray-500 hover:text-gray-900"
             aria-label="Platform Stats"
           >
             <HiChartBar size={18} />
           </Link>
 
-          {/* GM button — desktop only */}
+          {/* GM button */}
           <GMButton />
 
-          {/* X icon — desktop only */}
+          {/* X icon — desktop only (xl+) */}
           <a
             href="https://x.com/booztory"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden md:flex items-center justify-center w-7 h-7 transition-colors"
+            className="hidden xl:flex items-center justify-center w-7 h-7 transition-colors"
             aria-label="Follow on X"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

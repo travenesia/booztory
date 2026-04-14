@@ -126,11 +126,56 @@ export function useDonation() {
     [writeContractAsync, chainId, switchChainAsync],
   )
 
+  // Direct USDC transfer to Booztory contract — used when no slot is live (placeholder donate).
+  // Bypasses donate(tokenId) entirely; funds go straight to the contract, owner withdraws later.
+  const processDonationDirect = useCallback(
+    async (amount: number): Promise<{ success: boolean; error?: string }> => {
+      if (amount <= 0) return { success: false, error: "Amount must be greater than 0" }
+      setIsDonating(true)
+      try {
+        if (chainId !== APP_CHAIN.id) await switchChainAsync({ chainId: APP_CHAIN.id })
+        const tokenAmount = parseUnits(amount.toString(), 6)
+        let ranPaymaster = false
+        if (await canUsePaymaster(PAYMASTER_URL)) {
+          try {
+            setIsBatchedTx(true)
+            const callsId = await sendBatchWithAttribution([
+              { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "transfer", args: [BOOZTORY_ADDRESS, tokenAmount] },
+            ], PAYMASTER_URL!)
+            await waitForPaymasterCalls(callsId)
+            ranPaymaster = true
+          } catch { setIsBatchedTx(false) }
+        }
+        if (!ranPaymaster) {
+          const tx = await writeContractAsync({
+            address: USDC_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: "transfer",
+            args: [BOOZTORY_ADDRESS, tokenAmount],
+            ...DATA_SUFFIX_PARAM,
+          })
+          await waitForTransactionReceipt(wagmiConfig, { hash: tx })
+        }
+        setIsDonating(false)
+        setIsBatchedTx(false)
+        return { success: true }
+      } catch (error) {
+        setIsDonating(false)
+        setIsBatchedTx(false)
+        const msg = error instanceof Error ? error.message : "Donation failed"
+        const isRejected = msg.toLowerCase().includes("user rejected") || msg.toLowerCase().includes("rejected the request") || msg.toLowerCase().includes("user denied")
+        if (isRejected) return { success: false, error: "Donation was cancelled" }
+        return { success: false, error: msg }
+      }
+    },
+    [writeContractAsync, chainId, switchChainAsync],
+  )
+
   const resetDonationState = useCallback(() => {
     setIsDonating(false)
     setDonationStep(1)
     setIsBatchedTx(false)
   }, [])
 
-  return { processDonation, isDonating, isBatchedTx, donationStep, resetDonationState }
+  return { processDonation, processDonationDirect, isDonating, isBatchedTx, donationStep, resetDonationState }
 }

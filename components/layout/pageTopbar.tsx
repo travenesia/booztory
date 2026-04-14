@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 import { GMButton } from "@/components/modals/gmModal"
+import { isWorldApp } from "@/lib/miniapp-flag"
 
 interface PageTopbarProps {
   title: string
@@ -30,12 +31,12 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
 
   return (
     <header className={cn(
-      "fixed top-0 left-0 right-0 h-12 w-full z-50",
+      "fixed top-0 left-0 right-0 z-50",
       mobileTransparent
-        ? "bg-transparent border-none md:bg-white md:border-b md:border-gray-200"
-        : "bg-gray-0 border-b border-gray-200"
+        ? "bg-transparent border-none md:bg-transparent md:border-0 md:px-24"
+        : "bg-white border-b border-gray-200 md:bg-transparent md:border-0 md:px-24"
     )}>
-      <div className="relative flex items-center h-full px-6 md:px-12">
+      <div className="relative flex items-center h-12 px-6 md:w-full md:rounded-b-2xl md:bg-white md:border md:border-gray-200 md:shadow-md">
 
         {/* Left: logo */}
         <div className="flex items-center flex-1">
@@ -46,8 +47,8 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
           </Link>
         </div>
 
-        {/* Center: nav — desktop only */}
-        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center justify-evenly w-[650px]">
+        {/* Center: nav — desktop only (xl+) */}
+        <nav className="hidden xl:flex absolute left-1/2 -translate-x-1/2 items-center justify-evenly w-[650px]">
           {navItems.map((item) => (
             <Link
               key={item.name}
@@ -69,8 +70,8 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
           ))}
         </nav>
 
-        {/* Mobile: page title — absolutely centered */}
-        <h1 className={cn("md:hidden absolute left-1/2 -translate-x-1/2 text-lg font-bold", mobileTransparent ? "text-white" : "text-gray-900")}>{title}</h1>
+        {/* Mobile + tablet: page title — absolutely centered */}
+        <h1 className={cn("xl:hidden absolute left-1/2 -translate-x-1/2 text-lg font-bold", mobileTransparent ? "text-white" : "text-gray-900")}>{title}</h1>
 
         {/* Right */}
         <div className="flex items-center gap-2">
@@ -80,7 +81,7 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
           <Link
             href="/stats"
             className={cn(
-              "hidden md:flex items-center justify-center w-7 h-7 transition-colors",
+              "hidden xl:flex items-center justify-center w-7 h-7 transition-colors",
               pathname === "/stats" ? "text-[#E63946]" : "text-gray-500 hover:text-gray-900"
             )}
             aria-label="Platform Stats"
@@ -94,13 +95,14 @@ export function PageTopbar({ title, rightExtra, mobileTransparent }: PageTopbarP
             href="https://x.com/booztory"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden md:flex items-center justify-center w-7 h-7 transition-colors"
+            className="hidden xl:flex items-center justify-center w-7 h-7 transition-colors"
             aria-label="Follow on X"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/social/x.svg" alt="X" width={13} height={13} />
           </a>
-          <div className="hidden md:block">
+          {/* World App: always mount for auto-auth effect, but visually hidden on mobile */}
+          <div className={isWorldApp() ? "sr-only xl:not-sr-only" : "hidden xl:block"}>
             <ConnectWalletButton />
           </div>
         </div>

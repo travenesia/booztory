@@ -1,0 +1,180 @@
+// v1.0.3 — force unique IPFS hash for fresh reindex from startBlock 28076390
+import { BigInt, Bytes } from "@graphprotocol/graph-ts"
+import {
+  SlotMinted,
+  FreeSlotMinted,
+  DiscountSlotMinted,
+  WLDSlotMinted,
+  GMClaimed,
+  GMMilestoneReached,
+  PointsEarned,
+  DonationReceived,
+  TicketsConverted,
+} from "../generated/BooztoryWorld/BooztoryWorld"
+import {
+  Wallet,
+  Slot,
+  SlotMintEvent,
+  GMClaimEvent,
+  PointsEarnedEvent,
+  DonationEvent,
+  TicketsConvertedEvent,
+} from "../generated/schema"
+
+// ── Helper ─────────────────────────────────────────────────────────────────────
+function getOrCreateWallet(address: Bytes): Wallet {
+  const id = address.toHexString().toLowerCase()
+  let wallet = Wallet.load(id)
+  if (!wallet) {
+    wallet = new Wallet(id)
+    wallet.totalSlots = BigInt.fromI32(0)
+    wallet.bestStreak = 0
+    wallet.totalPoints = BigInt.fromI32(0)
+    wallet.totalDonated = BigInt.fromI32(0)
+    wallet.totalReceived = BigInt.fromI32(0)
+    wallet.totalWins = 0
+    wallet.totalWinnings = BigInt.fromI32(0)
+  }
+  return wallet
+}
+
+function eventId(hash: Bytes, logIndex: BigInt): string {
+  return hash.toHexString() + "-" + logIndex.toString()
+}
+
+// ── Slot mint handlers ────────────────────────────────────────────────────────
+// SlotMinted fires for ALL mint paths (emitted inside _createSlot).
+// FreeSlotMinted / DiscountSlotMinted fire after for non-standard paths.
+// Strategy: handleSlotMinted creates the record + increments totalSlots.
+// Type-specific handlers only update mintType — never create a second record.
+// Note: BooztoryWorld has no NFT pass mint paths.
+
+export function handleSlotMinted(event: SlotMinted): void {
+  const wallet = getOrCreateWallet(event.params.creator)
+  wallet.totalSlots = wallet.totalSlots.plus(BigInt.fromI32(1))
+  wallet.save()
+
+  const slot = new Slot(event.params.tokenId.toString())
+  slot.creator = event.params.creator
+  slot.blockNumber = event.block.number
+  slot.save()
+
+  const ev = new SlotMintEvent(event.params.tokenId.toString())
+  ev.creator = event.params.creator
+  ev.tokenId = event.params.tokenId
+  ev.mintType = "standard"
+  ev.txHash = event.transaction.hash.toHexString()
+  ev.blockTimestamp = event.block.timestamp
+  ev.save()
+}
+
+export function handleFreeSlotMinted(event: FreeSlotMinted): void {
+  const ev = SlotMintEvent.load(event.params.tokenId.toString())
+  if (ev) {
+    ev.mintType = "free"
+    ev.save()
+  }
+}
+
+export function handleDiscountSlotMinted(event: DiscountSlotMinted): void {
+  const ev = SlotMintEvent.load(event.params.tokenId.toString())
+  if (ev) {
+    ev.mintType = "discount"
+    ev.save()
+  }
+}
+
+// WLDSlotMinted fires after SlotMinted (and optionally after DiscountSlotMinted).
+// If mintType is already "discount" → upgrade to "wld-discount", else set "wld".
+export function handleWLDSlotMinted(event: WLDSlotMinted): void {
+  const ev = SlotMintEvent.load(event.params.tokenId.toString())
+  if (ev) {
+    ev.mintType = ev.mintType == "discount" ? "wld-discount" : "wld"
+    ev.wldAmount = event.params.wldAmount
+    ev.save()
+  }
+}
+
+// ── GM streak ─────────────────────────────────────────────────────────────────
+// GMClaimed fires first, then GMMilestoneReached in the same tx on milestone days.
+// Use txHash as ID so the milestone handler can load and update boozAmount.
+export function handleGMClaimed(event: GMClaimed): void {
+  const wallet = getOrCreateWallet(event.params.user)
+  const streak = event.params.streakCount as i32
+  if (streak > wallet.bestStreak) {
+    wallet.bestStreak = streak
+  }
+  wallet.save()
+
+  const txHash = event.transaction.hash.toHexString()
+  const ev = new GMClaimEvent(txHash)
+  ev.user = event.params.user
+  ev.streakCount = streak
+  ev.boozAmount = event.params.reward
+  ev.txHash = txHash
+  ev.blockTimestamp = event.block.timestamp
+  ev.save()
+}
+
+// GMMilestoneReached fires after GMClaimed in the same tx on milestone days (streak 7/14/30/60/90).
+// Load the GMClaimEvent by txHash and add the milestone bonus to boozAmount.
+export function handleGMMilestoneReached(event: GMMilestoneReached): void {
+  const txHash = event.transaction.hash.toHexString()
+  const ev = GMClaimEvent.load(txHash)
+  if (ev) {
+    ev.boozAmount = ev.boozAmount.plus(event.params.bonus)
+    ev.save()
+  }
+}
+
+// ── Points ─────────────────────────────────────────────────────────────────────
+export function handlePointsEarned(event: PointsEarned): void {
+  const wallet = getOrCreateWallet(event.params.user)
+  wallet.totalPoints = wallet.totalPoints.plus(event.params.amount)
+  wallet.save()
+
+  const ev = new PointsEarnedEvent(eventId(event.transaction.hash, event.logIndex))
+  ev.user = event.params.user
+  ev.amount = event.params.amount
+  ev.txHash = event.transaction.hash.toHexString()
+  ev.blockTimestamp = event.block.timestamp
+  ev.save()
+}
+
+// ── Tickets converted ─────────────────────────────────────────────────────────
+export function handleTicketsConverted(event: TicketsConverted): void {
+  const ev = new TicketsConvertedEvent(eventId(event.transaction.hash, event.logIndex))
+  ev.user = event.params.user
+  ev.pointsBurned = event.params.pointsBurned
+  ev.ticketsMinted = event.params.ticketsMinted
+  ev.txHash = event.transaction.hash.toHexString()
+  ev.blockTimestamp = event.block.timestamp
+  ev.save()
+}
+
+// ── Donations ─────────────────────────────────────────────────────────────────
+export function handleDonationReceived(event: DonationReceived): void {
+  const total = event.params.creatorAmount.plus(event.params.feeAmount)
+
+  const donor = getOrCreateWallet(event.params.donor)
+  donor.totalDonated = donor.totalDonated.plus(total)
+  donor.save()
+
+  const slot = Slot.load(event.params.tokenId.toString())
+  if (!slot) return
+
+  const creator = getOrCreateWallet(slot.creator)
+  creator.totalReceived = creator.totalReceived.plus(event.params.creatorAmount)
+  creator.save()
+
+  const ev = new DonationEvent(eventId(event.transaction.hash, event.logIndex))
+  ev.donor = event.params.donor
+  ev.creator = slot.creator
+  ev.tokenId = event.params.tokenId
+  ev.creatorAmount = event.params.creatorAmount
+  ev.totalAmount = total
+  ev.paymentToken = event.params.paymentToken.toHexString().toLowerCase()
+  ev.txHash = event.transaction.hash.toHexString()
+  ev.blockTimestamp = event.block.timestamp
+  ev.save()
+}

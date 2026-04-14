@@ -13,7 +13,8 @@ import { SiweMessage } from "siwe"
 import { useToast } from "@/hooks/use-toast"
 import { cache, CACHE_DURATIONS } from "@/lib/cache"
 import { sdk } from "@farcaster/miniapp-sdk"
-import { isMiniApp } from "@/lib/miniapp-flag"
+import { isMiniApp, isWorldApp } from "@/lib/miniapp-flag"
+import { MiniKit } from "@worldcoin/minikit-js"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Drawer } from "vaul"
 import { WalletDropdownContent } from "@/components/wallet/walletDropdown"
@@ -52,7 +53,12 @@ export function ConnectWalletButton() {
 
   const isAuthenticated = status === "authenticated"
 
-  const { avatarUrl, displayName: identityName } = useIdentity(address)
+  // In World App there is no injected wagmi provider — wagmi address is always undefined.
+  // MiniKit.user.walletAddress is available at init (before walletAuth).
+  // Fall back chain: wagmi → session → MiniKit.user → undefined
+  const miniKitAddress = isWorldApp() ? (MiniKit.user?.walletAddress as `0x${string}` | undefined) : undefined
+  const resolvedAddress = address ?? (session?.user?.walletAddress as `0x${string}` | undefined) ?? miniKitAddress
+  const { avatarUrl, displayName: identityName } = useIdentity(resolvedAddress)
   const displayName = identityName || session?.user?.username || null
 
   // If wagmi is still "reconnecting" after 5s the wallet is locked — stop blocking UI
@@ -169,6 +175,58 @@ export function ConnectWalletButton() {
     [handleSignIn],
   )
 
+  // World App wallet auth — MiniKit v2: MiniKit.walletAuth() returns { executedWith, data }.
+  // data = { address, message, signature } on success.
+  const handleWorldAuth = useCallback(
+    async (_walletAddress: string) => {
+      if (isSigningInRef.current) return
+      isSigningInRef.current = true
+      setIsLoading(true)
+      try {
+        const nonceRes = await fetch("/api/nonce")
+        if (!nonceRes.ok) throw new Error(`Nonce fetch failed (${nonceRes.status})`)
+        const { nonce } = await nonceRes.json()
+
+        const authResult = await MiniKit.walletAuth({
+          nonce,
+          expirationTime: new Date(Date.now() + 5 * 60 * 1000),
+          statement: "Sign in to Booztory",
+        })
+
+        // MiniKit returns executedWith:"fallback" when not running inside World App.
+        if (authResult.executedWith === "fallback") {
+          throw new Error("World App not detected. Please open this app inside World App.")
+        }
+
+        // authResult.data = { address, message, signature }
+        const result = await signIn("worldapp-wallet", {
+          payload: JSON.stringify(authResult.data),
+          nonce,
+          redirect: false,
+        })
+
+        if (result?.error) {
+          throw new Error(`Sign-in failed: ${result.error}`)
+        }
+      } catch (error) {
+        console.error("World Auth error:", error)
+        const msg = error instanceof Error ? error.message : "Authentication failed."
+        const isRejected = msg.toLowerCase().includes("rejected") || msg.toLowerCase().includes("user denied") || msg.toLowerCase().includes("cancelled")
+        if (!isRejected) {
+          toast({
+            title: "Sign-in Failed",
+            description: msg,
+            variant: "destructive",
+          })
+        }
+      } finally {
+        isSigningInRef.current = false
+        setIsLoading(false)
+      }
+    },
+    [toast],
+  )
+
   // isMiniApp() is synchronous — MiniAppInit sets the flag before calling connect(),
   // so by the time onConnect fires here, the flag is already correct.
   useAccountEffect({
@@ -178,7 +236,9 @@ export function ConnectWalletButton() {
       // Trigger sign-in when: (a) no session, or (b) a different address is connecting
       // (e.g. user switched wallets). Skip when same address reconnects with a valid session.
       if (status === "unauthenticated" || (status === "authenticated" && sessionAddress !== connectingAddress)) {
-        if (isMiniApp()) {
+        if (isWorldApp()) {
+          handleWorldAuth(address)
+        } else if (isMiniApp()) {
           handleQuickAuth(address)
         } else {
           handleSignIn(address, chainId)
@@ -207,16 +267,51 @@ export function ConnectWalletButton() {
       address &&
       !isSigningInRef.current
     ) {
-      if (isMiniApp()) {
+      if (isWorldApp()) {
+        handleWorldAuth(address)
+      } else if (isMiniApp()) {
         handleQuickAuth(address)
       } else {
         handleSignIn(address, APP_CHAIN.id)
       }
     }
-  }, [status, isWalletConnected, address, handleQuickAuth, handleSignIn])
+  }, [status, isWalletConnected, address, handleWorldAuth, handleQuickAuth, handleSignIn])
+
+  // World App auto-auth — MiniKit.walletAuth() works standalone, no wagmi connect needed.
+  // In World App there is no injected provider for wagmi to detect, so useAccountEffect.onConnect
+  // never fires. This effect starts the auth flow directly when the app loads.
+  //
+  // handleWorldAuth is held in a ref so that callback reference changes (e.g. after toast is
+  // shown and the toast function reference changes) do not re-trigger this effect. Without the
+  // ref, every failed auth attempt would reschedule another attempt in a tight loop, causing
+  // the World App to repeatedly display the walletAuth bottom sheet ("keeps refreshing").
+  const handleWorldAuthRef = useRef(handleWorldAuth)
+  handleWorldAuthRef.current = handleWorldAuth
+  useEffect(() => {
+    if (!isWorldApp()) return
+    if (status === "unauthenticated" && !isSigningInRef.current) {
+      handleWorldAuthRef.current("")
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status])
+
+  // First-visit fallback: on the very first visit to World App, sessionStorage is empty so
+  // isWorldApp() returns false when status first becomes "unauthenticated" (MiniKit hasn't
+  // installed yet). By 500ms MiniKit is installed and _worldAppCached is true, but the
+  // [status] effect above won't re-fire because status hasn't changed. This one-time delayed
+  // check catches that window and triggers auth if still unauthenticated.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isWorldApp() && status === "unauthenticated" && !isSigningInRef.current) {
+        handleWorldAuthRef.current("")
+      }
+    }, 600)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleConnect = () => {
-    if (isMiniApp()) return // MiniAppInit handles wallet connect for Farcaster users
+    if (isMiniApp() || isWorldApp()) return // handled automatically — no RainbowKit modal
     openConnectModal?.()
   }
 
@@ -260,7 +355,33 @@ export function ConnectWalletButton() {
 
   // ── Unauthenticated or ghost session (session alive but wallet gone) ────────
   // isReconnecting = wagmi is mid-reconnect on page load — don't flash Connect (unless timed out)
-  if (!isAuthenticated || (!isWalletConnected && !isReconnecting)) {
+  // World App: no wagmi wallet ever connects (no injected provider), so skip the wallet check —
+  // authentication alone is sufficient to show the profile UI.
+  const showConnectUI = isWorldApp()
+    ? !isAuthenticated
+    : !isAuthenticated || (!isWalletConnected && !isReconnecting)
+  if (showConnectUI) {
+    // World App: auth is automatic — show spinner while it's in progress,
+    // or a retry button if it failed (isLoading = false, status = unauthenticated)
+    if (isWorldApp()) {
+      return (
+        <div className="flex flex-col items-center">
+          <Button
+            variant="noShadow"
+            className="h-9 px-4 text-xs font-semibold flex items-center justify-center space-x-1 min-w-[72px] max-w-[180px] rounded-full"
+            onClick={() => handleWorldAuth("")}
+            disabled={isLoading || status === "loading"}
+          >
+            {isLoading || status === "loading" ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /><span>Signing in...</span></>
+            ) : (
+              <span>Sign in</span>
+            )}
+          </Button>
+        </div>
+      )
+    }
+
     return (
       <div className="flex flex-col items-center">
         <Button
@@ -286,7 +407,7 @@ export function ConnectWalletButton() {
 
   // ── Mobile — Vaul bottom drawer ─────────────────────────────────────────────
   if (isMobile) {
-    const mobileAvatar = avatarUrl || (address ? addressAvatar(address) : null)
+    const mobileAvatar = avatarUrl || (resolvedAddress ? addressAvatar(resolvedAddress) : null)
     return (
       <>
         {mobileAvatar ? (

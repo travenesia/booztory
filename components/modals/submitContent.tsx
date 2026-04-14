@@ -17,6 +17,10 @@ import { useToast } from "@/hooks/use-toast"
 import confetti from "canvas-confetti"
 import { extractTikTokId } from "@/lib/tiktokMetadata"
 import { usePayment } from "@/hooks/usePayment"
+import { usePaymentWorld } from "@/hooks/usePaymentWorld"
+import { useVerifyHuman } from "@/hooks/useVerifyHuman"
+import { WorldIDVerifyButton } from "@/components/world/WorldIDVerifyButton"
+import { isWorldApp } from "@/lib/miniapp-flag"
 import { useSession } from "next-auth/react"
 import { extractYouTubeId, getYouTubeMetadata, isYouTubeShort } from "@/lib/youtubeMetadata"
 import { getTikTokMetadata } from "@/lib/tiktokMetadata"
@@ -24,11 +28,12 @@ import { getVimeoMetadata, extractVimeoId } from "@/lib/vimeoMetadata"
 import { getSpotifyMetadata } from "@/lib/spotifyMetadata"
 import { getTwitchMetadata, extractTwitchInfo } from "@/lib/twitchMetadata"
 import { useSubmitDrawer } from "@/providers/submit-drawer-provider"
-import { TOKEN_ADDRESS, ERC20_ABI, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
-import { APP_CHAIN, NFT_CHAIN_ID } from "@/lib/wagmi"
+import { TOKEN_ADDRESS, USDC_ADDRESS, ERC20_ABI, BOOZTORY_ADDRESS, BOOZTORY_ABI } from "@/lib/contract"
+import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI, WORLD_TOKEN_ADDRESS, WORLD_USDC_ADDRESS, WORLD_WLD_ADDRESS } from "@/lib/contractWorld"
+import { APP_CHAIN, WORLD_CHAIN, NFT_CHAIN_ID } from "@/lib/wagmi"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-type PaymentMethod = "standard" | "discount" | "free" | "nft-discount" | "nft-free"
+type PaymentMethod = "standard" | "discount" | "free" | "nft-discount" | "nft-free" | "wld" | "wld-discount"
 type InputMode = "url" | "text"
 
 function formatCooldown(secsLeft: number): string {
@@ -47,7 +52,9 @@ const URL_LINK_PATTERN = /https?:\/\/|www\./i
 export function ContentSubmissionDrawer() {
   const { isOpen: open, setIsOpen: onOpenChange } = useSubmitDrawer()
   const { data: session } = useSession()
-  const { address } = useAccount()
+  const { address: wagmiAddress } = useAccount()
+  // In World App there is no injected wagmi provider — fall back to session wallet address
+  const address = wagmiAddress ?? (isWorldApp() ? (session?.user?.walletAddress as `0x${string}` | undefined) : undefined)
   const [contentUrl, setContentUrl] = useState("")
   const [resolvedContentUrl, setResolvedContentUrl] = useState<string | null>(null)
   const [contentType, setContentType] = useState<ContentType | null>(null)
@@ -59,6 +66,7 @@ export function ContentSubmissionDrawer() {
   const [detectedTikTokAspectRatio, setDetectedTikTokAspectRatio] = useState<"16:9" | "9:16">("9:16")
   const [isInputFocused, setIsInputFocused] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("standard")
+  const [currencyMode, setCurrencyMode] = useState<"usdc" | "wld">("usdc")
   const [inputMode, setInputMode] = useState<InputMode>("url")
   const [textContent, setTextContent] = useState("")
   const [textLinkError, setTextLinkError] = useState(false)
@@ -69,12 +77,23 @@ export function ContentSubmissionDrawer() {
   const isProcessingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  const basePayment  = usePayment()
+  const worldPayment = usePaymentWorld()
+  const activePayment = isWorldApp() ? worldPayment : basePayment
+
+  // NFT pass methods only exist on Base — destructure from basePayment directly
+  const { mintSlotWithNFTDiscount, mintSlotFreeWithNFT } = basePayment
+  // WLD methods only exist on World Chain — destructure from worldPayment directly
+  const { mintSlotWithWLD, mintSlotWithWLDDiscount, slotPriceInWLD } = worldPayment
+
+  // World ID verification gate — only active inside World App
+  const { handleIDKitSuccess, requireVerification, isVerifying, canProceed } = useVerifyHuman(address)
+  const needsWorldVerification = isWorldApp() && !canProceed
+
   const {
     mintSlot,
     mintSlotWithDiscount,
     mintSlotWithTokens,
-    mintSlotWithNFTDiscount,
-    mintSlotFreeWithNFT,
     isProcessing,
     isBatchedTx,
     paymentStep,
@@ -83,7 +102,7 @@ export function ContentSubmissionDrawer() {
     discountBurnCost,
     freeSlotCost,
     discountAmount,
-  } = usePayment()
+  } = activePayment
 
   // ── NFT state ─────────────────────────────────────────────────────────────────
   const [nftSelectedContract, setNftSelectedContract] = useState<string>("")
@@ -96,32 +115,36 @@ export function ContentSubmissionDrawer() {
   const freeSlotCostDisplay = Math.round(Number(formatUnits(freeSlotCost, 18))).toLocaleString()
   const tokenEnabled = TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000"
 
-  // Queue status
+  // Queue status — read from World Chain when in World App, Base otherwise
+  const queueContractAddress = isWorldApp() ? WORLD_BOOZTORY_ADDRESS : BOOZTORY_ADDRESS
+  const queueContractAbi = isWorldApp() ? WORLD_BOOZTORY_ABI : BOOZTORY_ABI
+  const queueChainId = isWorldApp() ? WORLD_CHAIN.id : APP_CHAIN.id
+
   const { data: queueSizeRaw } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: queueContractAddress,
+    abi: queueContractAbi,
     functionName: "getQueueSize",
-    chainId: APP_CHAIN.id,
+    chainId: queueChainId,
     query: { refetchInterval: 15_000 },
   })
   const { data: maxQueueSizeRaw } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: queueContractAddress,
+    abi: queueContractAbi,
     functionName: "maxQueueSize",
-    chainId: APP_CHAIN.id,
+    chainId: queueChainId,
   })
   const { data: queueEndTimeRaw } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: queueContractAddress,
+    abi: queueContractAbi,
     functionName: "queueEndTime",
-    chainId: APP_CHAIN.id,
+    chainId: queueChainId,
     query: { refetchInterval: 15_000 },
   })
   const { data: slotDurationRaw } = useReadContract({
-    address: BOOZTORY_ADDRESS,
-    abi: BOOZTORY_ABI,
+    address: queueContractAddress,
+    abi: queueContractAbi,
     functionName: "slotDuration",
-    chainId: APP_CHAIN.id,
+    chainId: queueChainId,
   })
 
   const slotDurationSecs = Number(slotDurationRaw ?? 900n)
@@ -145,19 +168,62 @@ export function ContentSubmissionDrawer() {
     ? Number(queueEndTimeRaw as bigint) - (maxQueue - 1) * Number(slotDurationRaw as bigint)
     : null
 
-  // BOOZ balance
-  const { data: boozBalanceRaw } = useReadContract({
-    address: TOKEN_ADDRESS,
+  // USDC balance — read from correct chain
+  const usdcAddress = isWorldApp() ? WORLD_USDC_ADDRESS : USDC_ADDRESS
+  const usdcChainId = isWorldApp() ? WORLD_CHAIN.id : APP_CHAIN.id
+  const { data: usdcBalanceRaw } = useReadContract({
+    address: usdcAddress,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
+    chainId: usdcChainId,
+    query: { enabled: !!address },
+  })
+  const usdcBalance = usdcBalanceRaw ? Number(usdcBalanceRaw as bigint) : 0
+
+  // BOOZ balance — read from World Chain token when in World App
+  const boozTokenAddress = isWorldApp() ? WORLD_TOKEN_ADDRESS : TOKEN_ADDRESS
+  const boozChainId = isWorldApp() ? WORLD_CHAIN.id : APP_CHAIN.id
+  const { data: boozBalanceRaw } = useReadContract({
+    address: boozTokenAddress,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: boozChainId,
     query: { enabled: tokenEnabled && !!address },
   })
   const boozBalance = boozBalanceRaw ? Number(formatUnits(boozBalanceRaw as bigint, 18)) : 0
   const boozFormatted = boozBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
   const canDiscount = tokenEnabled && boozBalance >= Number(formatUnits(discountBurnCost, 18))
   const canFree = tokenEnabled && boozBalance >= Number(formatUnits(freeSlotCost, 18))
+
+  // WLD balance — only read in World App
+  const inWorldApp = isWorldApp()
+  const { data: wldBalanceRaw } = useReadContract({
+    address: WORLD_WLD_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: WORLD_CHAIN.id,
+    query: { enabled: inWorldApp && !!address },
+  })
+  const wldBalance = wldBalanceRaw ? (wldBalanceRaw as bigint) : 0n
+  const wldBalanceFormatted = Number(formatUnits(wldBalance, 18)).toFixed(3)
+
+  // WLD price display (18 decimals → human-readable, 3dp)
+  const slotPriceInWLDDisplay = slotPriceInWLD > 0n
+    ? Number(formatUnits(slotPriceInWLD, 18)).toFixed(3)
+    : "..."
+  // Approximate discounted WLD price: scale by (slotPrice - discountAmount) / slotPrice
+  const discountedSlotPriceInWLD = slotPrice > 0n && slotPriceInWLD > 0n
+    ? slotPriceInWLD * (slotPrice - discountAmount) / slotPrice
+    : 0n
+  const discountedSlotPriceInWLDDisplay = discountedSlotPriceInWLD > 0n
+    ? Number(formatUnits(discountedSlotPriceInWLD, 18)).toFixed(3)
+    : "..."
+
+  const canWLD         = inWorldApp && slotPriceInWLD > 0n && wldBalance >= slotPriceInWLD
+  const canWLDDiscount = inWorldApp && slotPriceInWLD > 0n && canDiscount && wldBalance >= discountedSlotPriceInWLD
 
   // ── NFT reads ─────────────────────────────────────────────────────────────────
   const isNFTPath = paymentMethod === "nft-discount" || paymentMethod === "nft-free"
@@ -278,6 +344,7 @@ export function ContentSubmissionDrawer() {
       setPreviewError(null)
       setSubmissionStep("idle")
       setPaymentMethod("standard")
+      setCurrencyMode("usdc")
       setInputMode("url")
       setTextContent("")
       setTextLinkError(false)
@@ -550,10 +617,12 @@ export function ContentSubmissionDrawer() {
           imageUrl: "",
         }
         const mintResult = await (
-          paymentMethod === "nft-discount" ? mintSlotWithNFTDiscount(slotData, nftContractForMint, nftTokenId) :
-          paymentMethod === "nft-free"     ? mintSlotFreeWithNFT(slotData, nftContractForMint, nftTokenId) :
-          paymentMethod === "discount"     ? mintSlotWithDiscount(slotData) :
-          paymentMethod === "free"         ? mintSlotWithTokens(slotData) :
+          paymentMethod === "nft-discount"  ? mintSlotWithNFTDiscount(slotData, nftContractForMint, nftTokenId) :
+          paymentMethod === "nft-free"      ? mintSlotFreeWithNFT(slotData, nftContractForMint, nftTokenId) :
+          paymentMethod === "discount"      ? mintSlotWithDiscount(slotData) :
+          paymentMethod === "free"          ? mintSlotWithTokens(slotData) :
+          paymentMethod === "wld"           ? mintSlotWithWLD(slotData) :
+          paymentMethod === "wld-discount"  ? mintSlotWithWLDDiscount(slotData) :
                                              mintSlot(slotData)
         )
         if (!mintResult.success) {
@@ -662,11 +731,13 @@ export function ContentSubmissionDrawer() {
         imageUrl: metadata?.thumbnailUrl || "/placeholder.svg?height=180&width=320&text=Content",
       }
       const mintResult = await (
-        paymentMethod === "nft-discount" ? mintSlotWithNFTDiscount(slotData, nftContractForMint, nftTokenId) :
-        paymentMethod === "nft-free"     ? mintSlotFreeWithNFT(slotData, nftContractForMint, nftTokenId) :
-        paymentMethod === "discount"     ? mintSlotWithDiscount(slotData) :
-        paymentMethod === "free"         ? mintSlotWithTokens(slotData) :
-                                           mintSlot(slotData)
+        paymentMethod === "nft-discount"  ? mintSlotWithNFTDiscount(slotData, nftContractForMint, nftTokenId) :
+        paymentMethod === "nft-free"      ? mintSlotFreeWithNFT(slotData, nftContractForMint, nftTokenId) :
+        paymentMethod === "discount"      ? mintSlotWithDiscount(slotData) :
+        paymentMethod === "free"          ? mintSlotWithTokens(slotData) :
+        paymentMethod === "wld"           ? mintSlotWithWLD(slotData) :
+        paymentMethod === "wld-discount"  ? mintSlotWithWLDDiscount(slotData) :
+                                            mintSlot(slotData)
       )
 
       if (abortControllerRef.current?.signal.aborted) return
@@ -836,6 +907,8 @@ export function ContentSubmissionDrawer() {
     if (paymentMethod === "free") return `Burn ${freeSlotCostDisplay} $BOOZ to Submit`
     if (paymentMethod === "nft-discount") return `Pay ${(Number(slotPrice) / 2 / 1_000_000).toFixed(2)} USDC (NFT 50% off)`
     if (paymentMethod === "nft-free") return "Free (NFT Pass)"
+    if (paymentMethod === "wld") return `Pay ${slotPriceInWLDDisplay} WLD to Submit`
+    if (paymentMethod === "wld-discount") return `Pay ${discountedSlotPriceInWLDDisplay} WLD + Burn ${discountBurnDisplay} $BOOZ`
     return `Pay ${slotPriceDisplay} USDC to Submit`
   }
 
@@ -843,7 +916,22 @@ export function ContentSubmissionDrawer() {
     ? textContent.trim().length > 0 && textContent.trim().length <= 200 && !textLinkError
     : false
   const contentReady = inputMode === "url" ? isValidUrl : isTextValid
-  const canSubmit = contentReady && (!isNFTPath || canNFTMint)
+  // USDC required for the selected payment method (0 for free/WLD paths)
+  const usdcRequired = (() => {
+    if (paymentMethod === "free" || paymentMethod === "nft-free") return 0
+    if (paymentMethod === "wld" || paymentMethod === "wld-discount") return 0
+    if (paymentMethod === "discount") return Number(slotPrice) - Number(discountAmount)
+    if (paymentMethod === "nft-discount") return Number(slotPrice) / 2
+    return Number(slotPrice)
+  })()
+  const hasEnoughUsdc = usdcBalance >= usdcRequired
+  const hasEnoughWld = paymentMethod === "wld"
+    ? wldBalance >= slotPriceInWLD
+    : paymentMethod === "wld-discount"
+      ? wldBalance >= discountedSlotPriceInWLD
+      : true
+
+  const canSubmit = contentReady && (!isNFTPath || canNFTMint) && hasEnoughUsdc && hasEnoughWld
 
   // Check if any operation is in progress
   const isAnyOperationInProgress = isSubmitting || isProcessing || isProcessingRef.current
@@ -899,10 +987,30 @@ export function ContentSubmissionDrawer() {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-xl bg-white text-gray-900 outline-none flex flex-col overflow-hidden max-h-[90vh] p-0"
+        className="rounded-t-xl bg-white text-gray-900 outline-none p-0"
       >
+        <div className="flex flex-col overflow-hidden max-h-[90dvh] relative">
         {/* Drag handle */}
         <div className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-gray-300 flex-shrink-0" />
+
+        {/* World ID verification gate — shown in World App when unverified */}
+        {needsWorldVerification && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-white rounded-t-xl px-8 pb-8">
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 h-1.5 w-12 rounded-full bg-gray-300" />
+            <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-3xl select-none">🌍</div>
+            <div className="text-center">
+              <p className="text-base font-semibold text-gray-900">Verify with World ID</p>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed max-w-[240px]">
+                One-time proof of personhood required to mint, claim GM, and donate on World Chain.
+              </p>
+            </div>
+            <WorldIDVerifyButton
+              onSuccess={handleIDKitSuccess}
+              isVerifying={isVerifying}
+              className="w-full elegance-button h-10 text-sm font-medium"
+            />
+          </div>
+        )}
 
         <SheetHeader className="px-4 pt-2 pb-3 flex-shrink-0 text-left">
           <SheetTitle className="text-lg text-gray-900 font-medium">Submit Content</SheetTitle>
@@ -1087,73 +1195,159 @@ export function ContentSubmissionDrawer() {
               ) : (
                 <label className="text-gray-900 font-medium text-xs">Payment Method</label>
               )}
-              {(paymentMethod === "discount" || paymentMethod === "free") && (
-                <span className="flex items-center gap-1 text-xs text-gray-500">
-                  Balance: <span className="font-semibold text-gray-800">{boozFormatted}</span>
-                  <HiBolt className="text-yellow-500" size={11} />
-                  <span>$BOOZ</span>
-                </span>
-              )}
+              <div className="flex items-center gap-1.5">
+                {(paymentMethod === "discount" || paymentMethod === "free" || paymentMethod === "wld-discount") && (
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <span className="font-semibold text-gray-800">{boozFormatted}</span>
+                    <HiBolt className="text-yellow-500" size={11} />
+                    <span>$BOOZ</span>
+                  </span>
+                )}
+                {inWorldApp && slotPriceInWLD > 0n && !isNFTPath && (
+                  <div className="bg-gray-100 rounded-md p-0.5 flex items-center">
+                    <button
+                      type="button"
+                      disabled={isAnyOperationInProgress}
+                      onClick={() => { setCurrencyMode("usdc"); if (paymentMethod === "wld" || paymentMethod === "wld-discount") setPaymentMethod("standard") }}
+                      className={cn("p-1 rounded transition-all", currencyMode === "usdc" ? "bg-white shadow-sm" : "opacity-40")}
+                    >
+                      <img src="/usdc.svg" alt="USDC" width={14} height={14} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isAnyOperationInProgress}
+                      onClick={() => { setCurrencyMode("wld"); if (paymentMethod !== "wld" && paymentMethod !== "wld-discount") setPaymentMethod(canWLDDiscount ? "wld-discount" : "wld") }}
+                      className={cn("p-1 rounded transition-all", currencyMode === "wld" ? "bg-white shadow-sm" : "opacity-40")}
+                    >
+                      <img src="/world.svg" alt="WLD" width={14} height={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Standard payment buttons — hidden when NFT Pass is active */}
             {!isNFTPath && (
-              <div className="grid grid-cols-3 gap-2">
-                {/* Standard */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("standard")}
-                  disabled={isAnyOperationInProgress}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "standard"
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 bg-white"
-                  )}
-                >
-                  <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
-                  <span className="text-[10px] text-gray-500">Standard</span>
-                </button>
+              <div className="space-y-2">
+                {currencyMode === "usdc" && (<div className="grid grid-cols-3 gap-2">
+                  {/* Standard */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("standard")}
+                    disabled={isAnyOperationInProgress}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                      paymentMethod === "standard"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
+                    <span className="text-[10px] text-gray-500">Standard</span>
+                  </button>
 
-                {/* Discount */}
-                <button
-                  type="button"
-                  onClick={() => canDiscount && setPaymentMethod("discount")}
-                  disabled={isAnyOperationInProgress || !canDiscount}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "discount"
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 bg-white",
-                    !canDiscount && "opacity-40 cursor-not-allowed"
-                  )}
-                >
-                  <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
-                  <div className="flex items-center gap-0.5">
-                    <HiBolt className="text-yellow-500" size={10} />
-                    <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
-                  </div>
-                </button>
+                  {/* Discount */}
+                  <button
+                    type="button"
+                    onClick={() => canDiscount && setPaymentMethod("discount")}
+                    disabled={isAnyOperationInProgress || !canDiscount}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                      paymentMethod === "discount"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 bg-white",
+                      !canDiscount && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
+                    <div className="flex items-center gap-0.5">
+                      <HiBolt className="text-yellow-500" size={10} />
+                      <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
+                    </div>
+                  </button>
 
-                {/* Free */}
-                <button
-                  type="button"
-                  onClick={() => canFree && setPaymentMethod("free")}
-                  disabled={isAnyOperationInProgress || !canFree}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "free"
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 bg-white",
-                    !canFree && "opacity-40 cursor-not-allowed"
-                  )}
-                >
-                  <span className="text-xs font-bold text-gray-900">Free</span>
-                  <div className="flex items-center gap-0.5">
-                    <HiBolt className="text-yellow-500" size={10} />
-                    <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                  {/* Free */}
+                  <button
+                    type="button"
+                    onClick={() => canFree && setPaymentMethod("free")}
+                    disabled={isAnyOperationInProgress || !canFree}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                      paymentMethod === "free"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 bg-white",
+                      !canFree && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-gray-900">Free</span>
+                    <div className="flex items-center gap-0.5">
+                      <HiBolt className="text-yellow-500" size={10} />
+                      <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                    </div>
+                  </button>
+                </div>
+
+                )}
+                {currencyMode === "wld" && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* WLD Standard */}
+                    <button
+                      type="button"
+                      onClick={() => canWLD && setPaymentMethod("wld")}
+                      disabled={isAnyOperationInProgress || !canWLD}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "wld"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canWLD && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">{slotPriceInWLDDisplay} WLD</span>
+                      <span className="text-[10px] text-gray-500">Pay with WLD</span>
+                    </button>
+
+                    {/* WLD + Discount */}
+                    <button
+                      type="button"
+                      onClick={() => canWLDDiscount && setPaymentMethod("wld-discount")}
+                      disabled={isAnyOperationInProgress || !canWLDDiscount}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "wld-discount"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canWLDDiscount && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">{discountedSlotPriceInWLDDisplay} WLD</span>
+                      <div className="flex items-center gap-0.5">
+                        <HiBolt className="text-yellow-500" size={10} />
+                        <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
+                      </div>
+                    </button>
+
+                    {/* Free — burn 10k BOOZ, no payment token needed */}
+                    <button
+                      type="button"
+                      onClick={() => canFree && setPaymentMethod("free")}
+                      disabled={isAnyOperationInProgress || !canFree}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "free"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canFree && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">Free</span>
+                      <div className="flex items-center gap-0.5">
+                        <HiBolt className="text-yellow-500" size={10} />
+                        <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                      </div>
+                    </button>
                   </div>
-                </button>
+                )}
               </div>
             )}
 
@@ -1268,6 +1462,16 @@ export function ContentSubmissionDrawer() {
 
         {/* Button — always pinned at bottom */}
         <div className="flex-shrink-0 px-4 pt-3 pb-3 mt-0.5 border-t border-gray-100 bg-white">
+          {!hasEnoughUsdc && usdcRequired > 0 && !isAnyOperationInProgress && (
+            <p className="text-xs text-red-500 text-center mb-2">
+              Insufficient USDC. Your balance: {(usdcBalance / 1_000_000).toFixed(2)} USDC.
+            </p>
+          )}
+          {!hasEnoughWld && (paymentMethod === "wld" || paymentMethod === "wld-discount") && !isAnyOperationInProgress && (
+            <p className="text-xs text-red-500 text-center mb-2">
+              Insufficient WLD. Your balance: {wldBalanceFormatted} WLD.
+            </p>
+          )}
           <button
             className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50"
             onClick={handleSubmit}
@@ -1283,11 +1487,30 @@ export function ContentSubmissionDrawer() {
             )}
           </button>
         </div>
+        </div>
       </SheetContent>
     </Sheet>
     ) : (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-white text-gray-900 flex flex-col overflow-hidden max-h-[90vh] p-0 gap-0 rounded-xl">
+      <DialogContent className="max-w-lg bg-white text-gray-900 flex flex-col overflow-hidden max-h-[85dvh] p-0 gap-0 rounded-xl">
+        {/* World ID verification gate — shown in World App when unverified */}
+        {needsWorldVerification && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-white rounded-xl px-8 pb-8">
+            <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-3xl select-none">🌍</div>
+            <div className="text-center">
+              <p className="text-base font-semibold text-gray-900">Verify with World ID</p>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed max-w-[240px]">
+                One-time proof of personhood required to mint, claim GM, and donate on World Chain.
+              </p>
+            </div>
+            <WorldIDVerifyButton
+              onSuccess={handleIDKitSuccess}
+              isVerifying={isVerifying}
+              className="w-full elegance-button h-10 text-sm font-medium"
+            />
+          </div>
+        )}
+
         <DialogHeader className="px-4 pt-5 pb-3 flex-shrink-0 text-left">
           <DialogTitle className="text-lg text-gray-900 font-medium">Submit Content</DialogTitle>
           <DialogDescription className="text-xs text-gray-500 mt-1">
@@ -1469,69 +1692,151 @@ export function ContentSubmissionDrawer() {
               ) : (
                 <label className="text-gray-900 font-medium text-xs">Payment Method</label>
               )}
-              {(paymentMethod === "discount" || paymentMethod === "free") && (
-                <span className="flex items-center gap-1 text-xs text-gray-500">
-                  Balance: <span className="font-semibold text-gray-800">{boozFormatted}</span>
-                  <HiBolt className="text-yellow-500" size={11} />
-                  <span>$BOOZ</span>
-                </span>
-              )}
+              <div className="flex items-center gap-1.5">
+                {(paymentMethod === "discount" || paymentMethod === "free" || paymentMethod === "wld-discount") && (
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <span className="font-semibold text-gray-800">{boozFormatted}</span>
+                    <HiBolt className="text-yellow-500" size={11} />
+                    <span>$BOOZ</span>
+                  </span>
+                )}
+                {inWorldApp && slotPriceInWLD > 0n && !isNFTPath && (
+                  <div className="bg-gray-100 rounded-md p-0.5 flex items-center">
+                    <button
+                      type="button"
+                      disabled={isAnyOperationInProgress}
+                      onClick={() => { setCurrencyMode("usdc"); if (paymentMethod === "wld" || paymentMethod === "wld-discount") setPaymentMethod("standard") }}
+                      className={cn("p-1 rounded transition-all", currencyMode === "usdc" ? "bg-white shadow-sm" : "opacity-40")}
+                    >
+                      <img src="/usdc.svg" alt="USDC" width={14} height={14} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isAnyOperationInProgress}
+                      onClick={() => { setCurrencyMode("wld"); if (paymentMethod !== "wld" && paymentMethod !== "wld-discount") setPaymentMethod(canWLDDiscount ? "wld-discount" : "wld") }}
+                      className={cn("p-1 rounded transition-all", currencyMode === "wld" ? "bg-white shadow-sm" : "opacity-40")}
+                    >
+                      <img src="/world.svg" alt="WLD" width={14} height={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {!isNFTPath && (
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("standard")}
-                  disabled={isAnyOperationInProgress}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "standard"
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 bg-white"
-                  )}
-                >
-                  <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
-                  <span className="text-[10px] text-gray-500">Standard</span>
-                </button>
+              <div className="space-y-2">
+                {currencyMode === "usdc" && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("standard")}
+                      disabled={isAnyOperationInProgress}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "standard"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">{slotPriceDisplay} USDC</span>
+                      <span className="text-[10px] text-gray-500">Standard</span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => canDiscount && setPaymentMethod("discount")}
-                  disabled={isAnyOperationInProgress || !canDiscount}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "discount"
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 bg-white",
-                    !canDiscount && "opacity-40 cursor-not-allowed"
-                  )}
-                >
-                  <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
-                  <div className="flex items-center gap-0.5">
-                    <HiBolt className="text-yellow-500" size={10} />
-                    <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
-                  </div>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => canDiscount && setPaymentMethod("discount")}
+                      disabled={isAnyOperationInProgress || !canDiscount}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "discount"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canDiscount && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">{discountedPriceDisplay} USDC</span>
+                      <div className="flex items-center gap-0.5">
+                        <HiBolt className="text-yellow-500" size={10} />
+                        <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
+                      </div>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => canFree && setPaymentMethod("free")}
-                  disabled={isAnyOperationInProgress || !canFree}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
-                    paymentMethod === "free"
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 bg-white",
-                    !canFree && "opacity-40 cursor-not-allowed"
-                  )}
-                >
-                  <span className="text-xs font-bold text-gray-900">Free</span>
-                  <div className="flex items-center gap-0.5">
-                    <HiBolt className="text-yellow-500" size={10} />
-                    <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                    <button
+                      type="button"
+                      onClick={() => canFree && setPaymentMethod("free")}
+                      disabled={isAnyOperationInProgress || !canFree}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "free"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canFree && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">Free</span>
+                      <div className="flex items-center gap-0.5">
+                        <HiBolt className="text-yellow-500" size={10} />
+                        <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                      </div>
+                    </button>
                   </div>
-                </button>
+                )}
+                {currencyMode === "wld" && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => canWLD && setPaymentMethod("wld")}
+                      disabled={isAnyOperationInProgress || !canWLD}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "wld"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canWLD && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">{slotPriceInWLDDisplay} WLD</span>
+                      <span className="text-[10px] text-gray-500">Pay with WLD</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => canWLDDiscount && setPaymentMethod("wld-discount")}
+                      disabled={isAnyOperationInProgress || !canWLDDiscount}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "wld-discount"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canWLDDiscount && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">{discountedSlotPriceInWLDDisplay} WLD</span>
+                      <div className="flex items-center gap-0.5">
+                        <HiBolt className="text-yellow-500" size={10} />
+                        <span className="text-[10px] text-gray-500">-{discountBurnDisplay}</span>
+                      </div>
+                    </button>
+                    {/* Free — burn 10k BOOZ, no payment token needed */}
+                    <button
+                      type="button"
+                      onClick={() => canFree && setPaymentMethod("free")}
+                      disabled={isAnyOperationInProgress || !canFree}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-center transition-all",
+                        paymentMethod === "free"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 bg-white",
+                        !canFree && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-bold text-gray-900">Free</span>
+                      <div className="flex items-center gap-0.5">
+                        <HiBolt className="text-yellow-500" size={10} />
+                        <span className="text-[10px] text-gray-500">{freeSlotCostDisplay}</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1645,6 +1950,16 @@ export function ContentSubmissionDrawer() {
 
         {/* Button */}
         <div className="flex-shrink-0 px-4 pt-3 pb-3 mt-0.5 border-t border-gray-100 bg-white">
+          {!hasEnoughUsdc && usdcRequired > 0 && !isAnyOperationInProgress && (
+            <p className="text-xs text-red-500 text-center mb-2">
+              Insufficient USDC. Your balance: {(usdcBalance / 1_000_000).toFixed(2)} USDC.
+            </p>
+          )}
+          {!hasEnoughWld && (paymentMethod === "wld" || paymentMethod === "wld-discount") && !isAnyOperationInProgress && (
+            <p className="text-xs text-red-500 text-center mb-2">
+              Insufficient WLD. Your balance: {wldBalanceFormatted} WLD.
+            </p>
+          )}
           <button
             className="w-full elegance-button h-10 !shadow-custom-sm hover:!shadow-custom-sm transition-all duration-200 inline-flex items-center justify-center text-sm font-medium disabled:pointer-events-none disabled:opacity-50"
             onClick={handleSubmit}

@@ -3,13 +3,23 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAccount } from "wagmi"
+import { useSession } from "next-auth/react"
+import { MiniKit } from "@worldcoin/minikit-js"
+import { isWorldApp } from "@/lib/miniapp-flag"
 import { PageTopbar } from "@/components/layout/pageTopbar"
 import { Navbar } from "@/components/layout/navbar"
 import { ConnectWalletButton } from "@/components/wallet/connectWallet"
 
 export default function ProfileRedirectPage() {
-  const { address } = useAccount()
+  const { address: wagmiAddress } = useAccount()
+  const { data: session } = useSession()
   const router = useRouter()
+
+  // In World App there is no wagmi injected provider — fall back to session then MiniKit
+  const inWorldApp = isWorldApp()
+  const address = wagmiAddress
+    ?? (session?.user?.walletAddress as `0x${string}` | undefined)
+    ?? (inWorldApp ? (MiniKit.user?.walletAddress as `0x${string}` | undefined) : undefined)
 
   useEffect(() => {
     if (address) {

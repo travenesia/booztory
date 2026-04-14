@@ -1,7 +1,6 @@
 "use client"
 
 import { HiClock, HiGift, HiCurrencyDollar } from "react-icons/hi2"
-import { formatStatNumber } from "@/components/tweet/utils"
 
 interface ContentStatsProps {
   timeLeft: number // in minutes
@@ -21,7 +20,7 @@ export function ContentStats({
   isConnected,
 }: ContentStatsProps) {
   const formatDonations = (amount: number) =>
-    amount === 0 ? "0.00" : formatStatNumber(amount)
+    amount === 0 ? "0.00" : amount.toFixed(2)
 
   const formatTime = (minutes: number) => {
     if (isPlaceholder && username === "@Booztory") return "--:--"
@@ -38,7 +37,7 @@ export function ContentStats({
             !isConnected ? "opacity-50 cursor-not-allowed !bg-gray-500" : ""
           }`}
           onClick={onDonationClick}
-          aria-label="Support this App"
+          aria-label="Support @Booztory"
           disabled={!isConnected}
         >
           <HiGift size={16} className="text-white" />
@@ -68,7 +67,7 @@ export function ContentStats({
           <HiGift size={16} className="text-white" />
         </button>
 
-        <span className="block max-w-[6rem] text-xs font-medium text-white truncate" title={`Submitted by ${username}`}>
+        <span className="block max-w-[6rem] text-xs font-medium text-white truncate ml-1" title={`Submitted by ${username}`}>
           {username}
         </span>
       </div>
