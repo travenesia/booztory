@@ -44,6 +44,7 @@ jobs:
         run: pnpm build
         env:
           # Required by Next.js at build time — use placeholder values for CI
+          NEXT_PUBLIC_ALCHEMY_API_KEY: ${{ secrets.NEXT_PUBLIC_ALCHEMY_API_KEY || 'ci-placeholder' }}
           NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'ci-placeholder' }}
           NEXT_PUBLIC_BOOZTORY_ADDRESS: ${{ secrets.NEXT_PUBLIC_BOOZTORY_ADDRESS || '0x0000000000000000000000000000000000000000' }}
           NEXT_PUBLIC_USDC_ADDRESS: ${{ secrets.NEXT_PUBLIC_USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' }}
