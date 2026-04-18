@@ -1,22 +1,32 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { MiniKit } from "@worldcoin/minikit-js"
+import { useState, useCallback, useEffect } from "react"
+import { getIsUserVerified } from "@worldcoin/minikit-js/address-book"
 import type { IDKitResult } from "@worldcoin/idkit"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
 import { isWorldApp } from "@/lib/miniapp-flag"
 
+const WORLD_CHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public"
+
 export function useVerifyHuman(address?: `0x${string}`) {
   const [isVerifying, setIsVerifying] = useState(false)
+  const [isOrbVerified, setIsOrbVerified] = useState(false)
   const { data: session, update: updateSession } = useSession()
   const { toast } = useToast()
 
   const isWorldVerified = session?.user?.worldVerified ?? false
 
-  const isOrbVerified = isWorldApp()
-    ? (MiniKit.user?.verificationStatus?.isOrbVerified ?? false)
-    : false
+  // Query Address Book contract on World Chain — on-chain, trustworthy orb-verification check.
+  // Only runs in World App context where the user has a World Chain wallet address.
+  useEffect(() => {
+    if (!isWorldApp() || !address) return
+    let cancelled = false
+    getIsUserVerified(address, WORLD_CHAIN_RPC)
+      .then(verified => { if (!cancelled) setIsOrbVerified(verified) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [address])
 
   /**
    * Cloud verification flow (World ID 4.0 recommended pattern):
@@ -61,8 +71,9 @@ export function useVerifyHuman(address?: `0x${string}`) {
     }
   }, [address, toast, updateSession])
 
-  // In World App, require session worldVerified. Outside World App, no verification needed.
-  const canProceed = !isWorldApp() || isWorldVerified
+  // In World App: accept either session worldVerified (from IDKit ZK flow) OR on-chain
+  // Address Book orb-verification (getIsUserVerified queries 0x57b9...330D on World Chain).
+  const canProceed = !isWorldApp() || isWorldVerified || isOrbVerified
 
   return {
     handleIDKitSuccess,
