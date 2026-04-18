@@ -235,11 +235,13 @@ function ActiveRaffleCard({
     chainId: aChain,
   })
 
-  // getRaffle returns tuple: (prizeTokens, winnerCount, startTime, endTime, status,
-  //   drawThreshold, minUniqueEntrants, drawRequested, totalTickets, uniqueEntrants)
+  // Base getRaffle: (prizeTokens, winnerCount, startTime, endTime, status,
+  //   drawThreshold, minUniqueEntrants, drawRequested, totalTickets, uniqueEntrants) — 10 fields
+  // World getRaffle: (prizeTokens, winnerCount, startTime, endTime, status,
+  //   drawThreshold, minUniqueEntrants, commitment, commitBlock, totalTickets, uniqueEntrants) — 11 fields
   const raffle = raffleRaw as readonly [
     readonly string[], bigint, bigint, bigint, number,
-    bigint, bigint, boolean, bigint, bigint,
+    bigint, bigint, boolean | `0x${string}`, bigint, bigint, bigint?,
   ] | undefined
 
   const prizeAmounts = prizeAmountsRaw as readonly (readonly bigint[])[] | undefined
@@ -341,7 +343,13 @@ function ActiveRaffleCard({
   if (boozTokenAddress === undefined) return null
 
   // status: 0 = Active, 1 = Drawn, 2 = Cancelled
-  const [prizeTokens, winnerCount, startTime, endTime, raffleStatus, drawThreshold, minUniqueEntrants, drawRequested, totalTickets, uniqueEntrants] = raffle
+  // World returns 11 fields (commitment + commitBlock before totalTickets/uniqueEntrants).
+  // Base returns 10 fields (drawRequested bool instead).
+  const [prizeTokens, winnerCount, startTime, endTime, raffleStatus, drawThreshold, minUniqueEntrants, _field7, _field8, _field9, _field10] = raffle
+  const totalTickets    = inWorldApp ? (_field9  ?? 0n) : (_field8 ?? 0n)
+  const uniqueEntrants  = inWorldApp ? (_field10 ?? 0n) : (_field9 ?? 0n)
+  const worldCommitBlock = inWorldApp ? (_field8 ?? 0n) : 0n
+  const drawRequested   = inWorldApp ? false : !!_field7
 
   const isCancelled = raffleStatus === 2
 
@@ -391,8 +399,9 @@ function ActiveRaffleCard({
 
   const thresholdMet = Number(totalTickets) >= Number(drawThreshold)
   const uniqueMet = Number(uniqueEntrants) >= Number(minUniqueEntrants)
-  const drawable = ended && thresholdMet && uniqueMet && !drawRequested && !isDrawn && !isCancelled
-  const isStuckDraw = drawRequested && !isDrawn && !isCancelled
+  const drawable = ended && thresholdMet && uniqueMet && !drawRequested && !isDrawn && !isCancelled && !inWorldApp
+  const isStuckDraw = !inWorldApp && drawRequested && !isDrawn && !isCancelled
+  const worldCommitted = inWorldApp && worldCommitBlock > 0n && !isDrawn && !isCancelled
 
   async function handleEnter() {
     const amount = parseInt(ticketInput)
@@ -455,7 +464,7 @@ function ActiveRaffleCard({
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: tx })
       refetchRaffle()
-      toast({ title: "Draw Triggered!", description: `VRF request submitted for Raffle #${Number(selectedId) + 1}.`, variant: "success" })
+      toast({ title: "Draw Triggered!", description: `Draw requested for Raffle #${Number(selectedId) + 1}.`, variant: "success" })
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("user rejected") || msg.includes("User rejected")) return
@@ -639,6 +648,10 @@ function ActiveRaffleCard({
               <span className="bg-emerald-400/20 border border-emerald-300/30 rounded-full px-2.5 py-0.5 text-emerald-200">
                 Drawn ✓
               </span>
+            ) : worldCommitted ? (
+              <span className="bg-blue-400/20 border border-blue-300/30 rounded-full px-2.5 py-0.5 text-blue-200 animate-pulse">
+                Committed · Awaiting reveal
+              </span>
             ) : isStuckDraw ? (
               <span className="bg-green-400/20 border border-green-300/30 rounded-full px-2.5 py-0.5 text-green-200 animate-pulse">
                 VRF pending...
@@ -794,11 +807,11 @@ function ActiveRaffleCard({
             disabled={isDrawing}
             className="w-full bg-amber-500 text-white text-sm font-bold py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
           >
-            {isDrawing ? "Requesting VRF..." : "Trigger Draw"}
+            {isDrawing ? "Triggering Draw..." : "Trigger Draw"}
           </button>
         )}
 
-        {/* Owner: stuck VRF reset */}
+        {/* Owner: stuck VRF reset (Base only) */}
         {isOwner && isStuckDraw && (
           <div className="space-y-2">
             <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800">
@@ -812,6 +825,14 @@ function ActiveRaffleCard({
             >
               {isResetting ? "Resetting..." : "Reset Stuck Draw"}
             </button>
+          </div>
+        )}
+
+        {/* World: committed — inform user draw is pending reveal in admin */}
+        {worldCommitted && (
+          <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800">
+            <span>🔐</span>
+            <span>Draw committed. Waiting for owner to reveal in the admin panel.</span>
           </div>
         )}
 
