@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract, usePub
 import { useSession } from "next-auth/react"
 import { waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig, DATA_SUFFIX_PARAM, sendBatchWithAttribution, APP_CHAIN as _APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
-import { canUsePaymaster, waitForPaymasterCalls, isWorldApp } from "@/lib/miniapp-flag"
+import { canUsePaymaster, waitForPaymasterCalls, waitForWorldOp, isWorldApp } from "@/lib/miniapp-flag"
 import { MiniKit } from "@worldcoin/minikit-js"
 import { useVerifyHuman } from "@/hooks/useVerifyHuman"
 import { WorldIDVerifyButton } from "@/components/world/WorldIDVerifyButton"
@@ -414,6 +414,7 @@ function ActiveRaffleCard({
           chainId: aChain,
         })
         if (!result?.data?.userOpHash) throw new Error("No userOpHash")
+        await waitForWorldOp(result.data.userOpHash)
       } else {
         await ensureChain()
         let ranPaymaster = false
@@ -1230,6 +1231,7 @@ export default function RewardPage() {
           chainId: pChain,
         })
         if (!result?.data?.userOpHash) throw new Error("No userOpHash")
+        await waitForWorldOp(result.data.userOpHash)
       } else {
         await ensureRewardChain()
         let ranPaymaster = false

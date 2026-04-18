@@ -5,7 +5,7 @@ import { dataLimiter, getIp } from "@/lib/ratelimit"
 const SUBGRAPH_URL       = process.env.SUBGRAPH_URL
 const WORLD_SUBGRAPH_URL = process.env.WORLD_SUBGRAPH_URL
 
-const CACHE_SECONDS = 1800 // 30 minutes
+const CACHE_SECONDS = 300 // 5 minutes
 const SEVEN_DAYS_SECONDS  = 7  * 24 * 60 * 60
 const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60
 
