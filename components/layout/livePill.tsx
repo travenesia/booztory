@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useReadContract } from "wagmi"
 import { RAFFLE_ADDRESS, RAFFLE_ABI } from "@/lib/contract"
-import { APP_CHAIN } from "@/lib/wagmi"
+import { WORLD_RAFFLE_ADDRESS, WORLD_RAFFLE_ABI } from "@/lib/contractWorld"
+import { APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
 import { isWorldApp } from "@/lib/miniapp-flag"
 import {
   useSponsorAd,
@@ -87,12 +88,13 @@ export function LivePill() {
     return () => window.removeEventListener("resize", compute)
   }, [ad])
 
+  const inWorldApp = isWorldApp()
   const { data: activeRaffleIdsRaw } = useReadContract({
-    address: RAFFLE_ADDRESS,
-    abi: RAFFLE_ABI,
+    address: inWorldApp ? WORLD_RAFFLE_ADDRESS : RAFFLE_ADDRESS,
+    abi: inWorldApp ? WORLD_RAFFLE_ABI : RAFFLE_ABI,
     functionName: "getActiveRaffles",
-    chainId: APP_CHAIN.id,
-    query: { enabled: !isWorldApp(), refetchInterval: 30_000 },
+    chainId: inWorldApp ? WORLD_CHAIN.id : APP_CHAIN.id,
+    query: { refetchInterval: 30_000 },
   })
   const hasLiveRaffle = ((activeRaffleIdsRaw as bigint[] | undefined) ?? []).length > 0
   const hasLiveAd = !!ad
