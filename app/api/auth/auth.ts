@@ -123,11 +123,12 @@ export const authOptions: NextAuthOptions = {
         token.walletAddress = user.walletAddress
         token.username = user.username
       }
-      // Persist worldVerified across sessions — check Redis once then bake into JWT.
-      // The nullifier stored during POST /api/worldid/verify is the source of truth.
-      if (token.walletAddress && !token.worldVerified) {
+      // Always re-check Redis so deleting the key revokes worldVerified.
+      // Small overhead (1 Redis call per JWT refresh) but necessary for World App
+      // where there's no manual sign-out — auto sign-in would otherwise re-bake stale true.
+      if (token.walletAddress) {
         const nullifier = await redis.get(`worldVerified:${token.walletAddress}`)
-        if (nullifier) token.worldVerified = true
+        token.worldVerified = !!nullifier
       }
       // Allow client to set worldVerified via useSession().update()
       if (trigger === "update" && session?.worldVerified) {
