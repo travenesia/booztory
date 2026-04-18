@@ -61,15 +61,26 @@ export function ConnectWalletButton() {
   const { avatarUrl, displayName: identityName } = useIdentity(resolvedAddress)
   const displayName = identityName || session?.user?.username || null
 
-  // If wagmi is still "reconnecting" after 5s the wallet is locked — stop blocking UI
+  // If wagmi is still "reconnecting" after 2s, clear stale WalletConnect IndexedDB
+  // session and force disconnect so the user sees "Connect" instead of stuck spinner.
+  // Only runs on desktop browser — World/Farcaster/Base mini app paths never reach this.
   useEffect(() => {
     if (walletStatus !== "reconnecting") {
       setReconnectTimedOut(false)
       return
     }
-    const timer = setTimeout(() => setReconnectTimedOut(true), 5000)
+    const timer = setTimeout(async () => {
+      setReconnectTimedOut(true)
+      if (isMiniApp() || isWorldApp()) return
+      try {
+        const dbs = await indexedDB.databases?.()
+        const wcDbs = (dbs ?? []).filter((d) => d.name?.includes("WALLET_CONNECT") || d.name?.includes("wc@"))
+        await Promise.all(wcDbs.map((d) => new Promise<void>((res) => { indexedDB.deleteDatabase(d.name!).onsuccess = () => res() })))
+      } catch { /* indexedDB.databases() not supported in all browsers — safe to ignore */ }
+      disconnect()
+    }, 2000)
     return () => clearTimeout(timer)
-  }, [walletStatus])
+  }, [walletStatus, disconnect])
 
   // Close desktop dropdown on outside click
   useEffect(() => {

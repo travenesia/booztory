@@ -1,5 +1,5 @@
 specVersion: 1.0.0
-description: Booztory World Chain subgraph v1.0.13
+description: Booztory World Chain subgraph v1.0.14
 indexerHints:
   prune: auto
 schema:

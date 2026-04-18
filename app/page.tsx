@@ -207,21 +207,12 @@ export default function Home() {
             {isPricePromo && <>{" "}<span className="inline-block text-[8px] font-bold text-orange-500 border border-orange-400 rounded px-1 py-0.5 leading-none align-super">LIMITED</span></>}
             . Your moment. On-chain, forever.
           </p>
-          {(
-            <Button
-              onClick={handleFabClick}
-              className="w-fit px-6 py-3 text-white font-semibold elegance-button shadow-custom-sm hover:shadow-custom-sm"
-            >
-              Submit Content
-            </Button>
-          )}
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400">Available on</span>
-            <div className="flex items-center gap-2">
-              <img src="/baselogo.svg" alt="Base" className="h-3.5 opacity-60" />
-              <img src="/worldlogo.svg" alt="World" className="h-3.5 opacity-60" />
-            </div>
-          </div>
+          <Button
+            onClick={handleFabClick}
+            className="w-fit px-6 py-3 text-white font-semibold elegance-button shadow-custom-sm hover:shadow-custom-sm"
+          >
+            Submit Content
+          </Button>
         </div>
 
         {/* Right: content card */}
@@ -242,6 +233,40 @@ export default function Home() {
             isDesktop && cardNode
           )}
         </div>
+      </div>
+
+      {/* Available on — desktop floating */}
+      <div className="hidden xl:block fixed bottom-0 left-1/2 -translate-x-1/2 z-40 h-[52px]">
+      <motion.div
+        className="flex items-center gap-5 px-4 h-full"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <span className="text-xs text-gray-400">Available on</span>
+        <motion.a
+          href="https://base.app/app/https:/booztory.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          whileHover={{ scale: 1.15, opacity: 1 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="opacity-70"
+        >
+          <img src="/baselogo.svg" alt="Base" className="h-5" />
+        </motion.a>
+        <motion.a
+          href="https://worldcoin.org/mini-app?app_id=app_8d4c76e0cea57e5f01c3c51699b96dac&app_mode=mini-app"
+          target="_blank"
+          rel="noopener noreferrer"
+          whileHover={{ scale: 1.15, opacity: 1 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="opacity-70"
+        >
+          <img src="/worldlogo.svg" alt="World" className="h-5" />
+        </motion.a>
+      </motion.div>
       </div>
 
       <Navbar />

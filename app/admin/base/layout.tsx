@@ -2,7 +2,7 @@
 
 import { useAccount, useReadContract, useSwitchChain } from "wagmi"
 import { useSession } from "next-auth/react"
-import { useEffect } from "react"
+
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/admin/adminSidebar"
 import { Toaster } from "@/components/ui/toaster"
@@ -13,7 +13,8 @@ import { Loader2, ShieldAlert } from "lucide-react"
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { address, isConnected, chainId: currentChain } = useAccount()
   const { switchChain } = useSwitchChain()
-  const { status } = useSession()
+  const { status, data: session } = useSession()
+  const resolvedAddress = (address ?? session?.user?.walletAddress) as `0x${string}` | undefined
 
   const { data: ownerAddress, isLoading: ownerLoading } = useReadContract({
     address: BOOZTORY_ADDRESS,
@@ -22,23 +23,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   })
 
   const isOwner =
-    !!(address && ownerAddress && address.toLowerCase() === (ownerAddress as string).toLowerCase())
+    !!(resolvedAddress && ownerAddress && resolvedAddress.toLowerCase() === (ownerAddress as string).toLowerCase())
 
   const loading = status === "loading" || ownerLoading
-
-  useEffect(() => {
-    if (isOwner && currentChain !== APP_CHAIN.id) switchChain({ chainId: APP_CHAIN.id })
-  }, [isOwner, currentChain, switchChain])
+  const isWrongChain = isOwner && !!currentChain && currentChain !== APP_CHAIN.id
 
   return (
     // Fixed overlay — breaks out of root layout's max-w-[650px] container
     <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center">
       {loading ? (
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      ) : !isConnected || status === "unauthenticated" ? (
+      ) : (!isConnected && !resolvedAddress) || status === "unauthenticated" ? (
         <AccessDenied message="Connect your wallet to access the admin panel." />
       ) : !isOwner ? (
         <AccessDenied message={"This is not the contract owner.\nOn blockchain, ownership can't be changed.\nNo access or control without the rightful owner."} />
+      ) : isWrongChain ? (
+        <div className="flex flex-col items-center gap-4 text-center px-6 max-w-sm w-full">
+          <ShieldAlert className="h-10 w-10 text-yellow-500" />
+          <p className="text-base font-semibold text-gray-900">Wrong Network</p>
+          <p className="text-sm text-muted-foreground">Switch to Base to access the Base admin panel.</p>
+          <button
+            onClick={() => switchChain({ chainId: APP_CHAIN.id })}
+            className="px-4 py-2 text-sm font-semibold text-white bg-[#E63946] rounded-base"
+          >
+            Switch to Base
+          </button>
+        </div>
       ) : (
         <SidebarProvider className="w-full h-full">
           <AdminSidebar />

@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI } from "@/lib/contractWorld"
 import { WORLD_CHAIN } from "@/lib/wagmi"
 import { Loader2, ShieldAlert } from "lucide-react"
-import { useEffect } from "react"
+
 
 function AccessDenied({ message }: { message: string }) {
   return (
@@ -40,18 +40,28 @@ export default function WorldAdminLayout({ children }: { children: React.ReactNo
 
   const loading = status === "loading" || ownerLoading
 
-  useEffect(() => {
-    if (isOwner && currentChain !== WORLD_CHAIN.id) switchChain({ chainId: WORLD_CHAIN.id })
-  }, [isOwner, currentChain, switchChain])
+  const isWrongChain = isOwner && !!currentChain && currentChain !== WORLD_CHAIN.id
 
   return (
     <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center">
       {loading ? (
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      ) : !isConnected || status === "unauthenticated" ? (
+      ) : (!isConnected && !resolvedAddress) || status === "unauthenticated" ? (
         <AccessDenied message="Connect your wallet to access the World admin panel." />
       ) : !isOwner ? (
         <AccessDenied message={"This is not the World contract owner.\nOnly the deployer wallet has access."} />
+      ) : isWrongChain ? (
+        <div className="flex flex-col items-center gap-4 text-center px-6 max-w-sm w-full">
+          <ShieldAlert className="h-10 w-10 text-yellow-500" />
+          <p className="text-base font-semibold text-gray-900">Wrong Network</p>
+          <p className="text-sm text-muted-foreground">Switch to World Chain to access the World admin panel.</p>
+          <button
+            onClick={() => switchChain({ chainId: WORLD_CHAIN.id })}
+            className="px-4 py-2 text-sm font-semibold text-white bg-[#E63946] rounded-base"
+          >
+            Switch to World Chain
+          </button>
+        </div>
       ) : (
         <SidebarProvider className="w-full h-full">
           <WorldSidebar />
