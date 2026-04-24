@@ -52,27 +52,33 @@ Warpcast / Browser / Base App
 | External oracle | Chainlink | None — pure Solidity |
 | Draw steps | 1 tx (auto callback) | 2 txs within 256 blocks (~8.5 min) |
 
-### World ID Implementation — Cloud-Only Pattern (World ID 4.0 recommended, 2026-04-08)
+### World ID Implementation — Address Book Gate (2026-04-19)
 
-**Verification flow (one-time per wallet):**
-1. IDKit modal opens in World App (`WorldIDVerifyButton` → `/api/worldid/rp-signature` for signed context)
-2. User completes Orb scan — IDKit returns `IDKitResult`
-3. `POST /api/worldid/verify` — backend forwards proof to `https://developer.world.org/api/v4/verify/{rp_id}` (World's servers verify ZK proof, no private key needed); backend then calls `setVerifiedHuman(address, true)` on-chain via relayer
-4. Frontend polls `verifiedHumans[address]` until relayer tx confirms (6 × 5s = 30s max)
-5. Nullifier stored in Redis: `worldVerified:{address}`
-6. Session updated: `worldVerified: true` — persists 30 days; Redis lookup restores it on new sessions permanently
+**Gate (on-chain, trustworthy):**
+- `getIsUserVerified(address, rpcUrl)` from `@worldcoin/minikit-js/address-book`
+- Queries WorldIDAddressBook contract `0x57b930D551e677CC36e2fA036Ae2fe8FdaE0330D` on World Chain
+- Returns `true` if user is orb-verified — no ZK proof flow needed in-app
+- Called in `useVerifyHuman` via `useEffect` on address change
+- `canProceed = !isWorldApp() || isWorldVerified || isOrbVerified`
 
-**Key IDKit config (WorldIDVerifyButton):** `environment="production"` required — omitting it defaults to staging and generates proofs the production WorldIDRouter rejects.
+**Why not IDKit inside World App:**
+- `IDKitRequestWidget` renders `null` when `window.WorldApp` is detected (IDKit source confirmed)
+- WASM init (`initIDKit()`) loads from `world-id-assets.com` CDN — fails silently in World App WebView
+- Result: widget silently resets after 2.5s, `/api/worldid/rp-signature` called repeatedly with no modal
+
+**IDKit ZK flow (browser/desktop only — still wired as fallback):**
+- `WorldIDVerifyButton` → `/api/worldid/rp-signature` → IDKit modal → `/api/worldid/verify` → Redis nullifier
+- Session `worldVerified: true` — JWT now always re-checks Redis on refresh (key deletion resets it)
 
 **Gated actions (frontend/session — contract never blocks):**
 - GM, Submit content, Convert tickets, Enter raffle — show `WorldIDVerifyButton` if `!canProceed`
-- `canProceed = !isWorldApp() || isWorldVerified` — non-World App users always proceed
+- Non-World App users always proceed (`canProceed = true`)
 
-**Not gated:** Donate, Sponsor application, Claim refund — no `onlyVerifiedHuman` in contracts
+**Not gated:** Donate, Sponsor application, Claim refund
 
-**On-chain:** `requireVerification = false` on both contracts (set 2026-04-08). Contract `verifyHuman()` / `onlyVerifiedHuman` modifier exist but are disabled. No on-chain ZK proof required.
+**On-chain:** `requireVerification = false` on both contracts. No on-chain ZK proof required.
 
-⚠ **World ID v4 migration required before April 1, 2027.** v4 `WorldIDVerifier` not yet on mainnet — no action needed now. See: https://docs.world.org/world-id/migration
+⚠ **World ID v4 migration required before April 1, 2027.** See: https://docs.world.org/world-id/migration
 
 ### Confirmed addresses
 
@@ -256,7 +262,7 @@ In World Developer Portal:
 | Donate (WLD) | `BooztoryWorld.donateWithWLD()` | ✅ confirmed 2026-04-13 |
 | Claim daily GM | `BooztoryWorld.claimDailyGM()` | ✅ confirmed 2026-04-13 |
 | Convert tickets | `BooztoryWorld.convertToTickets()` | ✅ confirmed 2026-04-13 |
-| Enter raffle | `BooztoryRaffleWorld.enterRaffle()` | ⬜ needs raffle funded |
+| Enter raffle | `BooztoryRaffleWorld.enterRaffle()` | ✅ confirmed 2026-04-19 |
 | Commit draw | `BooztoryRaffleWorld.commitDraw()` | ⬜ |
 | Reveal draw | `BooztoryRaffleWorld.revealDraw()` (within 256 blocks) | ⬜ |
 | Sponsor apply | `BooztoryRaffleWorld.submitApplication()` | ⬜ 200 USDC fee |
@@ -290,15 +296,21 @@ In World Developer Portal:
 - [x] **Profile/dropdown Base fix** — `profileQuery(addr, isWorld)` now gates World-only fields (`wldAmount`, `paymentToken`, `cancelledRaffles`) — Base was silently broken ✅ 2026-04-14
 - [x] **Profile WLD display** — mint shows `-3.45 $WLD` (actual amount from `wldAmount`); donations show `-$1.00 (WLD)` (USD-equiv) ✅ 2026-04-14
 - [x] **GM modal** — "Highest Streak · Day X" fixed to "Day X · Best: ⚔️ Warrior" with CSS hover tooltip ✅ 2026-04-14
-- [ ] Deploy subgraph `booztory-world/1.0.13` to Goldsky + update `WORLD_SUBGRAPH_URL` in `.env.local` and Vercel
+- [x] Deploy subgraph `booztory-world/1.0.13` to Goldsky + update `WORLD_SUBGRAPH_URL` in `.env.local` and Vercel ✅ 2026-04-14
 - [x] Re-register `0x14Fb9124b2E376c250DCf73336912eD6EB6e1219` in Dev Portal ✅ 2026-04-14
   - ERC-20 (Permit2): USDC `0x79A02482...` · BOOZ `0x48A7199f...` · WLD `0x2cFc85d8...`
   - Contract entrypoints: BooztoryWorld `0x14Fb9124...` · RaffleWorld `0x5DED6db7...` · USDC · WLD · Permit2 `0x000000000022D473030F116dDEE9F6B43aC78BA3`
 - [x] Deploy subgraph `booztory-world/1.0.13` to Goldsky + update `WORLD_SUBGRAPH_URL` in `.env.local` ✅ 2026-04-14
 - [x] Update `NEXT_PUBLIC_WORLD_BOOZTORY_ADDRESS` + `WORLD_SUBGRAPH_URL` in Vercel ✅ 2026-04-14
-- [ ] Push code to Vercel (local changes staged, not yet committed/pushed)
+- [x] Push code to Vercel ✅ 2026-04-19
+- [x] Goldsky subgraph `booztory-world/1.0.14` redeployed — fixed writer crash ✅ 2026-04-19
+- [x] Live raffle pill — World App now queries World Chain raffle contract ✅ 2026-04-19
+- [x] World raffle tuple fix — 11 fields (World) vs 10 fields (Base) corrected ✅ 2026-04-19
+- [x] World ID gate — replaced IDKit WebView flow with `getIsUserVerified` Address Book ✅ 2026-04-19
+- [x] Reward page — `waitForWorldOp` awaited before refetch on convert + enter raffle ✅ 2026-04-19
+- [x] Stats cache reduced to 60s, leaderboard to 5 min ✅ 2026-04-19
 - [ ] Submit mini app to World App Store for review
-- [ ] QA remaining: Raffle (needs funding), Sponsor apply (200 USDC), Commit+Reveal draw
+- [ ] QA remaining: Sponsor apply (200 USDC), Commit+Reveal draw (admin)
 
 ---
 
@@ -393,8 +405,8 @@ npx hardhat run scripts/setupWorld.ts --network world-chain
 - **No VRF subscription** — commit-reveal needs no setup, just ETH for gas
 - **BOOZ is unified** — same address on World Chain and Base via CREATE2 + SuperchainERC20; bridgeable in Phase 2 when soulbound disabled
 - **Base Mainnet stays live** — existing contracts, subgraph, and frontend untouched
-- **World ID verification** — `requireVerification = false` on both mainnet contracts. Cloud verify (`POST /api/v4/verify/{rp_id}`) + backend relayer sets `verifiedHumans[address]=true` on-chain. Frontend polls until confirmed, then updates session. `worldVerified` in JWT backed by Redis nullifier — one-time verify per wallet, permanent across sessions.
-- **IDKit config:** `environment="production"` on `IDKitRequestWidget` is required — without it proofs are generated for staging and fail on-chain.
+- **World ID verification** — `requireVerification = false` on both mainnet contracts. Primary gate: `getIsUserVerified(address)` from `@worldcoin/minikit-js/address-book` (on-chain Address Book `0x57b930D551e677CC36e2fA036Ae2fe8FdaE0330D`). IDKit ZK flow wired as fallback for browser but does NOT work inside World App WebView (renders `null`). JWT always re-checks Redis on refresh.
+- **IDKit config:** `environment="production"` on `IDKitRequestWidget` is required — without it proofs are generated for staging and fail. Keep for browser/desktop path only.
 - **Emergency script:** `scripts/setVerifiedHumans.ts` — manually grants `verifiedHumans[address]=true` on both contracts for wallets stuck due to relayer/tx failure.
 - **`waitForWorldOp`** — logs `debug_url` on failed status; throws immediately on `failed/reverted/error` instead of waiting for timeout.
 - **Env vars for World ID:** `WORLD_RP_ID` (cloud verify) + `WORLD_RP_SIGNING_KEY` (IDKit RP signature) — both server-side only.

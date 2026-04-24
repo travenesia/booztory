@@ -501,7 +501,7 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] ERC-8021 Builder Code attribution (`bc_qaqhzzqp`) — all 11 write functions covered on both EOA and smart account paths; verified on-chain
 - [x] World Chain deployment — BooztoryWorld + BooztoryRaffleWorld live on World Chain Mainnet (480)
 - [x] World Mini App — MiniKit auth, sendTransaction, World ID cloud verification, Goldsky subgraph
-- [x] World ID verification — cloud-only pattern (no on-chain ZK proof); session-gated via Redis nullifier
+- [x] World ID verification — on-chain Address Book gate (`getIsUserVerified` from `@worldcoin/minikit-js/address-book`); Redis nullifier fallback for IDKit ZK flow
 - [x] Creator profile & analytics dashboard (`/profile/[address]`)
 - [x] Base admin panel (`/admin/base/*`) — owner-gated, full contract setter coverage, auto chain switch
 - [x] World admin panel (`/admin/world/*`) — full parity with Base admin; commit-reveal draw UI; createRaffle; verification controls; auto chain switch to World Chain (480)
@@ -518,6 +518,11 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] GMMilestoneReached bonus BOOZ tracked in subgraphs — Base `v0.0.12` · World `v1.0.13` ✅ 2026-04-14
 - [x] RaffleCancelled indexed in subgraphs — Base `v0.0.13` · World `v1.0.13` ✅ 2026-04-14
 - [x] Dev Portal re-registered — BooztoryWorld + RaffleWorld + USDC + WLD + Permit2 entrypoints ✅ 2026-04-14
+- [x] Goldsky subgraph `booztory-world/1.0.14` — fixed writer crash, redeployed ✅ 2026-04-19
+- [x] Live raffle pill — World App now correctly queries World Chain raffle contract ✅ 2026-04-19
+- [x] World raffle tuple fix — `getRaffle()` returns 11 fields on World vs 10 on Base; parsing corrected ✅ 2026-04-19
+- [x] World ID gate — replaced IDKit WebView flow (broken) with `getIsUserVerified` Address Book on-chain check ✅ 2026-04-19
+- [x] Reward page World UX — `waitForWorldOp` now awaited before refetch on convert + enter raffle ✅ 2026-04-19
 - [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
 - [ ] Submit World Mini App to World App Store
 - [ ] Superchain expansion (OP Mainnet, etc.)
