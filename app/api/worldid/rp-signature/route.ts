@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const action = "booztory-human"
 
     // signRequest generates a fresh nonce + ECDSA signature (valid for 5 minutes)
-    const sig = signRequest(action, signingKey)
+    const sig = signRequest({ signingKeyHex: signingKey, action })
 
     // Return RpContext shape expected by IDKitRequestConfig
     return NextResponse.json({
