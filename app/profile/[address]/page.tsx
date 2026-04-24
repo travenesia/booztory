@@ -113,11 +113,12 @@ function txDescription(tx: TxItem): React.ReactNode {
 
   switch (tx.type) {
     case "mint": {
+      const priceNote = <span className="text-gray-400 font-normal"> · USDC paid*</span>
       if (tx.mintType === "nft-free")     return `NFT Pass Free${tokenStr}`
-      if (tx.mintType === "nft-discount") return `NFT Pass Discount${tokenStr}`
-      if (tx.mintType === "discount")     return `Discount Mint${tokenStr}`
+      if (tx.mintType === "nft-discount") return <span>NFT Pass Discount{tokenStr}{priceNote}</span>
+      if (tx.mintType === "discount")     return <span>Discount Mint{tokenStr}{priceNote}</span>
       if (tx.mintType === "free")         return `Free Mint${tokenStr}`
-      return `Normal Mint${tokenStr}`
+      return <span>Standard Mint{tokenStr}{priceNote}</span>
     }
     case "gm":
       return `Day ${tx.streakCount}`
@@ -162,7 +163,6 @@ function txAmounts(tx: TxItem): AmountLine[] {
       if (tx.mintType === "nft-free") {
         lines.push({ text: "+1 Raffle Ticket", positive: true })
       } else if (tx.mintType === "nft-discount") {
-        lines.push({ text: "-0.5 USDC", positive: false })
         lines.push({ text: "+1 Raffle Ticket", positive: true })
       } else if (tx.mintType === "free") {
         lines.push({ text: "-10,000 $BOOZ", positive: false })
@@ -173,10 +173,8 @@ function txAmounts(tx: TxItem): AmountLine[] {
         lines.push({ text: `-${formatWldStr(tx.wldAmount)} $WLD`, positive: false })
         lines.push({ text: "+1,000 $BOOZ", positive: true })
       } else if (tx.mintType === "discount") {
-        lines.push({ text: "-0.9 USDC", positive: false })
-        // net BOOZ = 0 (burn 1000, earn 1000) — omit
+        // USDC amount not emitted in SlotMinted event — omitted
       } else {
-        lines.push({ text: "-1 USDC", positive: false })
         lines.push({ text: "+1,000 $BOOZ", positive: true })
       }
       if (pts) lines.push({ text: `+${formatPoints(pts)} pts`, positive: true })
@@ -603,6 +601,11 @@ export default function ProfilePage() {
                   <TxRow tx={tx} connectedAddress={connectedAddress} />
                 </ScrollReveal>
               ))}
+              {tab === "activity" && filtered.some(t => t.type === "mint" && !["free", "nft-free", "wld", "wld-discount"].includes(t.mintType ?? "")) && (
+                <p className="text-[11px] text-gray-400 px-4 py-2 border-t border-gray-100">
+                  * USDC amount not stored in the contract event — exact amount paid may differ.
+                </p>
+              )}
             </div>
           )}
         </div>

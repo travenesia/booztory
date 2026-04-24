@@ -523,6 +523,10 @@ npx hardhat run scripts/deploy.ts --network base            # Deploy to mainnet
 - [x] World raffle tuple fix — `getRaffle()` returns 11 fields on World vs 10 on Base; parsing corrected ✅ 2026-04-19
 - [x] World ID gate — replaced IDKit WebView flow (broken) with `getIsUserVerified` Address Book on-chain check ✅ 2026-04-19
 - [x] Reward page World UX — `waitForWorldOp` now awaited before refetch on convert + enter raffle ✅ 2026-04-19
+- [x] IDKit v4.1.x — `signRequest` API updated (positional args → options object) ✅ 2026-04-24
+- [x] WLD mint oracle resilience — ERC20/Permit2 approvals include +2% slippage buffer for oracle delta between static call and block inclusion ✅ 2026-04-24
+- [x] WLD discount guard — discount paths disabled in UI when `discountAmount ≥ slotPrice` (prevents contract revert) ✅ 2026-04-24
+- [x] Profile activity — USDC mint amounts removed (not stored in contract events); replaced with "USDC paid*" note and footnote ✅ 2026-04-24
 - [ ] BOOZ Phase 2 — trading enabled, DEX liquidity
 - [ ] Submit World Mini App to World App Store
 - [ ] Superchain expansion (OP Mainnet, etc.)

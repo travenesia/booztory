@@ -218,17 +218,21 @@ export function usePaymentWorld() {
     if (isProcessing) return { success: false, error: "Payment already in progress" }
     const wldAmount = slotPriceInWLDRef.current
     if (wldAmount === 0n) return { success: false, error: "WLD oracle price unavailable" }
+    // Approve 2% above the frontend oracle read — the contract re-reads the oracle on-chain,
+    // so if the price moved slightly between our static call and block inclusion the allowance
+    // still covers it. The contract only pulls the exact on-chain amount.
+    const wldApprove = wldAmount + wldAmount / 50n
     setIsProcessing(true)
     try {
       const result = await MiniKit.sendTransaction({
         transactions: [
           {
             to: WORLD_WLD_ADDRESS,
-            data: encodeFunctionData({ abi: ERC20_APPROVE_ABI, functionName: "approve", args: [PERMIT2_ADDRESS, wldAmount] }),
+            data: encodeFunctionData({ abi: ERC20_APPROVE_ABI, functionName: "approve", args: [PERMIT2_ADDRESS, wldApprove] }),
           },
           {
             to: PERMIT2_ADDRESS,
-            data: encodeFunctionData({ abi: PERMIT2_ABI, functionName: "approve", args: [WORLD_WLD_ADDRESS, WORLD_BOOZTORY_ADDRESS, wldAmount, 0] }),
+            data: encodeFunctionData({ abi: PERMIT2_ABI, functionName: "approve", args: [WORLD_WLD_ADDRESS, WORLD_BOOZTORY_ADDRESS, wldApprove, 0] }),
           },
           {
             to: WORLD_BOOZTORY_ADDRESS,
@@ -256,19 +260,20 @@ export function usePaymentWorld() {
     if (isProcessing) return { success: false, error: "Payment already in progress" }
     const wldAmount = slotPriceInWLDRef.current
     if (wldAmount === 0n) return { success: false, error: "WLD oracle price unavailable" }
+    // Approve full (non-discounted) WLD price + 2% buffer. The contract computes the
+    // discounted amount on-chain at oracle rate and pulls only that. Over-approving is safe.
+    const wldApprove = wldAmount + wldAmount / 50n
     setIsProcessing(true)
     try {
-      // Approve full WLD price — contract pulls only the discounted amount at oracle rate.
-      // Over-approving is safe; the contract never pulls more than it computes internally.
       const result = await MiniKit.sendTransaction({
         transactions: [
           {
             to: WORLD_WLD_ADDRESS,
-            data: encodeFunctionData({ abi: ERC20_APPROVE_ABI, functionName: "approve", args: [PERMIT2_ADDRESS, wldAmount] }),
+            data: encodeFunctionData({ abi: ERC20_APPROVE_ABI, functionName: "approve", args: [PERMIT2_ADDRESS, wldApprove] }),
           },
           {
             to: PERMIT2_ADDRESS,
-            data: encodeFunctionData({ abi: PERMIT2_ABI, functionName: "approve", args: [WORLD_WLD_ADDRESS, WORLD_BOOZTORY_ADDRESS, wldAmount, 0] }),
+            data: encodeFunctionData({ abi: PERMIT2_ABI, functionName: "approve", args: [WORLD_WLD_ADDRESS, WORLD_BOOZTORY_ADDRESS, wldApprove, 0] }),
           },
           {
             to: WORLD_BOOZTORY_ADDRESS,

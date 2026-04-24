@@ -194,7 +194,7 @@ export function ContentSubmissionDrawer() {
   })
   const boozBalance = boozBalanceRaw ? Number(formatUnits(boozBalanceRaw as bigint, 18)) : 0
   const boozFormatted = boozBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
-  const canDiscount = tokenEnabled && boozBalance >= Number(formatUnits(discountBurnCost, 18))
+  const canDiscount = tokenEnabled && slotPrice > discountAmount && boozBalance >= Number(formatUnits(discountBurnCost, 18))
   const canFree = tokenEnabled && boozBalance >= Number(formatUnits(freeSlotCost, 18))
 
   // WLD balance — only read in World App
