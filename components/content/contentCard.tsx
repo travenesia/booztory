@@ -12,7 +12,6 @@ import { APP_CHAIN, WORLD_CHAIN } from "@/lib/wagmi"
 import { isWorldApp } from "@/lib/miniapp-flag"
 import { WORLD_BOOZTORY_ADDRESS, WORLD_BOOZTORY_ABI } from "@/lib/contractWorld"
 import { ShineBorder } from "@/components/ui/shine-border"
-import { UsersOnline } from "@/components/layout/usersOnline"
 
 type ContentType = "youtube" | "youtubeshorts" | "tiktok" | "twitter" | "vimeo" | "spotify" | "twitch" | "text"
 
@@ -225,12 +224,7 @@ export function ContentCard({
               borderTopRightRadius: "5px",
             }}
           >
-            {/* Users Online overlay */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 bg-green-50/90 backdrop-blur-sm rounded-b-lg px-3 h-[12px] flex items-center">
-              <UsersOnline />
-            </div>
-
-            {contentUrl && !isPlaceholder ? (
+{contentUrl && !isPlaceholder ? (
               <ContentEmbed
                 key={`embed-${contentType}-${contentUrl}`}
                 contentType={contentType}

@@ -100,7 +100,8 @@ export function LivePill() {
   const hasLiveAd = !!ad
 
   // On homepage, ads are already shown via SponsorAdFloatingBar — hide Live Ads pill there
-  const showAd = hasLiveAd && !isHomepage
+  // Exception: World App — floating bar behaves differently in the mini app WebView
+  const showAd = hasLiveAd && (!isHomepage || inWorldApp)
 
   if (!hasLiveRaffle && !showAd) return null
 
@@ -129,7 +130,7 @@ export function LivePill() {
         {hasLiveRaffle && (
           <button
             onClick={() => router.push("/reward")}
-            className={cn("pointer-events-auto flex items-center justify-center rounded-none py-3 px-2.5 bg-red-600 hover:bg-red-700 text-white transition-colors shadow-md", isHomepage && "hidden md:flex")}
+            className={cn("pointer-events-auto flex items-center justify-center rounded-none py-3 px-2.5 bg-red-600 hover:bg-red-700 text-white transition-colors shadow-md", isHomepage && !inWorldApp && "hidden md:flex")}
             aria-label="Live Raffle"
           >
             <div className="flex items-center gap-1.5" style={tabStyle}>

@@ -105,7 +105,8 @@ const ERC721_NFT_ABI = [
 ] as const
 
 // TODO: move to NEXT_PUBLIC_RAFFLE_DEPLOY_BLOCK env var once confirmed on mainnet
-const RAFFLE_DEPLOY_BLOCK = 38_200_000n
+const RAFFLE_DEPLOY_BLOCK       = 38_200_000n
+const WORLD_RAFFLE_DEPLOY_BLOCK = 28_382_487n
 
 // ── WinnerName ────────────────────────────────────────────────────────────────
 // Wrapper so useIdentity can be called per winner without violating Rules of Hooks
@@ -254,7 +255,8 @@ function ActiveRaffleCard({
     functionName: "raffleDrawBlock",
     args: [selectedId],
     chainId: aChain,
-    query: { enabled: winners.length > 0, refetchInterval: 60_000 },
+    // raffleDrawBlock is Base-only (Chainlink VRF callback block) — not in World ABI
+    query: { enabled: winners.length > 0 && !inWorldApp, refetchInterval: 60_000 },
   })
 
   const { data: winnerTicketsRaw } = useReadContracts({
@@ -267,31 +269,44 @@ function ActiveRaffleCard({
     query: { enabled: winners.length > 0 },
   })
 
-  // Draw tx hash — fetched via getLogs once drawBlock is known (must be before early return)
+  // Draw tx hash — fetched via getLogs once draw is known (must be before early return)
+  // Base: uses raffleDrawBlock (Chainlink VRF callback block) for a precise 1-block window.
+  // World: raffleDrawBlock doesn't exist — search from contract deploy block to latest.
   const drawBlock = Number(raffleDrawBlockRaw ?? 0n)
   const basescanHost = inWorldApp ? "worldscan.org" : ((APP_CHAIN.id as number) === 8453 ? "basescan.org" : "sepolia.basescan.org")
   const publicClient = usePublicClient({ chainId: aChain })
   const [drawTxHash, setDrawTxHash] = useState<string | undefined>()
   useEffect(() => {
     setDrawTxHash(undefined)
-    if (!drawBlock || !publicClient) return
+    if (!publicClient) return
     let cancelled = false
-    // FIX (Issue 1): use drawBlock as both bounds (1-block window) with RAFFLE_DEPLOY_BLOCK as
-    // a defensive floor so we never query before the contract existed.
-    // FIX (Issue 2): raffleId is an indexed topic — viem's args filter ensures we only get
-    // the DrawCompleted event for this specific raffle, not all historical draws.
-    const safeFrom = BigInt(Math.max(drawBlock, Number(RAFFLE_DEPLOY_BLOCK)))
-    publicClient.getLogs({
-      address: rAddr as `0x${string}`,
-      event: parseAbiItem("event DrawCompleted(uint256 indexed raffleId, address[] winners)"),
-      args: { raffleId: selectedId },
-      fromBlock: safeFrom,
-      toBlock: BigInt(drawBlock),
-    }).then(logs => {
-      if (!cancelled && logs[0]?.transactionHash) setDrawTxHash(logs[0].transactionHash)
-    }).catch(() => {})
+    if (inWorldApp) {
+      // World commit-reveal: no raffleDrawBlock — scan from deploy block, raffleId indexed so fast
+      if (winners.length === 0) return
+      publicClient.getLogs({
+        address: rAddr as `0x${string}`,
+        event: parseAbiItem("event DrawCompleted(uint256 indexed raffleId, address[] winners)"),
+        args: { raffleId: selectedId },
+        fromBlock: WORLD_RAFFLE_DEPLOY_BLOCK,
+        toBlock: "latest",
+      }).then(logs => {
+        if (!cancelled && logs[0]?.transactionHash) setDrawTxHash(logs[0].transactionHash)
+      }).catch(() => {})
+    } else {
+      if (!drawBlock) return
+      const safeFrom = BigInt(Math.max(drawBlock, Number(RAFFLE_DEPLOY_BLOCK)))
+      publicClient.getLogs({
+        address: rAddr as `0x${string}`,
+        event: parseAbiItem("event DrawCompleted(uint256 indexed raffleId, address[] winners)"),
+        args: { raffleId: selectedId },
+        fromBlock: safeFrom,
+        toBlock: BigInt(drawBlock),
+      }).then(logs => {
+        if (!cancelled && logs[0]?.transactionHash) setDrawTxHash(logs[0].transactionHash)
+      }).catch(() => {})
+    }
     return () => { cancelled = true }
-  }, [drawBlock, publicClient, selectedId])
+  }, [drawBlock, publicClient, selectedId, inWorldApp, winners.length, rAddr])
 
 
   // Live countdown — re-renders every second

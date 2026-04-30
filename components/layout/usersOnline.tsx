@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 
-const PING_INTERVAL_MS = 20_000
+const PING_INTERVAL_MS = 60_000
 
 function getVisitorId(): string {
   const key = "bz_vid"
