@@ -22,7 +22,9 @@ export async function GET(request: Request) {
 
     const enrichedTweetData = enrichTweet(tweetData) // Enriches the tweet data
 
-    return NextResponse.json({ tweet: enrichedTweetData })
+    return NextResponse.json({ tweet: enrichedTweetData }, {
+      headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" },
+    })
   } catch (error: any) {
     // Using 'any' for simplicity, can be 'unknown' with type checks
     console.error(`Error fetching tweet ${tweetId} in API route:`, error)

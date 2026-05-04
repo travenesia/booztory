@@ -57,7 +57,7 @@ export async function GET(request: Request) {
         thumbnail_url: stream?.thumbnail_url
           ? stream.thumbnail_url.replace("{width}", "320").replace("{height}", "180")
           : (user?.profile_image_url ?? "/placeholder.svg?height=180&width=320&text=Twitch+Stream"),
-      })
+      }, { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=600" } })
     }
 
     if (info.type === "video") {
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
         thumbnail_url: video?.thumbnail_url
           ? video.thumbnail_url.replace("%{width}", "320").replace("%{height}", "180")
           : "/placeholder.svg?height=180&width=320&text=Twitch+Video",
-      })
+      }, { headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" } })
     }
 
     if (info.type === "clip") {
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
         title: clip?.title || `Twitch Clip ${info.id}`,
         author_name: clip?.broadcaster_name || "Twitch",
         thumbnail_url: clip?.thumbnail_url || "/placeholder.svg?height=180&width=320&text=Twitch+Clip",
-      })
+      }, { headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" } })
     }
 
     return NextResponse.json({ error: "Unknown type" }, { status: 400 })

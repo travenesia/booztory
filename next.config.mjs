@@ -32,6 +32,7 @@ const nextConfig = {
   ],
   
   images: {
+    minimumCacheTTL: 86400,
     remotePatterns: [
       { protocol: 'https', hostname: 'i.ytimg.com' },
       { protocol: 'https', hostname: 'pbs.twimg.com' },

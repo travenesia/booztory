@@ -25,7 +25,9 @@ export async function GET(request: Request) {
       if (getResponse.headers.has("location")) {
         const finalUrl = getResponse.headers.get("location")
         if (finalUrl && finalUrl.includes("tiktok.com/@")) {
-          return NextResponse.json({ resolvedUrl: finalUrl })
+          return NextResponse.json({ resolvedUrl: finalUrl }, {
+            headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" },
+          })
         }
       }
       throw new Error(`Failed to resolve URL, status: ${response.status}`)
@@ -38,7 +40,9 @@ export async function GET(request: Request) {
       // Further check if it's a valid video URL structure
       const videoIdMatch = finalUrl.match(/\/video\/(\d+)/)
       if (videoIdMatch && videoIdMatch[1]) {
-        return NextResponse.json({ resolvedUrl: finalUrl })
+        return NextResponse.json({ resolvedUrl: finalUrl }, {
+          headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" },
+        })
       } else {
         // It might have resolved to a user profile or something else
         return NextResponse.json({ error: "Resolved URL is not a TikTok video page" }, { status: 400 })

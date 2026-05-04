@@ -128,7 +128,7 @@ export async function GET(request: Request) {
         totalPrizePoolPaid,
         totalUniqueWinners,
       },
-      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+      { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=600" } }
     )
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error"
